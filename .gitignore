@@ -4,6 +4,9 @@
 # binaries folder
 Binaries
 
+# dependancies binaries
+Dependancies
+
 # userdata (temp folder)
 UserData
 
@@ -32,4 +35,9 @@ config.h
 
 # qt creator
 CMakeLists.txt.user
+
+# dev stuff
+BlockGame
+TestGame
+
 

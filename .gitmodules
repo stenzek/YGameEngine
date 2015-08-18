@@ -1,0 +1,9 @@
+[submodule "Engine/Dependancies/YBaseLib"]
+	path = Engine/Dependancies/YBaseLib
+	url = https://bitbucket.org/connormcl/ybaselib.git
+[submodule "Engine/Dependancies/libfif"]
+	path = Engine/Dependancies/libfif
+	url = https://bitbucket.org/connormcl/libfif.git
+[submodule "Engine/Dependancies/HLSLTranslator"]
+	path = Engine/Dependancies/HLSLTranslator
+	url = https://bitbucket.org/connormcl/hlsltranslator.git

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<editor-visual name="BlockMeshBrush">
+	<visual type="BlockMesh">
+		<position from-property="Position" />
+		<rotation from-property="Rotation" />
+		<scale from-property="Scale" />
+		<visible from-property="Visible" />
+		<shadowflags from-property="ShadowFlags" />
+		<mesh from-property="BlockMeshName" />
+		<selected-tint-color value="#529bf5" />
+	</visual>                
+</editor-visual>

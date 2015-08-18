@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="StaticMesh" base="Resource" can-create="false">
+    <displayname>Static Mesh</displayname>
+    <category>Resources</category>
+    <description>Static mesh properties.</description>
+    <properties>
+		<property type="bool" name="EnableVertexTextureCoordinates">
+			<category>Vertex Attributes</category>
+			<label>Enable Texture Coordinates</label>
+			<description>The mesh will have texture coordiantes available for rendering.</description>
+			<default>true</default>
+		</property>
+		<property type="bool" name="EnableVertexColors">
+			<category>Vertex Attributes</category>
+			<label>Enable Vertex Colors</label>
+			<description>The mesh will have vertex colours available for rendering.</description>
+			<default>false</default>
+		</property>
+	</properties>
+</object-template>

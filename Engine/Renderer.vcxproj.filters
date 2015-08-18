@@ -1,0 +1,270 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="RenderProxies">
+      <UniqueIdentifier>{7a7d517a-b017-4793-9738-61253b4d0664}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{453a66ac-9f15-4a63-b0db-60f74eeb15e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VertexFactories">
+      <UniqueIdentifier>{244e41d3-e42d-4d5c-84f2-2020a8291107}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="WorldRenderers">
+      <UniqueIdentifier>{d6a23e47-102a-4c49-a9f6-14f1dacbb371}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Renderer\PrecompiledHeader.h" />
+    <ClInclude Include="Source\Renderer\MiniGUIContext.h" />
+    <ClInclude Include="Source\Renderer\Renderer.h" />
+    <ClInclude Include="Source\Renderer\RendererStateBlock.h" />
+    <ClInclude Include="Source\Renderer\RendererTypes.h" />
+    <ClInclude Include="Source\Renderer\RenderProfiler.h" />
+    <ClInclude Include="Source\Renderer\RenderProxy.h" />
+    <ClInclude Include="Source\Renderer\RenderQueue.h" />
+    <ClInclude Include="Source\Renderer\RenderWorld.h" />
+    <ClInclude Include="Source\Renderer\ShaderCompilerFrontend.h" />
+    <ClInclude Include="Source\Renderer\ShaderComponent.h" />
+    <ClInclude Include="Source\Renderer\ShaderComponentTypeInfo.h" />
+    <ClInclude Include="Source\Renderer\ShaderConstantBuffer.h" />
+    <ClInclude Include="Source\Renderer\ShaderMap.h" />
+    <ClInclude Include="Source\Renderer\ShaderProgram.h" />
+    <ClInclude Include="Source\Renderer\ShaderProgramSelector.h" />
+    <ClInclude Include="Source\Renderer\VertexBufferBindingArray.h" />
+    <ClInclude Include="Source\Renderer\VertexFactory.h" />
+    <ClInclude Include="Source\Renderer\VertexFactoryTypeInfo.h" />
+    <ClInclude Include="Source\Renderer\DecalManager.h" />
+    <ClInclude Include="Source\Renderer\ImGuiBridge.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderers\DeferredShadingWorldRenderer.h">
+      <Filter>WorldRenderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\WorldRenderers\ForwardShadingWorldRenderer.h">
+      <Filter>WorldRenderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\WorldRenderers\FullBrightWorldRenderer.h">
+      <Filter>WorldRenderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\WorldRenderers\MobileWorldRenderer.h">
+      <Filter>WorldRenderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\WorldRenderers\SingleShaderWorldRenderer.h">
+      <Filter>WorldRenderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\WorldRenderers\SSMShadowMapRenderer.h">
+      <Filter>WorldRenderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\WorldRenderers\CompositingWorldRenderer.h">
+      <Filter>WorldRenderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\WorldRenderers\CSMShadowMapRenderer.h">
+      <Filter>WorldRenderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\WorldRenderers\CubeMapShadowMapRenderer.h">
+      <Filter>WorldRenderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\WorldRenderers\DebugNormalsWorldRenderer.h">
+      <Filter>WorldRenderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\VertexFactories\LocalVertexFactory.h">
+      <Filter>VertexFactories</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\VertexFactories\PlainVertexFactory.h">
+      <Filter>VertexFactories</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\VertexFactories\SkeletalMeshVertexFactory.h">
+      <Filter>VertexFactories</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\VertexFactories\BlockMeshVertexFactory.h">
+      <Filter>VertexFactories</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\FullBrightShader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\MobileShaders.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\OneColorShader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\OverlayShader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\PlainShader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\ShadowMapShader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\SSAOShader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\TextureBlitShader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\DeferredShadingShaders.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\DepthOnlyShader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\DownsampleShader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Shaders\ForwardShadingShaders.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderProxies\DirectionalLightRenderProxy.h">
+      <Filter>RenderProxies</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderProxies\PointLightRenderProxy.h">
+      <Filter>RenderProxies</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderProxies\SkeletalMeshRenderProxy.h">
+      <Filter>RenderProxies</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderProxies\SpriteRenderProxy.h">
+      <Filter>RenderProxies</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderProxies\StaticMeshRenderProxy.h">
+      <Filter>RenderProxies</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderProxies\VolumetricLightRenderProxy.h">
+      <Filter>RenderProxies</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderProxies\BlockMeshRenderProxy.h">
+      <Filter>RenderProxies</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\RenderProxies\CompositeRenderProxy.h">
+      <Filter>RenderProxies</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Renderer\Common.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Renderer\PrecompiledHeader.cpp" />
+    <ClCompile Include="Source\Renderer\MiniGUIContext.cpp" />
+    <ClCompile Include="Source\Renderer\Renderer.cpp" />
+    <ClCompile Include="Source\Renderer\RendererStateBlock.cpp" />
+    <ClCompile Include="Source\Renderer\RendererTypes.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProfiler.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProxy.cpp" />
+    <ClCompile Include="Source\Renderer\RenderQueue.cpp" />
+    <ClCompile Include="Source\Renderer\RenderWorld.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderCompilerFrontend.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderComponent.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderComponentTypeInfo.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderConstantBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderMap.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderProgram.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderProgramSelector.cpp" />
+    <ClCompile Include="Source\Renderer\VertexBufferBindingArray.cpp" />
+    <ClCompile Include="Source\Renderer\VertexFactory.cpp" />
+    <ClCompile Include="Source\Renderer\VertexFactoryTypeInfo.cpp" />
+    <ClCompile Include="Source\Renderer\DecalManager.cpp" />
+    <ClCompile Include="Source\Renderer\ImGuiBridge.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderers\DeferredShadingWorldRenderer.cpp">
+      <Filter>WorldRenderers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\WorldRenderers\ForwardShadingWorldRenderer.cpp">
+      <Filter>WorldRenderers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\WorldRenderers\FullBrightWorldRenderer.cpp">
+      <Filter>WorldRenderers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\WorldRenderers\MobileWorldRenderer.cpp">
+      <Filter>WorldRenderers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\WorldRenderers\SingleShaderWorldRenderer.cpp">
+      <Filter>WorldRenderers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\WorldRenderers\SSMShadowMapRenderer.cpp">
+      <Filter>WorldRenderers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\WorldRenderers\CompositingWorldRenderer.cpp">
+      <Filter>WorldRenderers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\WorldRenderers\CSMShadowMapRenderer.cpp">
+      <Filter>WorldRenderers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\WorldRenderers\CubeMapShadowMapRenderer.cpp">
+      <Filter>WorldRenderers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\WorldRenderers\DebugNormalsWorldRenderer.cpp">
+      <Filter>WorldRenderers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\VertexFactories\PlainVertexFactory.cpp">
+      <Filter>VertexFactories</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\VertexFactories\SkeletalMeshVertexFactory.cpp">
+      <Filter>VertexFactories</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\VertexFactories\BlockMeshVertexFactory.cpp">
+      <Filter>VertexFactories</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\VertexFactories\LocalVertexFactory.cpp">
+      <Filter>VertexFactories</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\FullBrightShader.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\MobileShaders.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\OneColorShader.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\OverlayShader.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\PlainShader.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\ShadowMapShader.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\SSAOShader.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\TextureBlitShader.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\DeferredShadingShaders.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\DepthOnlyShader.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\DownsampleShader.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Shaders\ForwardShadingShaders.cpp">
+      <Filter>Shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderProxies\DirectionalLightRenderProxy.cpp">
+      <Filter>RenderProxies</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderProxies\PointLightRenderProxy.cpp">
+      <Filter>RenderProxies</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderProxies\SkeletalMeshRenderProxy.cpp">
+      <Filter>RenderProxies</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderProxies\SpriteRenderProxy.cpp">
+      <Filter>RenderProxies</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderProxies\StaticMeshRenderProxy.cpp">
+      <Filter>RenderProxies</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderProxies\VolumetricLightRenderProxy.cpp">
+      <Filter>RenderProxies</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderProxies\BlockMeshRenderProxy.cpp">
+      <Filter>RenderProxies</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\RenderProxies\CompositeRenderProxy.cpp">
+      <Filter>RenderProxies</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\WorldRenderer.cpp" />
+  </ItemGroup>
+</Project>

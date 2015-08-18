@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Source\D3D12Renderer\D3D12Renderer.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\PrecompiledHeader.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12Defines.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12RendererOutputBuffer.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12CVars.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\D3D12Renderer\D3D12Renderer.h" />
+    <ClInclude Include="Source\D3D12Renderer\PrecompiledHeader.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12Defines.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12RendererOutputBuffer.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12Common.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12CVars.h" />
+  </ItemGroup>
+</Project>

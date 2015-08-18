@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Source\OpenGLES2Renderer\PrecompiledHeader.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2ConstantLibrary.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2GPUContext.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2RendererOutputBuffer.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2Renderer.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2GPUTexture.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2GPUShaderProgram.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2CVars.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2Defines.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2GPUBuffer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\OpenGLES2Renderer\PrecompiledHeader.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2ConstantLibrary.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUContext.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2RendererOutputBuffer.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2Renderer.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUTexture.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUShaderProgram.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2Common.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2CVars.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2Defines.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUBuffer.h" />
+  </ItemGroup>
+</Project>

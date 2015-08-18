@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<material>
+    <shader name="shaders/engine/simple">
+        <parameters>
+            <uniform name="SpecularCoefficient" value="1.000000"/>
+            <texture name="DiffuseMap" value="models/ninja/nskinbr"/>
+            <staticswitch name="UseDiffuseMap" value="True"/>
+            <staticswitch name="UseSpecularMap" value="False"/>
+        </parameters>
+    </shader>
+</material>

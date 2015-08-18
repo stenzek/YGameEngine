@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="none" />
+	<lighting type="Emissive" model="Phong" normal-space="World" two-sided="false" />
+	<parameters>
+		<uniform name="Color" type="float3" value="1 1 1" />
+	</parameters>
+	    <sources>
+		<graph featurelevel="es2">
+        	<nodes>
+                <node name="Color" type="ShaderGraphNode_Float3Parameter" parametername="Color" />               
+            </nodes>
+            <links>
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="Color" output="Value" />
+            </links>
+        </graph>
+	</sources>
+</shader>

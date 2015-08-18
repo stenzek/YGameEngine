@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_RotationSpeed" base="ParticleSystemModule" can-create="true">
+    <displayname>Rotation Speed</displayname>
+    <category>Constant Modifiers</category>
+    <properties>
+      <property type="float" name="RotationSpeed">
+        <category>Rotation</category>
+        <label>Rotation Speed</label>
+        <description>Speed at which the particle rotates in degrees per second</description>
+        <default>0.0</default>
+      </property>
+    </properties>
+</object-template>

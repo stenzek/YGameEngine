@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="BlockMeshEntity" base="Entity" can-create="true">
+    <displayname>Block Mesh Entity</displayname>
+    <category>Movables</category>
+    <description>Entity that is a simple static block mesh.</description>
+    <properties>
+        <property type="string" name="StaticBlockMeshComponent.StaticBlockMesh">
+            <category>Static Block Mesh</category>
+            <label>Mesh Block Name</label>
+            <description>Static block mesh to render.</description>
+            <default>models/engine/single_block</default>
+            <selector type="resource" resource-type="StaticBlockMesh" />
+        </property>
+        <property type="bool" name="StaticBlockMeshComponent.EnableCollision">
+            <category>Collision</category>
+            <label>Enable Collision</label>
+            <description>Enable/disable collision with this mesh.</description>
+            <default>true</default>
+        </property>
+        <property type="bool" name="StaticBlockMeshComponent.Visible">
+			<category>Rendering</category>
+			<label>Visible</label>
+			<description>Controls entity render visibility.</description>
+			<default>true</default>
+		</property>
+		<property type="uint" name="StaticBlockMeshComponent.ShadowFlags">
+			<category>Rendering</category>
+			<label>Shadow Flags</label>
+			<description>Controls entity shadow visiblity.</description>
+			<default>15</default>
+			<selector type="flags">
+				<flag value="1">
+					<label>Cast Static Shadows</label>
+					<description>Casts static shadows.</description>
+				</flag>
+				<flag value="2">
+					<label>Receive Static Shadows</label>
+					<description>Receives static shadows.</description>
+				</flag>
+				<flag value="4">
+					<label>Cast Dynamic Shadows</label>
+					<description>Casts dynamic shadows.</description>
+				</flag>
+				<flag value="8">
+					<label>Receive Dynamic Shadows</label>
+					<description>Receives dynamic shadows.</description>
+				</flag>
+			</selector>
+		</property>
+    </properties>
+</object-template>

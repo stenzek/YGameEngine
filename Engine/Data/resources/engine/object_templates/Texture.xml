@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="Texture" base="Resource" can-create="false">
+    <displayname>Texture</displayname>
+    <category>Resources</category>
+    <description>Base texture class with common properties.</description>
+    <properties>
+		<property type="string" name="SourceUsage">
+			<category>Source</category>
+			<label>Usage</label>
+			<description>What the texture will be used as</description>
+			<default>None</default>
+			<selector type="choice">
+				<choice value="None">None</choice>
+				<choice value="DiffuseMap">Diffuse Map</choice>
+				<choice value="SpecularMap">Specular Map</choice>
+				<choice value="AlphaMap">Alpha Map</choice>
+				<choice value="NormalMap">Normal Map</choice>
+				<choice value="BumpMap">Bump Map</choice>
+			</selector>
+		</property>
+		<property type="bool" name="SourceSRGB">
+			<category>Source</category>
+			<label>SRGB</label>
+			<description>Controls whether the source is already in SRGB range</description>
+			<default>false</default>
+		</property>
+		<property type="bool" name="SourcePremultipliedAlpha">
+			<category>Source</category>
+			<label>Premultiplied Alpha</label>
+			<description>Controls whether the source already has premultiplied alpha</description>
+			<default>false</default>
+		</property>
+		<property type="int" name="MaxFilter">
+			<category>Rendering</category>
+			<label>Maximum Filter</label>
+			<description>Controls the maximum texture filter that is allowed for use</description>
+			<default>Anisotropic</default>
+			<selector type="choice">
+				<choice value="MinMagMipPoint">[Nearest Neighbour] Point Minification, Point Magnification, Point Mipmap</choice>
+				<choice value="MinMagPointMipLinear">Point Minification, Point Magnification, Linear Mipmap</choice>
+				<choice value="MinPointMagLinearMipPoint">Point Minification, Linear Magnification, Point Mipmap</choice>
+				<choice value="MinPointMagMipLinear">Point Minification, Linear Magnification, Linear Mipmap</choice>
+				<choice value="MinLinearMagMipPoint">Linear Minification, Point Magnification, Point Mipmap</choice>
+				<choice value="MinLinearMagPointMipLinear">Linear Minification, Point Magnification, Linear Mipmap</choice>
+				<choice value="MinMagLinearMipPoint">[Bilinear] Linear Minification, Linear Magnification, Point Mipmap</choice>
+				<choice value="MinMagMipLinear">[Trilinear] Linear Minification, Linear Magnification, Linear Mipmap</choice>
+				<choice value="Anisotropic">Anisotropic</choice>
+			</selector>
+		</property>
+		<property type="string" name="AddressU">
+			<category>Rendering</category>
+			<label>Horizontal Address Mode</label>
+			<description>Mode for texture repeats in the horizontal direction</description>
+			<default>Clamp</default>
+			<selector type="choice">
+				<choice value="Wrap">Wrap</choice>
+				<choice value="Mirror">Mirror</choice>
+				<choice value="Clamp">Clamp</choice>
+				<choice value="Border">Border</choice>
+				<choice value="MirrorOnce">Mirror Once</choice>
+			</selector>
+		</property>
+		<property type="string" name="AddressV">
+			<category>Rendering</category>
+			<label>Vertical Address Mode</label>
+			<description>Mode for texture repeats in the vertical direction</description>
+			<default>Clamp</default>
+			<selector type="choice">
+				<choice value="Wrap">Wrap</choice>
+				<choice value="Mirror">Mirror</choice>
+				<choice value="Clamp">Clamp</choice>
+				<choice value="Border">Border</choice>
+				<choice value="MirrorOnce">Mirror Once</choice>
+			</selector>
+		</property>
+		<property type="string" name="AddressW">
+			<category>Rendering</category>
+			<label>Depth Address Mode</label>
+			<description>Mode for texture repeats in the depth direction</description>
+			<default>Clamp</default>
+			<selector type="choice">
+				<choice value="Wrap">Wrap</choice>
+				<choice value="Mirror">Mirror</choice>
+				<choice value="Clamp">Clamp</choice>
+				<choice value="Border">Border</choice>
+				<choice value="MirrorOnce">Mirror Once</choice>
+			</selector>
+		</property>
+		<property type="float4" name="BorderColor">
+			<category>Rendering</category>
+			<label>Border Color</label>
+			<description>Border color used in border address mode</description>
+			<default>1 1 1 1</default>
+			<selector type="color" />
+		</property>
+		<property type="bool" name="GenerateMipmaps">
+			<category>Texture</category>
+			<label>Generate Mipmaps</label>
+			<description>Enable mipmap generation</description>
+			<default>true</default>
+		</property>
+		<property type="string" name="MipmapResizeFilter">
+			<category>Texture</category>
+			<label>Mipmap Resize Filter</label>
+			<description>Filter used when resizing images for mipmaps</description>
+			<default>Lanczos3</default>
+			<selector type="choice">
+				<choice value="Box">Box</choice>
+				<choice value="Bicubic">Bicubic</choice>
+				<choice value="Bilinear">Bilinear</choice>
+				<choice value="BSpline">B-spline</choice>
+				<choice value="Catmullrom">Catmull-Rom</choice>
+				<choice value="Lanczos3">Lanczos3</choice>
+			</selector>
+		</property>
+		<property type="bool" name="NPOTMipmaps">
+			<category>Texture</category>
+			<label>Allow NPOT Mipmaps</label>
+			<description>Allow non-power-of-2 dimensioned mipmaps. NPOT textures will be resized on compile.</description>
+			<default>false</default>
+		</property>
+		<property type="bool" name="EnableSRGB">
+			<category>Texture</category>
+			<label>Enable SRGB</label>
+			<description>Enable SRGB conversion if required</description>
+			<default>true</default>
+		</property>
+		<property type="bool" name="EnablePremultipliedAlpha">
+			<category>Texture</category>
+			<label>Enable Premultiplied Alpha</label>
+			<description>Allow conversion to premultiplied alpha if required</description>
+			<default>true</default>
+		</property>
+		<property type="bool" name="EnableTextureCompression">
+			<category>Texture</category>
+			<label>Allow Block Compression</label>
+			<description>Allow conversion to a compressed block texture format if required</description>
+			<default>true</default>
+		</property>
+	</properties>
+</object-template>

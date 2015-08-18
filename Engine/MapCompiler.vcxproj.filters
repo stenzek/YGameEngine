@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="Source\MapCompiler\MapCompiler.h" />
+    <ClInclude Include="Source\MapCompiler\MapSource.h" />
+    <ClInclude Include="Source\MapCompiler\MapSourceGeometryData.h" />
+    <ClInclude Include="Source\MapCompiler\Common.h" />
+    <ClInclude Include="Source\MapCompiler\MapSourceTerrainData.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\MapCompiler\MapSource.cpp" />
+    <ClCompile Include="Source\MapCompiler\MapSourceGeometryData.cpp" />
+    <ClCompile Include="Source\MapCompiler\MapCompiler.cpp" />
+    <ClCompile Include="Source\MapCompiler\MapSourceTerrainData.cpp" />
+  </ItemGroup>
+</Project>

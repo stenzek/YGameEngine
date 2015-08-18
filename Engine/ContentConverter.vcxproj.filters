@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="Source\ContentConverter\BaseImporter.h" />
+    <ClInclude Include="Source\ContentConverter\Common.h" />
+    <ClInclude Include="Source\ContentConverter\FontImporter.h" />
+    <ClInclude Include="Source\ContentConverter\OBJImporter.h" />
+    <ClInclude Include="Source\ContentConverter\TextureImporter.h" />
+    <ClInclude Include="Source\ContentConverter\AssimpSkeletalMeshImporter.h" />
+    <ClInclude Include="Source\ContentConverter\AssimpCommon.h" />
+    <ClInclude Include="Source\ContentConverter\AssimpSkeletonImporter.h" />
+    <ClInclude Include="Source\ContentConverter\AssimpSkeletalAnimationImporter.h" />
+    <ClInclude Include="Source\ContentConverter\AssimpMaterialImporter.h" />
+    <ClInclude Include="Source\ContentConverter\AssimpStaticMeshImporter.h" />
+    <ClInclude Include="Source\ContentConverter\AssimpSceneImporter.h" />
+    <ClInclude Include="Source\ContentConverter\PrecompiledHeader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\ContentConverter\FontImporter.cpp" />
+    <ClCompile Include="Source\ContentConverter\OBJImporter.cpp" />
+    <ClCompile Include="Source\ContentConverter\TextureImporter.cpp" />
+    <ClCompile Include="Source\ContentConverter\BaseImporter.cpp" />
+    <ClCompile Include="Source\ContentConverter\AssimpSkeletalMeshImporter.cpp" />
+    <ClCompile Include="Source\ContentConverter\AssimpCommon.cpp" />
+    <ClCompile Include="Source\ContentConverter\AssimpSkeletonImporter.cpp" />
+    <ClCompile Include="Source\ContentConverter\AssimpSkeletalAnimationImporter.cpp" />
+    <ClCompile Include="Source\ContentConverter\AssimpMaterialImporter.cpp" />
+    <ClCompile Include="Source\ContentConverter\AssimpStaticMeshImporter.cpp" />
+    <ClCompile Include="Source\ContentConverter\AssimpSceneImporter.cpp" />
+    <ClCompile Include="Source\ContentConverter\PrecompiledHeader.cpp" />
+  </ItemGroup>
+</Project>

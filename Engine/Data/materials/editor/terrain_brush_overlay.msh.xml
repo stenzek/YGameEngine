@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="Straight" />
+	<lighting type="Emissive" model="Phong" two-sided="false" />
+	<parameters>
+        <uniform name="BrushCenter" type="float3" />
+		<!--<texture name="SceneDepthTexture" type="Texture2D" />-->
+        <uniform name="BrushRadius" type="float" default="1" />
+        <uniform name="BrushFalloff" type="float" default="1" />
+        <uniform name="BrushColor" type="float3" default="1" />
+	</parameters>
+	<sources>
+		<code platform="d3d11"><![CDATA[
+
+float3 MTLUniformParameter_BrushCenter;
+//Texture2D MTLTextureParameter_SceneDepthTexture;
+//SamplerState MTLTextureParameter_SceneDepthTexture_SamplerState;
+
+float MTLUniformParameter_BrushRadius;
+float MTLUniformParameter_BrushFalloff;
+float3 MTLUniformParameter_BrushColor;
+
+#if MATERIAL_NEEDS_WORLD_NORMAL
+
+#if !MATERIAL_NEEDS_PS_INPUT_WORLD_NORMAL
+    #define MATERIAL_NEEDS_PS_INPUT_WORLD_NORMAL 1
+#endif
+
+float3 MaterialGetWorldNormal(MaterialPSInputParameters InputParameters)
+{
+    return InputParameters.WorldNormal;
+}
+#endif
+
+#if MATERIAL_NEEDS_TANGENT_NORMAL
+float3 MaterialGetTangentNormal(MaterialPSInputParameters InputParameters)
+{
+    return float3(0, 0, 1);
+}
+#endif
+
+#if MATERIAL_NEEDS_BASE_COLOR
+
+#if !MATERIAL_NEEDS_PS_INPUT_WORLD_POSITION
+    #define MATERIAL_NEEDS_PS_INPUT_WORLD_POSITION 1
+#endif
+
+float3 MaterialGetBaseColor(MaterialPSInputParameters InputParameters)
+{
+/*
+    //float coeff = max(InputParameters.TexCoord0.x, InputParameters.TexCoord0.y);
+    //float coeff = clamp(length(InputParameters.WorldPosition - MTLUniformParameter_BrushCenter) / MTLUniformParameter_BrushRadius, 0, 1);
+    float3 diff = InputParameters.WorldPosition - MTLUniformParameter_BrushCenter;
+    //float len = max(diff.x, max(diff.y, diff.z));
+    float len = length(diff);
+    float lend = len / MTLUniformParameter_BrushRadius;
+    float coeff = 1.0f - clamp(lend, 0, 1);
+    return MTLUniformParameter_BrushColor * coeff;
+*/
+    return MTLUniformParameter_BrushColor;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_COEFFICIENT
+float MaterialGetSpecularCoefficient(MaterialPSInputParameters InputParameters)
+{
+	return 1.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_EXPONENT
+float MaterialGetSpecularExponent(MaterialPSInputParameters InputParameters)
+{
+	return 16.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_OPACITY
+
+#if !MATERIAL_NEEDS_PS_INPUT_WORLD_POSITION
+    #define MATERIAL_NEEDS_PS_INPUT_WORLD_POSITION 1
+#endif
+
+float MaterialGetOpacity(MaterialPSInputParameters InputParameters)
+{
+    //return 1.0;
+    //float3 diff = InputParameters.WorldPosition - MTLUniformParameter_BrushCenter;
+    float2 diff = InputParameters.WorldPosition.xy - MTLUniformParameter_BrushCenter.xy;
+    //float len = max(diff.x, max(diff.y, diff.z));
+    float len = length(diff);
+    float lend = len / MTLUniformParameter_BrushRadius;
+    float coeff = 1.0f - clamp(lend, 0, 1);
+    return coeff;
+}
+#endif
+
+
+        ]]></code>
+	</sources>
+</shader>
+

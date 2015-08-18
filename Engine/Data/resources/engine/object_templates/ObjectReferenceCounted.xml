@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="ObjectReferenceCounted" base="Object" can-create="false">
+    <displayname>ObjectReferenceCounted</displayname>
+    <category></category>
+    <properties>
+    </properties>
+</object-template>

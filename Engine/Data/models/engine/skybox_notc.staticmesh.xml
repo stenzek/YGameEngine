@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<static-mesh>
+    <properties/>
+    <bounds>
+        <bounding-box min-bounds="-1.000000 -1.000000 -1.000000" max-bounds="1.000000 1.000000 1.000000"/>
+        <bounding-sphere center="-1.000000 1.000000 1.000000" radius="3.464102"/>
+    </bounds>
+    <lods>
+        <lod>
+            <vertices>
+                <vertex position="1.000000 1.000000 -1.000000" texcoord="0.000000 0.000000" tangent="0.000000 0.000000 0.000000" binormal="0.000000 0.000000 0.000000" normal="-0.666667 -0.333333 0.666667" color="#ffffff"/>
+                <vertex position="-1.000000 1.000000 -1.000000" texcoord="0.000000 0.000000" tangent="0.000000 0.000000 0.000000" binormal="0.000000 0.000000 0.000000" normal="0.408248 -0.816497 0.408248" color="#ffffff"/>
+                <vertex position="-1.000000 -1.000000 -1.000000" texcoord="0.000000 0.000000" tangent="0.000000 0.000000 0.000000" binormal="0.000000 0.000000 0.000000" normal="0.666667 0.333333 0.666667" color="#ffffff"/>
+                <vertex position="1.000000 -1.000000 -1.000000" texcoord="0.000000 0.000000" tangent="0.000000 0.000000 0.000000" binormal="0.000000 0.000000 0.000000" normal="-0.408248 0.816497 0.408248" color="#ffffff"/>
+                <vertex position="1.000000 0.999999 1.000000" texcoord="0.000000 0.000000" tangent="0.000000 0.000000 0.000000" binormal="0.000000 0.000000 0.000000" normal="-0.333333 -0.666667 -0.666667" color="#ffffff"/>
+                <vertex position="0.999999 -1.000001 1.000000" texcoord="0.000000 0.000000" tangent="0.000000 0.000000 0.000000" binormal="0.000000 0.000000 0.000000" normal="-0.816496 0.408249 -0.408248" color="#ffffff"/>
+                <vertex position="-1.000000 -1.000000 1.000000" texcoord="0.000000 0.000000" tangent="0.000000 0.000000 0.000000" binormal="0.000000 0.000000 0.000000" normal="0.333334 0.666667 -0.666667" color="#ffffff"/>
+                <vertex position="-1.000000 1.000000 1.000000" texcoord="0.000000 0.000000" tangent="0.000000 0.000000 0.000000" binormal="0.000000 0.000000 0.000000" normal="0.816497 -0.408248 -0.408248" color="#ffffff"/>
+            </vertices>
+            <batches>
+                <batch material="materials/engine/default">
+                    <triangles>
+                        <triangle vertex1="0" vertex2="1" vertex3="2"/>
+                        <triangle vertex1="0" vertex2="2" vertex3="3"/>
+                        <triangle vertex1="4" vertex2="5" vertex3="6"/>
+                        <triangle vertex1="4" vertex2="6" vertex3="7"/>
+                        <triangle vertex1="0" vertex2="3" vertex3="5"/>
+                        <triangle vertex1="0" vertex2="5" vertex3="4"/>
+                        <triangle vertex1="3" vertex2="2" vertex3="6"/>
+                        <triangle vertex1="3" vertex2="6" vertex3="5"/>
+                        <triangle vertex1="2" vertex2="1" vertex3="7"/>
+                        <triangle vertex1="2" vertex2="7" vertex3="6"/>
+                        <triangle vertex1="4" vertex2="7" vertex3="1"/>
+                        <triangle vertex1="4" vertex2="1" vertex3="0"/>
+                    </triangles>
+                </batch>
+            </batches>
+        </lod>
+    </lods>
+</static-mesh>

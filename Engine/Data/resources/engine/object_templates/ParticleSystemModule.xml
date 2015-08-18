@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule" base="Object" can-create="false">
+    <displayname>Module</displayname>
+    <category>Modules</category>
+    <properties>
+    </properties>
+</object-template>

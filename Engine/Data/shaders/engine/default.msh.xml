@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="none" />
+	<lighting type="Emissive" model="Phong" normal-space="World" two-sided="false" />
+	<parameters>
+		<texture name="DiffuseMap" type="Texture2D" default="textures/engine/default" />
+	</parameters>
+    <sources>
+		<graph featurelevel="es2" nextnodeid="5">
+        	<nodes>
+                <node name="DiffuseMap" type="ShaderGraphNode_Texture2DParameter" parametername="DiffuseMap" />
+                <node name="DiffuseMapSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+            </nodes>
+            <links>               
+                <link target="DiffuseMapSample" input="Texture" source="DiffuseMap" output="Texture" />
+                <link target="DiffuseMapSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="DiffuseMapSample" output="Result" />
+            </links>
+        </graph>
+	</sources>
+</shader>
+

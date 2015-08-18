@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="squish\singlecolourfit.cpp" />
+    <ClCompile Include="squish\squish.cpp" />
+    <ClCompile Include="squish\alpha.cpp" />
+    <ClCompile Include="squish\clusterfit.cpp" />
+    <ClCompile Include="squish\colourblock.cpp" />
+    <ClCompile Include="squish\colourfit.cpp" />
+    <ClCompile Include="squish\colourset.cpp" />
+    <ClCompile Include="squish\maths.cpp" />
+    <ClCompile Include="squish\rangefit.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="squish\alpha.h" />
+    <ClInclude Include="squish\clusterfit.h" />
+    <ClInclude Include="squish\colourblock.h" />
+    <ClInclude Include="squish\colourfit.h" />
+    <ClInclude Include="squish\colourset.h" />
+    <ClInclude Include="squish\config.h" />
+    <ClInclude Include="squish\maths.h" />
+    <ClInclude Include="squish\rangefit.h" />
+    <ClInclude Include="squish\simd.h" />
+    <ClInclude Include="squish\simd_float.h" />
+    <ClInclude Include="squish\simd_sse.h" />
+    <ClInclude Include="squish\simd_ve.h" />
+    <ClInclude Include="squish\singlecolourfit.h" />
+    <ClInclude Include="squish\squish.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="squish\singlecolourlookup.inl" />
+  </ItemGroup>
+</Project>

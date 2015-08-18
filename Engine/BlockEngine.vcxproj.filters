@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="Source\BlockEngine\BlockWorld.h" />
+    <ClInclude Include="Source\BlockEngine\BlockWorldChunk.h" />
+    <ClInclude Include="Source\BlockEngine\BlockWorldTypes.h" />
+    <ClInclude Include="Source\BlockEngine\BlockWorldChunkCollisionShape.h" />
+    <ClInclude Include="Source\BlockEngine\BlockWorldChunkRenderProxy.h" />
+    <ClInclude Include="Source\BlockEngine\BlockWorldSection.h" />
+    <ClInclude Include="Source\BlockEngine\BlockWorldMesher.h" />
+    <ClInclude Include="Source\BlockEngine\BlockEngineCVars.h" />
+    <ClInclude Include="Source\BlockEngine\BlockWorldVertexFactory.h" />
+    <ClInclude Include="Source\BlockEngine\BlockAnimation.h" />
+    <ClInclude Include="Source\BlockEngine\BlockWorldGenerator.h" />
+    <ClInclude Include="Source\BlockEngine\BlockDrawTemplate.h" />
+    <ClInclude Include="Source\BlockEngine\PrecompiledHeader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\BlockEngine\BlockWorld.cpp" />
+    <ClCompile Include="Source\BlockEngine\BlockWorldChunk.cpp" />
+    <ClCompile Include="Source\BlockEngine\BlockWorldChunkCollisionShape.cpp" />
+    <ClCompile Include="Source\BlockEngine\BlockWorldChunkRenderProxy.cpp" />
+    <ClCompile Include="Source\BlockEngine\BlockWorldSection.cpp" />
+    <ClCompile Include="Source\BlockEngine\BlockWorldMesher.cpp" />
+    <ClCompile Include="Source\BlockEngine\BlockEngineCVars.cpp" />
+    <ClCompile Include="Source\BlockEngine\BlockWorldVertexFactory.cpp" />
+    <ClCompile Include="Source\BlockEngine\BlockAnimation.cpp" />
+    <ClCompile Include="Source\BlockEngine\BlockWorldGenerator.cpp" />
+    <ClCompile Include="Source\BlockEngine\BlockDrawTemplate.cpp" />
+    <ClCompile Include="Source\BlockEngine\PrecompiledHeader.cpp" />
+  </ItemGroup>
+</Project>

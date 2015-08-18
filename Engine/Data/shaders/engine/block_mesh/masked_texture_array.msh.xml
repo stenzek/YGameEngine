@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="masked" />
+	<lighting type="Reflective" model="Phong" normal-space="World" two-sided="false" />
+	<parameters>       
+		<texture name="DiffuseMap" type="Texture2DArray" />
+        <texture name="SpecularMap" type="Texture2DArray" />
+        
+        <staticswitch name="UseSpecularMap" default="false" />
+        <staticswitch name="BlendVertexColors" default="false" />
+	</parameters>
+	<sources>
+        <graph featurelevel="es2" nextnodeid="15">
+        	<nodes>
+                <node name="DiffuseMap" type="ShaderGraphNode_Texture2DArrayParameter" parametername="DiffuseMap" />
+                <node name="SpecularMap" type="ShaderGraphNode_Texture2DArrayParameter" parametername="SpecularMap" />
+                <node name="UseSpecularMap" type="ShaderGraphNode_StaticSwitchParameter" parametername="UseSpecularMap" />
+                <node name="BlendVertexColors" type="ShaderGraphNode_StaticSwitchParameter" parametername="BlendVertexColors" />
+                <node name="BlendVertexColorsMultiply" type="ShaderGraphNode_Multiply" />
+                <node name="DiffuseMapSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+                <node name="SpecularMapSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+                <node name="DefaultSpecularCoefficient" type="ShaderGraphNode_FloatConstant" value="1" />
+            </nodes>
+            <links>               
+                <link target="DiffuseMapSample" input="Texture" source="DiffuseMap" output="Texture" />
+                <link target="DiffuseMapSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                <link target="BlendVertexColorsMultiply" input="A" source="DiffuseMapSample" output="Result" />
+                <link target="BlendVertexColorsMultiply" input="B" source="SHADER_INPUTS" output="VertexColor" />
+                <link target="BlendVertexColors" input="IfEnabled" source="BlendVertexColorsMultiply" output="Result" />
+                <link target="BlendVertexColors" input="IfDisabled" source="DiffuseMapSample" output="Result" />
+                
+                <link target="SpecularMapSample" input="Texture" source="SpecularMap" output="Texture" />
+                <link target="SpecularMapSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                <link target="UseSpecularMap" input="IfEnabled" source="SpecularMapSample" output="Result" swizzle="r" />
+                <link target="UseSpecularMap" input="IfDisabled" source="DefaultSpecularCoefficient" output="Value" />
+                               
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="BlendVertexColors" output="Result" swizzle="rgb" />
+                <link target="SHADER_OUTPUTS" input="SpecularCoefficient" source="UseSpecularMap" output="Result" />
+                <link target="SHADER_OUTPUTS" input="Opacity" source="BlendVertexColors" output="Result" swizzle="a" />
+            </links>
+        </graph>
+	</sources>
+</shader>
+

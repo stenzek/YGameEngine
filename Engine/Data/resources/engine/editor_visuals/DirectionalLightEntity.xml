@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<editor-visual name="DirectionalLightEntity">
+	<visual type="Sprite">
+		<position from-property="Position" />
+		<texture name="textures/editor/light_directional" />
+		<blending mode="straight" />
+		<width value="1" />
+		<height value="1" />
+		<shadowflags value="0" />
+		<selected-tint-color value="#dbeafd" />
+	</visual>
+	<visual type="StaticMesh">
+		<position from-property="Position" offset="0 0 -10" />
+		<rotation from-property="Rotation" offset="euler(0, 0, 0)" />
+		<mesh name="models/editor/directional_light_arrow" />
+		<scale value="1.0 1.0 1.0" />
+		<selected-tint-color value="#dbeafd" />
+		<shadowflags value="0" />
+		<only-show-when-selected value="true" />
+	</visual>
+	<visual type="DirectionalLight">
+		<enabled from-property="Enabled" />
+		<rotation from-property="Rotation" />
+		<color from-property="Color" />
+		<brightness from-property="Brightness" />
+		<shadow-flags from-property="LightShadowFlags" />
+		<ambient-factor from-property="AmbientFactor" />
+	</visual>
+</editor-visual>
+

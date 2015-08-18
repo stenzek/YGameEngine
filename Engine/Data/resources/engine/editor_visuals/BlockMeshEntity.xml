@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<editor-visual name="BlockMeshEntity">
+	<visual type="BlockMesh">
+		<position from-property="Position" />
+		<rotation from-property="Rotation" />
+		<scale from-property="Scale" />
+		<visible from-property="StaticBlockMeshComponent.Visible" />
+		<shadowflags from-property="StaticBlockMeshComponent.ShadowFlags" />
+		<mesh from-property="StaticBlockMeshComponent.StaticBlockMesh" />
+		<selected-tint-color value="#dbeafd" />
+	</visual>                
+</editor-visual>

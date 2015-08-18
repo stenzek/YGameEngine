@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="Source\GameFramework\PrecompiledHeader.h" />
+    <ClInclude Include="Source\GameFramework\PositionInterpolatorComponent.h" />
+    <ClInclude Include="Source\GameFramework\RotationInterpolatorComponent.h" />
+    <ClInclude Include="Source\GameFramework\SpriteComponent.h" />
+    <ClInclude Include="Source\GameFramework\SpriteEntity.h" />
+    <ClInclude Include="Source\GameFramework\StaticMeshBrush.h" />
+    <ClInclude Include="Source\GameFramework\StaticMeshComponent.h" />
+    <ClInclude Include="Source\GameFramework\StaticMeshEntity.h" />
+    <ClInclude Include="Source\GameFramework\StaticMeshRigidBodyEntity.h" />
+    <ClInclude Include="Source\GameFramework\SunLightEntity.h" />
+    <ClInclude Include="Source\GameFramework\BlockMeshBrush.h" />
+    <ClInclude Include="Source\GameFramework\BlockMeshComponent.h" />
+    <ClInclude Include="Source\GameFramework\BlockMeshEntity.h" />
+    <ClInclude Include="Source\GameFramework\DirectionalLightEntity.h" />
+    <ClInclude Include="Source\GameFramework\InterpolatorComponent.h" />
+    <ClInclude Include="Source\GameFramework\ParticleEmitterComponent.h" />
+    <ClInclude Include="Source\GameFramework\ParticleEmitterEntity.h" />
+    <ClInclude Include="Source\GameFramework\PointLightComponent.h" />
+    <ClInclude Include="Source\GameFramework\PointLightEntity.h" />
+    <ClInclude Include="Source\GameFramework\Common.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\GameFramework\PrecompiledHeader.cpp" />
+    <ClCompile Include="Source\GameFramework\PositionInterpolatorComponent.cpp" />
+    <ClCompile Include="Source\GameFramework\RotationInterpolatorComponent.cpp" />
+    <ClCompile Include="Source\GameFramework\SpriteComponent.cpp" />
+    <ClCompile Include="Source\GameFramework\SpriteEntity.cpp" />
+    <ClCompile Include="Source\GameFramework\StaticMeshBrush.cpp" />
+    <ClCompile Include="Source\GameFramework\StaticMeshComponent.cpp" />
+    <ClCompile Include="Source\GameFramework\StaticMeshEntity.cpp" />
+    <ClCompile Include="Source\GameFramework\StaticMeshRigidBodyEntity.cpp" />
+    <ClCompile Include="Source\GameFramework\SunLightEntity.cpp" />
+    <ClCompile Include="Source\GameFramework\BlockMeshBrush.cpp" />
+    <ClCompile Include="Source\GameFramework\BlockMeshComponent.cpp" />
+    <ClCompile Include="Source\GameFramework\BlockMeshEntity.cpp" />
+    <ClCompile Include="Source\GameFramework\DirectionalLightEntity.cpp" />
+    <ClCompile Include="Source\GameFramework\InterpolatorComponent.cpp" />
+    <ClCompile Include="Source\GameFramework\ParticleEmitterComponent.cpp" />
+    <ClCompile Include="Source\GameFramework\ParticleEmitterEntity.cpp" />
+    <ClCompile Include="Source\GameFramework\PointLightComponent.cpp" />
+    <ClCompile Include="Source\GameFramework\PointLightEntity.cpp" />
+  </ItemGroup>
+</Project>

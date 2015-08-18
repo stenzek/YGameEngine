@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="none" />
+	<lighting type="Emissive" model="Phong" normal-space="World" two-sided="true" cast-shadows="false" receive-shadows="false" />
+    <render mode="Wireframe" depth-tests="true" depth-writes="true" />
+	<parameters>
+	</parameters>
+    <sources>
+		<graph featurelevel="es2" nextnodeid="5">
+        	<nodes>
+            </nodes>
+            <links>               
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="SHADER_INPUTS" output="VertexColor" />
+            </links>
+        </graph>
+	</sources>
+</shader>
+

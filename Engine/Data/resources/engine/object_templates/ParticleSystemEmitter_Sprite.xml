@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemEmitter_Sprite" base="ParticleSystemEmitter" can-create="true">
+    <displayname>Sprite Emitter</displayname>
+    <category>Emitters</category>
+    <properties>
+      <property type="string" name="Material">
+        <category>Sprite Emitter</category>
+        <label>Material Name</label>
+        <description>Sprite material to render</description>
+        <default>materials/engine/default</default>
+        <selector type="resource" resource-type="Material" />
+      </property>
+    </properties>
+</object-template>

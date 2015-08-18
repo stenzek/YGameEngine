@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="Entity" base="ObjectReferenceCounted" can-create="false">
+    <displayname>Entity</displayname>
+    <category></category>
+    <description>Base class for all entities</description>
+    <properties>
+		<property type="float3" name="Position">
+            <category>Positioning</category>
+            <label>Base Position</label>
+            <description>Entity base position in world space.</description>
+            <default>0 0 0</default>
+        </property>     
+        <property type="quaternion" name="Rotation">
+            <category>Positioning</category>
+            <label>Base Rotation</label>
+            <description>Entity base rotation (pitch, yaw, roll)</description>
+            <default>0 0 0 1</default>
+            <selector type="euler-angles" />
+        </property>
+		<property type="float3" name="Scale">
+			<category>Positioning</category>
+			<label>Base Scale</label>
+			<description>Entity base scale</description>
+			<default>1 1 1</default>
+		</property>
+		<property type="uint" name="Mobility">
+			<category>Streaming</category>
+			<label>Mobility</label>
+			<description>Controls streaming behaviour and some physics properties</description>
+			<default>0</default>
+            <selector type="choice">
+				<choice value="0">Static</choice>
+				<choice value="1">Movable</choice>
+				<choice value="2">Deferred</choice>
+				<choice value="3">Global</choice>
+			</selector>
+		</property>
+    </properties>
+</object-template>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+  <blending mode="none" />
+  <lighting type="Emissive" model="Phong" normal-space="World" two-sided="false" cast-shadows="false" receive-shadows="false" />
+  <render mode="Normal" layer="SkyBox" depth-clamping="true" depth-tests="true" depth-writes="false" />
+  <parameters>
+    <texture name="SkyDomeTexture" type="Texture2D" default="textures/engine/default" />
+  </parameters>
+  <sources>
+    <graph featurelevel="es3" nextnodeid="5">
+      <nodes>
+        <node name="SkyDomeTexture" type="ShaderGraphNode_Texture2DParameter" parametername="SkyDomeTexture" />
+        <node name="SkyDomeTextureSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+        <node name="EyePosition" type="ShaderGraphNode_Global" global="EyePosition" />
+        <node name="varWorldOffset" type="ShaderGraphNode_Float3Variable" />
+      </nodes>
+      <links>
+        <link target="SkyDomeTextureSample" input="Texture" source="SkyDomeTexture" output="Texture" />
+        <link target="SkyDomeTextureSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+        <link target="varWorldOffset" input="X" source="EyePosition" output="Value" swizzle="r" />
+        <link target="varWorldOffset" input="Y" source="EyePosition" output="Value" swizzle="g" />
+        <link target="SHADER_OUTPUTS" input="BaseColor" source="SkyDomeTextureSample" output="Result" />
+        <link target="SHADER_OUTPUTS" input="WorldPositionOffset" source="varWorldOffset" output="Value" />
+      </links>
+    </graph>
+    <graph featurelevel="es2" nextnodeid="5">
+      <nodes>
+        <node name="SkyDomeTexture" type="ShaderGraphNode_Texture2DParameter" parametername="SkyDomeTexture" />
+        <node name="SkyDomeTextureSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+      </nodes>
+      <links>
+        <link target="SkyDomeTextureSample" input="Texture" source="SkyDomeTexture" output="Texture" />
+        <link target="SkyDomeTextureSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+        <link target="SHADER_OUTPUTS" input="BaseColor" source="SkyDomeTextureSample" output="Result" />
+      </links>
+    </graph>
+  </sources>
+</shader>
+

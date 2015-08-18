@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_SpawnSize" base="ParticleSystemModule" can-create="true">
+    <displayname>Spawn Size</displayname>
+    <category>Spawn Modules</category>
+    <properties>
+      <property type="float" name="MinWidth">
+        <category>Size</category>
+        <label>Minimum Width</label>
+        <description>Minimum width of the particle in world units</description>
+        <default>1.0</default>
+      </property>
+      <property type="float" name="MaxWidth">
+        <category>Size</category>
+        <label>Maximum Width</label>
+        <description>Maximum width of the particle in world units</description>
+        <default>1.0</default>
+      </property>
+      <property type="float" name="MinHeight">
+        <category>Size</category>
+        <label>Minimum Height</label>
+        <description>Minimum height of the particle in world units</description>
+        <default>1.0</default>
+      </property>
+      <property type="float" name="MaxHeight">
+        <category>Size</category>
+        <label>Maximum Height</label>
+        <description>Maximum height of the particle in world units</description>
+        <default>1.0</default>
+      </property>
+    </properties>
+</object-template>

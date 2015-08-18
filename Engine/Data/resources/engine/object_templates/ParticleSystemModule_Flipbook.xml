@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_Flipbook" base="ParticleSystemModule" can-create="true">
+    <displayname>Flipbook</displayname>
+    <category>Time-Based Operations</category>
+    <properties>
+      <property type="uint" name="Columns">
+        <category>Flipbook</category>
+        <label>Columns</label>
+        <description>Number of columns in the flipbook material</description>
+        <default>1</default>
+      </property>
+      <property type="uint" name="Rows">
+        <category>Flipbook</category>
+        <label>Rows</label>
+        <description>Number of rows in the flipbook material</description>
+        <default>1</default>
+      </property>
+      <property type="float" name="FlipInterval">
+        <category>Flipbook</category>
+        <label>Flip Interval</label>
+        <description>Amount of time between sprite changes</description>
+        <default>1</default>
+      </property>
+    </properties>
+</object-template>

@@ -1,0 +1,548 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="DebugFast|Win32">
+      <Configuration>DebugFast</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="DebugFast|x64">
+      <Configuration>DebugFast</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Shipping|Win32">
+      <Configuration>Shipping</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Shipping|x64">
+      <Configuration>Shipping</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Editor\BlockMeshSource\Editor\EditorBlockMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\BlockMeshSource\Editor\moc_EditorBlockMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\Defines.cpp" />
+    <ClCompile Include="Source\Editor\Editor.cpp" />
+    <ClCompile Include="Source\Editor\EditorCVars.cpp" />
+    <ClCompile Include="Source\Editor\EditorProgressCallbacks.cpp" />
+    <ClCompile Include="Source\Editor\EditorScriptEditor.cpp" />
+    <ClCompile Include="Source\Editor\EditorVisual.cpp" />
+    <ClCompile Include="Source\Editor\EditorVisualComponent.cpp" />
+    <ClCompile Include="Source\Editor\EditorHelpers.cpp" />
+    <ClCompile Include="Source\Editor\EditorIconLibrary.cpp" />
+    <ClCompile Include="Source\Editor\EditorLightSimulator.cpp" />
+    <ClCompile Include="Source\Editor\EditorLightSimulatorControlWidget.cpp" />
+    <ClCompile Include="Source\Editor\EditorProgressDialog.cpp" />
+    <ClCompile Include="Source\Editor\EditorPropertyEditorDialog.cpp" />
+    <ClCompile Include="Source\Editor\EditorPropertyEditorWidget.cpp" />
+    <ClCompile Include="Source\Editor\EditorRendererSwapChainWidget.cpp" />
+    <ClCompile Include="Source\Editor\EditorResourcePreviewGenerator.cpp" />
+    <ClCompile Include="Source\Editor\EditorResourcePreviewWidget.cpp" />
+    <ClCompile Include="Source\Editor\EditorResourceSaveDialog.cpp" />
+    <ClCompile Include="Source\Editor\EditorResourceSelectionDialog.cpp" />
+    <ClCompile Include="Source\Editor\EditorResourceSelectionDialogModel.cpp" />
+    <ClCompile Include="Source\Editor\EditorResourceSelectionWidget.cpp" />
+    <ClCompile Include="Source\Editor\EditorSettings.cpp" />
+    <ClCompile Include="Source\Editor\EditorShaderGraphEditor.cpp" />
+    <ClCompile Include="Source\Editor\EditorBlockVolumeRenderProxy.cpp" />
+    <ClCompile Include="Source\Editor\EditorTest.cpp" />
+    <ClCompile Include="Source\Editor\EditorTypes.cpp" />
+    <ClCompile Include="Source\Editor\EditorVectorEditWidget.cpp" />
+    <ClCompile Include="Source\Editor\EditorViewController.cpp" />
+    <ClCompile Include="Source\Editor\EditorVirtualFileSystemModel.cpp" />
+    <ClCompile Include="Source\Editor\FlowLayout.cpp" />
+    <ClCompile Include="Source\Editor\Main.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorCreateTerrainDialog.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorEntityEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorEntityIdWorldRenderer.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorGeometryEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMap.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapEntity.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapViewport.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapWindow.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorTerrainEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\EditorWorldOutlinerWidget.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorCreateTerrainDialog.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorEntityEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorGeometryEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorMapEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorMapViewport.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorMapWindow.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorTerrainEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorWorldOutlinerWidget.cpp" />
+    <ClCompile Include="Source\Editor\MaterialSource\Editor\EditorMaterialEditor.cpp" />
+    <ClCompile Include="Source\Editor\MaterialShaderSource\Editor\EditorMaterialShaderEditor.cpp" />
+    <ClCompile Include="Source\Editor\moc_Editor.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorProgressDialog.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorPropertyEditorDialog.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorPropertyEditorWidget.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorRendererSwapChainWidget.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorResourcePreviewWidget.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorResourceSaveDialog.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorResourceSelectionDialog.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorResourceSelectionDialogModel.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorResourceSelectionWidget.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorScriptEditor.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorVectorEditWidget.cpp" />
+    <ClCompile Include="Source\Editor\moc_EditorVirtualFileSystemModel.cpp" />
+    <ClCompile Include="Source\Editor\moc_SimpleTreeModel.cpp" />
+    <ClCompile Include="Source\Editor\moc_ToolMenuWidget.cpp" />
+    <ClCompile Include="Source\Editor\PrecompiledHeader.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DebugFast|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Shipping|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DebugFast|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Shipping|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\rcc_Editor.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DebugFast|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Shipping|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DebugFast|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Shipping|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\ResourceBrowser\EditorResourceBrowserWidget.cpp" />
+    <ClCompile Include="Source\Editor\ResourceBrowser\EditorStaticMeshImportDialog.cpp" />
+    <ClCompile Include="Source\Editor\ResourceBrowser\moc_EditorResourceBrowserWidget.cpp" />
+    <ClCompile Include="Source\Editor\ResourceBrowser\moc_EditorStaticMeshImportDialog.cpp" />
+    <ClCompile Include="Source\Editor\SimpleTreeModel.cpp" />
+    <ClCompile Include="Source\Editor\SkeletalAnimationSource\Editor\EditorSkeletalAnimationEditor.cpp" />
+    <ClCompile Include="Source\Editor\SkeletalAnimationSource\Editor\moc_EditorSkeletalAnimationEditor.cpp" />
+    <ClCompile Include="Source\Editor\SkeletalMeshSource\Editor\EditorSkeletalMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\SkeletalMeshSource\Editor\moc_EditorSkeletalMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\StaticMeshSource\Editor\EditorStaticMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\StaticMeshSource\Editor\moc_EditorStaticMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\ToolMenuWidget.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Editor\BlockMeshSource\Editor\EditorBlockMeshEditor.h" />
+    <ClInclude Include="Source\Editor\BlockMeshSource\Editor\ui_EditorBlockMeshEditor.h" />
+    <ClInclude Include="Source\Editor\Common.h" />
+    <ClInclude Include="Source\Editor\Defines.h" />
+    <ClInclude Include="Source\Editor\Editor.h" />
+    <ClInclude Include="Source\Editor\EditorCVars.h" />
+    <ClInclude Include="Source\Editor\EditorProgressCallbacks.h" />
+    <ClInclude Include="Source\Editor\EditorScriptEditor.h" />
+    <ClInclude Include="Source\Editor\EditorVisual.h" />
+    <ClInclude Include="Source\Editor\EditorVisualComponent.h" />
+    <ClInclude Include="Source\Editor\EditorHelpers.h" />
+    <ClInclude Include="Source\Editor\EditorIconLibrary.h" />
+    <ClInclude Include="Source\Editor\EditorLightSimulator.h" />
+    <ClInclude Include="Source\Editor\EditorLightSimulatorControlWidget.h" />
+    <ClInclude Include="Source\Editor\EditorProgressDialog.h" />
+    <ClInclude Include="Source\Editor\EditorPropertyEditorDialog.h" />
+    <ClInclude Include="Source\Editor\EditorPropertyEditorWidget.h" />
+    <ClInclude Include="Source\Editor\EditorRendererSwapChainWidget.h" />
+    <ClInclude Include="Source\Editor\EditorResourcePreviewGenerator.h" />
+    <ClInclude Include="Source\Editor\EditorResourcePreviewWidget.h" />
+    <ClInclude Include="Source\Editor\EditorResourceSaveDialog.h" />
+    <ClInclude Include="Source\Editor\EditorResourceSelectionDialog.h" />
+    <ClInclude Include="Source\Editor\EditorResourceSelectionDialogModel.h" />
+    <ClInclude Include="Source\Editor\EditorResourceSelectionWidget.h" />
+    <ClInclude Include="Source\Editor\EditorSettings.h" />
+    <ClInclude Include="Source\Editor\EditorShaderGraphEditor.h" />
+    <ClInclude Include="Source\Editor\EditorBlockVolumeRenderProxy.h" />
+    <ClInclude Include="Source\Editor\EditorVectorEditWidget.h" />
+    <ClInclude Include="Source\Editor\EditorViewController.h" />
+    <ClInclude Include="Source\Editor\EditorVirtualFileSystemModel.h" />
+    <ClInclude Include="Source\Editor\FlowLayout.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapEditMode.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorCreateTerrainDialog.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorEditMode.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorEntityEditMode.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorEntityIdWorldRenderer.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorGeometryEditMode.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMap.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapEntity.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapViewport.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapWindow.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorTerrainEditMode.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\EditorWorldOutlinerWidget.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\ui_EditorCreateTerrainDialog.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\ui_EditorMapViewport.h" />
+    <ClInclude Include="Source\Editor\MapSource\Editor\ui_EditorMapWindow.h" />
+    <ClInclude Include="Source\Editor\MaterialSource\Editor\EditorMaterialEditor.h" />
+    <ClInclude Include="Source\Editor\MaterialShaderSource\Editor\EditorMaterialShaderEditor.h" />
+    <ClInclude Include="Source\Editor\PrecompiledHeader.h" />
+    <ClInclude Include="Source\Editor\ResourceBrowser\EditorResourceBrowserWidget.h" />
+    <ClInclude Include="Source\Editor\ResourceBrowser\EditorStaticMeshImportDialog.h" />
+    <ClInclude Include="Source\Editor\ResourceBrowser\ui_EditorStaticMeshImportDialog.h" />
+    <ClInclude Include="Source\Editor\SignalBlocker.h" />
+    <ClInclude Include="Source\Editor\SimpleTreeModel.h" />
+    <ClInclude Include="Source\Editor\SkeletalAnimationSource\Editor\EditorSkeletalAnimationEditor.h" />
+    <ClInclude Include="Source\Editor\SkeletalAnimationSource\Editor\ui_EditorSkeletalAnimationEditor.h" />
+    <ClInclude Include="Source\Editor\SkeletalMeshSource\Editor\EditorSkeletalMeshEditor.h" />
+    <ClInclude Include="Source\Editor\SkeletalMeshSource\Editor\ui_EditorSkeletalMeshEditor.h" />
+    <ClInclude Include="Source\Editor\StaticMeshSource\Editor\EditorStaticMeshEditor.h" />
+    <ClInclude Include="Source\Editor\StaticMeshSource\Editor\ui_EditorStaticMeshEditor.h" />
+    <ClInclude Include="Source\Editor\ToolMenuWidget.h" />
+    <ClInclude Include="Source\Editor\ui_EditorProgressDialog.h" />
+    <ClInclude Include="Source\Editor\ui_EditorResourcePreviewWidget.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="ContentConverter.vcxproj">
+      <Project>{25aef9de-5353-4931-80e4-90e61b15b9a1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="Engine.vcxproj">
+      <Project>{ccdf1982-a135-4826-8db2-7ab5011ccd41}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{DB034845-5229-4F51-95B9-1F764344E07A}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>Editor</RootNamespace>
+    <ProjectName>Editor</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\Editor-$(Configuration)\</IntDir>
+    <TargetName>Editor-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\Editor-$(Configuration)\</IntDir>
+    <TargetName>Editor-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\Editor-$(Configuration)\</IntDir>
+    <TargetName>Editor-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\Editor-$(Configuration)\</IntDir>
+    <TargetName>Editor-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\Editor-$(Configuration)\</IntDir>
+    <TargetName>Editor-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\Editor-$(Configuration)\</IntDir>
+    <TargetName>Editor-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\Editor-$(Configuration)\</IntDir>
+    <TargetName>Editor-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\Editor-$(Configuration)\</IntDir>
+    <TargetName>Editor-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt32\include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MinimalRebuild>false</MinimalRebuild>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependancies\Windows\lib32-debug;$(SolutionDir)Dependancies\Windows\qt32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>QtPropertyBrowserd.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;qtmaind.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_DEBUGFAST;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt32\include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MinimalRebuild>false</MinimalRebuild>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependancies\Windows\lib32-debug;$(SolutionDir)Dependancies\Windows\qt32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>QtPropertyBrowserd.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;qtmaind.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependancies\Windows\lib64-debug;$(SolutionDir)Dependancies\Windows\qt64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>QtPropertyBrowserd.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;qtmaind.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_DEBUGFAST;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependancies\Windows\lib64-debug;$(SolutionDir)Dependancies\Windows\qt64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>QtPropertyBrowserd.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5Widgetsd.lib;qtmaind.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt32\include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MinimalRebuild>false</MinimalRebuild>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalOptions>/Zo %(AdditionalOptions)</AdditionalOptions>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependancies\Windows\lib32;$(SolutionDir)Dependancies\Windows\qt32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>QtPropertyBrowser.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;qtmain.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_SHIPPING;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt32\include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MinimalRebuild>false</MinimalRebuild>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalOptions>/Zo %(AdditionalOptions)</AdditionalOptions>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependancies\Windows\lib32;$(SolutionDir)Dependancies\Windows\qt32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>QtPropertyBrowser.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;qtmain.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalOptions>/Zo %(AdditionalOptions)</AdditionalOptions>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependancies\Windows\lib64;$(SolutionDir)Dependancies\Windows\qt64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>QtPropertyBrowser.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;qtmain.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_SHIPPING;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalOptions>/Zo %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(SolutionDir)Dependancies\Windows\lib64;$(SolutionDir)Dependancies\Windows\qt64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>QtPropertyBrowser.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;qtmain.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

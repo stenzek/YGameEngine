@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_FadeOut" base="ParticleSystemModule" can-create="true">
+    <displayname>Fade Out</displayname>
+    <category>Constant Operators</category>
+    <properties>
+    </properties>
+</object-template>

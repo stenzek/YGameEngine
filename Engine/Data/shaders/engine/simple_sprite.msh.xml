@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="straight" />
+	<lighting type="Emissive" model="Phong" normal-space="World" two-sided="false" />
+	<parameters>
+		<texture name="SpriteTexture" type="Texture2D" default="textures/engine/default" />
+	</parameters>
+	<sources>
+		<graph featurelevel="es2" nextnodeid="3">
+            <nodes>
+                <node name="Texture2DParameter_1" type="ShaderGraphNode_Texture2DParameter" parametername="SpriteTexture" />
+                <node name="TextureSample_2" type="ShaderGraphNode_TextureSample" unpack-operation="none" />
+            </nodes>
+            <links>
+                <link target="TextureSample_2" input="Texture" source="Texture2DParameter_1" output="Texture" />
+                <link target="TextureSample_2" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="TextureSample_2" output="Result" swizzle="rgb" />
+                <link target="SHADER_OUTPUTS" input="Opacity" source="TextureSample_2" output="Result" swizzle="a" />
+            </links>
+        </graph>
+	</sources>
+</shader>
+

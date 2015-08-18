@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<editor-visual name="SpriteEntity">
+	<visual type="Sprite">
+		<position from-property="Position" />
+		<texture from-property="TextureName" />
+		<blending from-property="DrawBlending" />
+		<width from-property="DrawWidth" />
+		<height from-property="DrawHeight" />
+		<visible from-property="Visible" />
+		<shadowflags from-property="ShadowFlags" />
+		<selected-tint-color value="#dbeafd" />
+	</visual>                
+</editor-visual>

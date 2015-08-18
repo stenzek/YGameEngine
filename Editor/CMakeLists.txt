@@ -1,0 +1,189 @@
+set(HEADER_FILES
+    BlockMeshEditor/EditorBlockMeshEditor.h
+    BlockMeshEditor/ui_EditorBlockMeshEditor.h
+    Common.h
+    Defines.h
+    EditorBlockVolumeRenderProxy.h
+    EditorCVars.h
+    Editor.h
+    EditorHelpers.h
+    EditorIconLibrary.h
+    EditorLightSimulatorControlWidget.h
+    EditorLightSimulator.h
+    EditorProgressCallbacks.h
+    EditorProgressDialog.h
+    EditorPropertyEditorDialog.h
+    EditorPropertyEditorWidget.h
+    EditorRendererSwapChainWidget.h
+    EditorResourcePreviewGenerator.h
+    EditorResourcePreviewWidget.h
+    EditorResourceSaveDialog.h
+    EditorResourceSelectionDialog.h
+    EditorResourceSelectionDialogModel.h
+    EditorResourceSelectionWidget.h
+    EditorScriptEditor.h
+    EditorSettings.h
+    EditorShaderGraphEditor.h
+    EditorVectorEditWidget.h
+    EditorViewController.h
+    EditorVirtualFileSystemModel.h
+    EditorVisualComponent.h
+    EditorVisual.h
+    FlowLayout.h
+    MapEditor/EditorCreateTerrainDialog.h
+    MapEditor/EditorEditMode.h
+    MapEditor/EditorEntityEditMode.h
+    MapEditor/EditorEntityIdWorldRenderer.h
+    MapEditor/EditorGeometryEditMode.h
+    MapEditor/EditorMapEditMode.h
+    MapEditor/EditorMapEntity.h
+    MapEditor/EditorMap.h
+    MapEditor/EditorMapViewport.h
+    MapEditor/EditorMapWindow.h
+    MapEditor/EditorTerrainEditMode.h
+    MapEditor/EditorWorldOutlinerWidget.h
+    MapEditor/ui_EditorCreateTerrainDialog.h
+    MapEditor/ui_EditorMapViewport.h
+    MapEditor/ui_EditorMapWindow.h
+    MaterialEditor/EditorMaterialEditor.h
+    MaterialShaderEditor/EditorMaterialShaderEditor.h
+    PrecompiledHeader.h
+    ResourceBrowser/EditorResourceBrowserWidget.h
+    ResourceBrowser/EditorStaticMeshImportDialog.h
+    ResourceBrowser/ui_EditorStaticMeshImportDialog.h
+    SignalBlocker.h
+    SimpleTreeModel.h
+    SkeletalAnimationEditor/EditorSkeletalAnimationEditor.h
+    SkeletalAnimationEditor/ui_EditorSkeletalAnimationEditor.h
+    SkeletalMeshEditor/EditorSkeletalMeshEditor.h
+    SkeletalMeshEditor/ui_EditorSkeletalMeshEditor.h
+    StaticMeshEditor/EditorStaticMeshEditor.h
+    StaticMeshEditor/ui_EditorStaticMeshEditor.h
+    ToolMenuWidget.h
+    ui_EditorProgressDialog.h
+    ui_EditorResourcePreviewWidget.h
+)
+
+set(SOURCE_FILES
+    BlockMeshEditor/EditorBlockMeshEditor.cpp
+    BlockMeshEditor/moc_EditorBlockMeshEditor.cpp
+    Defines.cpp
+    EditorBlockVolumeRenderProxy.cpp
+    Editor.cpp
+    EditorCVars.cpp
+    EditorHelpers.cpp
+    EditorIconLibrary.cpp
+    EditorLightSimulatorControlWidget.cpp
+    EditorLightSimulator.cpp
+    EditorProgressCallbacks.cpp
+    EditorProgressDialog.cpp
+    EditorPropertyEditorDialog.cpp
+    EditorPropertyEditorWidget.cpp
+    EditorRendererSwapChainWidget.cpp
+    EditorResourcePreviewGenerator.cpp
+    EditorResourcePreviewWidget.cpp
+    EditorResourceSaveDialog.cpp
+    EditorResourceSelectionDialog.cpp
+    EditorResourceSelectionDialogModel.cpp
+    EditorResourceSelectionWidget.cpp
+    EditorScriptEditor.cpp
+    EditorSettings.cpp
+    EditorShaderGraphEditor.cpp
+    EditorTest.cpp
+    EditorTypes.cpp
+    EditorVectorEditWidget.cpp
+    EditorViewController.cpp
+    EditorVirtualFileSystemModel.cpp
+    EditorVisualComponent.cpp
+    EditorVisual.cpp
+    FlowLayout.cpp
+    Main.cpp
+    MapEditor/EditorCreateTerrainDialog.cpp
+    MapEditor/EditorEditMode.cpp
+    MapEditor/EditorEntityEditMode.cpp
+    MapEditor/EditorEntityIdWorldRenderer.cpp
+    MapEditor/EditorGeometryEditMode.cpp
+    MapEditor/EditorMap.cpp
+    MapEditor/EditorMapEditMode.cpp
+    MapEditor/EditorMapEntity.cpp
+    MapEditor/EditorMapViewport.cpp
+    MapEditor/EditorMapWindow.cpp
+    MapEditor/EditorTerrainEditMode.cpp
+    MapEditor/EditorWorldOutlinerWidget.cpp
+    MapEditor/moc_EditorCreateTerrainDialog.cpp
+    MapEditor/moc_EditorEditMode.cpp
+    MapEditor/moc_EditorEntityEditMode.cpp
+    MapEditor/moc_EditorGeometryEditMode.cpp
+    MapEditor/moc_EditorMapEditMode.cpp
+    MapEditor/moc_EditorMapViewport.cpp
+    MapEditor/moc_EditorMapWindow.cpp
+    MapEditor/moc_EditorTerrainEditMode.cpp
+    MapEditor/moc_EditorWorldOutlinerWidget.cpp
+    MaterialEditor/EditorMaterialEditor.cpp
+    MaterialShaderEditor/EditorMaterialShaderEditor.cpp
+    moc_Editor.cpp
+    moc_EditorProgressDialog.cpp
+    moc_EditorPropertyEditorDialog.cpp
+    moc_EditorPropertyEditorWidget.cpp
+    moc_EditorRendererSwapChainWidget.cpp
+    moc_EditorResourcePreviewWidget.cpp
+    moc_EditorResourceSaveDialog.cpp
+    moc_EditorResourceSelectionDialog.cpp
+    moc_EditorResourceSelectionDialogModel.cpp
+    moc_EditorResourceSelectionWidget.cpp
+    moc_EditorScriptEditor.cpp
+    moc_EditorVectorEditWidget.cpp
+    moc_EditorVirtualFileSystemModel.cpp
+    moc_SimpleTreeModel.cpp
+    moc_ToolMenuWidget.cpp
+    PrecompiledHeader.cpp
+    rcc_Editor.cpp
+    ResourceBrowser/EditorResourceBrowserWidget.cpp
+    ResourceBrowser/EditorStaticMeshImportDialog.cpp
+    ResourceBrowser/moc_EditorResourceBrowserWidget.cpp
+    ResourceBrowser/moc_EditorStaticMeshImportDialog.cpp
+    SimpleTreeModel.cpp
+    SkeletalAnimationEditor/EditorSkeletalAnimationEditor.cpp
+    SkeletalAnimationEditor/moc_EditorSkeletalAnimationEditor.cpp
+    SkeletalMeshEditor/EditorSkeletalMeshEditor.cpp
+    SkeletalMeshEditor/moc_EditorSkeletalMeshEditor.cpp
+    StaticMeshEditor/EditorStaticMeshEditor.cpp
+    StaticMeshEditor/moc_EditorStaticMeshEditor.cpp
+    ToolMenuWidget.cpp
+)
+
+include_directories(${ENGINE_BASE_DIRECTORY}
+                    ${Qt5Gui_PRIVATE_INCLUDE_DIRS}
+                    ${SDL2_INCLUDE_DIR})
+
+# hackfix for icu issue on linux
+if(UNIX AND (NOT APPLE))
+    #set(EXTRA_LIBRARIES ":libicudata.so.52")
+    set(EXTRA_LIBRARIES "")
+else()
+    set(EXTRA_LIBRARIES "")
+endif()
+
+add_executable(Editor ${HEADER_FILES} ${SOURCE_FILES})
+
+target_link_libraries(Editor
+                      QtPropertyBrowser 
+                      EngineContentConverter 
+                      EngineMapCompiler 
+                      EngineResourceCompiler 
+                      EngineMain 
+                      EngineCore
+                      ${EXTRA_LIBRARIES})
+                      
+qt5_use_modules(Editor 
+                Core 
+                Gui 
+                Widgets)
+
+#if(APPLE)
+    #include(DeployQt5)
+    #set_target_properties(Editor PROPERTIES MACOSX_BUNDLE TRUE)
+    #install_qt5_executable("Source/Tools/Editor/Editor.app")
+#endif()
+
+install(TARGETS Editor DESTINATION ${INSTALL_BINARIES_DIRECTORY})

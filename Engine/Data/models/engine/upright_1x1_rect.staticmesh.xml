@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<static-mesh>
+    <properties>
+        <property name="EnableVertexTextureCoordinates" value="true"/>
+        <property name="EnableVertexColors" value="false"/>
+    </properties>
+    <bounds>
+        <bounding-box min-bounds="-0.500000 -0.500000 0.000000" max-bounds="0.500000 0.500000 0.000000"/>
+        <bounding-sphere center="0.000000 0.000000 0.000000" radius="0.866025"/>
+    </bounds>
+    <collision-shape>
+        <box center="0.000000 0.000000 0.000000" half-extents="0.500000 0.500000 0.000000"/>
+    </collision-shape>
+    <lods>
+        <lod>
+            <vertices>
+                <vertex position="-0.500000 0.000000 -0.500000" texcoord="0.000000 0.000000" tangent="1.000000 0.000000 0.000000" binormal="0.000000 1.000000 0.000000" normal="0.000000 -1.000000 0.000000" color="#ffffff"/>
+                <vertex position="-0.500000 0.000000 0.500000" texcoord="0.000000 1.000000" tangent="1.000000 0.000000 0.000000" binormal="0.000000 1.000000 0.000000" normal="0.000000 -1.000000 0.000000" color="#ffffff"/>
+                <vertex position="0.500000 0.000000 0.500000" texcoord="1.000000 1.000000" tangent="1.000000 0.000000 0.000000" binormal="0.000000 1.000000 0.000000" normal="0.000000 -1.000000 0.000000" color="#ffffff"/>
+                <vertex position="0.500000 0.000000 -0.500000" texcoord="1.000000 0.000000" tangent="1.000000 0.000000 0.000000" binormal="0.000000 1.000000 0.000000" normal="0.000000 -1.000000 0.000000" color="#ffffff"/>
+            </vertices>
+            <batches>
+                <batch material="materials/engine/default">
+                    <triangles>
+                        <triangle vertex1="0" vertex2="1" vertex3="2"/>
+                        <triangle vertex1="2" vertex2="1" vertex3="3"/>
+                        <triangle vertex1="1" vertex2="0" vertex3="2"/>
+                        <triangle vertex1="1" vertex2="2" vertex3="3"/>
+                    </triangles>
+                </batch>
+            </batches>
+        </lod>
+    </lods>
+</static-mesh>

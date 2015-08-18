@@ -1,0 +1,974 @@
+###################################################################################################
+# glad Library
+###################################################################################################
+set(GLAD_HEADER_FILES
+    glad/include/EGL/eglext.h
+    glad/include/EGL/egl.h
+    glad/include/EGL/eglplatform.h
+    glad/include/glad/glad_egl.h
+    glad/include/glad/glad_glx.h
+    glad/include/glad/glad.h
+    glad/include/glad/glad_wgl.h
+    glad/include/KHR/khrplatform.h
+)
+
+set(GLAD_SOURCE_FILES
+    glad/src/glad.c
+)
+
+if(ANDROID OR EMSCRIPTEN)
+    LIST(APPEND GLAD_SOURCE_FILES glad/src/glad_egl.c)
+else()
+    LIST(APPEND GLAD_SOURCE_FILES glad/src/glad_glx.c)
+endif()
+#    glad/src/glad_wgl.c
+
+add_library(glad STATIC ${GLAD_HEADER_FILES} ${GLAD_SOURCE_FILES})
+target_include_directories(glad PUBLIC glad/include)
+#set_property(TARGET glad APPEND PROPERTY COMPILE_DEFINITIONS "SQUISH_USE_SSE=2")
+target_link_libraries(glad ${CMAKE_DL_LIBS})
+
+###################################################################################################
+# libfif Library
+###################################################################################################
+set(FIF_HEADER_FILES
+    libfif/dep/msvc/include/zconf.h
+    libfif/dep/msvc/include/zlib.h
+    libfif/include/libfif/fif.h
+    libfif/include/libfif/fif_io.h
+    libfif/include/libfif/fif_types.h
+    libfif/src/fif_format.h
+    libfif/src/fif_internal.h
+    libfif/src/trace_format.h
+    libfif/src/trace.h
+    libfif/src/trace_stream.h
+)
+
+set(FIF_SOURCE_FILES
+    libfif/src/block.c
+    libfif/src/compressor.c
+    libfif/src/compressor_zlib.c
+    libfif/src/dir.c
+    libfif/src/file.c
+    libfif/src/inode.c
+    libfif/src/io_local.c
+    libfif/src/io_memory.c
+    libfif/src/log.c
+    libfif/src/mount.c
+    libfif/src/trace.c
+    libfif/src/trace_stream.c
+    libfif/src/util.c
+)
+
+add_library(fif STATIC ${FIF_HEADER_FILES} ${FIF_SOURCE_FILES})
+target_include_directories(fif PUBLIC libfif/include)
+target_include_directories(fif PRIVATE libfif/include libfif/src ${ZLIB_INCLUDE_DIRS})
+target_link_libraries(fif ${ZLIB_LIBRARIES})
+
+###################################################################################################
+# lua Library
+###################################################################################################
+set(LUA_HEADER_FILES
+    lua/src/lstring.h
+    lua/src/ltable.h
+    lua/src/ltm.h
+    lua/src/lua.h
+    lua/src/lua.hpp
+    lua/src/luaconf.h
+    lua/src/lualib.h
+    lua/src/lundump.h
+    lua/src/lvm.h
+    lua/src/lzio.h
+    lua/src/lapi.h
+    lua/src/lauxlib.h
+    lua/src/lcode.h
+    lua/src/lctype.h
+    lua/src/ldebug.h
+    lua/src/ldo.h
+    lua/src/lfunc.h
+    lua/src/lgc.h
+    lua/src/llex.h
+    lua/src/llimits.h
+    lua/src/lmem.h
+    lua/src/lobject.h
+    lua/src/lopcodes.h
+    lua/src/lparser.h
+    lua/src/lstate.h
+    lua/src/lprefix.h
+)
+
+set(LUA_SOURCE_FILES
+    lua/src/lstring.c
+    lua/src/lstrlib.c
+    lua/src/ltable.c
+    lua/src/ltablib.c
+    lua/src/ltm.c
+    lua/src/lundump.c
+    lua/src/lutf8lib.c
+    lua/src/lvm.c
+    lua/src/lzio.c
+    lua/src/lapi.c
+    lua/src/lauxlib.c
+    lua/src/lbaselib.c
+    lua/src/lbitlib.c
+    lua/src/lcode.c
+    lua/src/lcorolib.c
+    lua/src/lctype.c
+    lua/src/ldblib.c
+    lua/src/ldebug.c
+    lua/src/ldo.c
+    lua/src/ldump.c
+    lua/src/lfunc.c
+    lua/src/lgc.c
+    lua/src/linit.c
+    lua/src/liolib.c
+    lua/src/llex.c
+    lua/src/lmathlib.c
+    lua/src/lmem.c
+    lua/src/loadlib.c
+    lua/src/lobject.c
+    lua/src/lopcodes.c
+    lua/src/loslib.c
+    lua/src/lparser.c
+    lua/src/lstate.c
+)
+
+add_library(lua STATIC ${LUA_HEADER_FILES} ${LUA_SOURCE_FILES})
+target_include_directories(lua PUBLIC lua/src)
+#set_property(TARGET glad APPEND PROPERTY COMPILE_DEFINITIONS "SQUISH_USE_SSE=2")
+
+###################################################################################################
+# squish Library
+###################################################################################################
+set(SQUISH_HEADER_FILES
+    squish/simd.h
+    squish/squish.h
+    squish/colourfit.h
+    squish/simd_ve.h
+    squish/singlecolourfit.h
+    squish/colourblock.h
+    squish/config.h
+    squish/rangefit.h
+    squish/simd_float.h
+    squish/alpha.h
+    squish/colourset.h
+    squish/maths.h
+    squish/simd_sse.h
+    squish/clusterfit.h
+)
+
+set(SQUISH_SOURCE_FILES
+    squish/colourfit.cpp
+    squish/colourblock.cpp
+    squish/clusterfit.cpp
+    squish/singlecolourfit.cpp
+    squish/squish.cpp
+    squish/maths.cpp
+    squish/alpha.cpp
+    squish/colourset.cpp
+    squish/rangefit.cpp
+)
+
+if(HAVE_SQUISH)
+    add_library(squish STATIC ${SQUISH_HEADER_FILES} ${SQUISH_SOURCE_FILES})
+    target_include_directories(squish PUBLIC squish)
+    set_property(TARGET squish APPEND PROPERTY COMPILE_DEFINITIONS "SQUISH_USE_SSE=2")
+endif()
+
+###################################################################################################
+# SFMT Library
+###################################################################################################
+set(SFMT_HEADER_FILES
+    SFMT/SFMT.h
+    SFMT/SFMT-alti.h
+    SFMT/SFMT-common.h
+    SFMT/SFMT-params.h
+    SFMT/SFMT-params607.h
+    SFMT/SFMT-params1279.h
+    SFMT/SFMT-params2281.h
+    SFMT/SFMT-params4253.h
+    SFMT/SFMT-params11213.h
+    SFMT/SFMT-params19937.h
+    SFMT/SFMT-params44497.h
+    SFMT/SFMT-params86243.h
+    SFMT/SFMT-params132049.h
+    SFMT/SFMT-params216091.h
+    SFMT/SFMT-params.h
+    SFMT/SFMT-sse2.h
+    SFMT/SFMT-sse2-msc.h
+)
+
+set(SFMT_SOURCE_FILES
+    SFMT/SFMT.c
+)
+
+add_library(SFMT STATIC ${SFMT_HEADER_FILES} ${SFMT_SOURCE_FILES})
+target_include_directories(SFMT PUBLIC SFMT)
+set_property(TARGET SFMT APPEND PROPERTY COMPILE_DEFINITIONS "SFMT_MEXP=19937")
+if(HAVE_SFMT AND NOT EMSCRIPTEN AND NOT ANDROID)
+    set_property(TARGET SFMT APPEND PROPERTY COMPILE_DEFINITIONS "HAVE_SSE2")
+endif()
+
+###################################################################################################
+# Bullet Library
+###################################################################################################
+
+set(BULLET_HEADER_FILES 
+    bullet/src/btBulletCollisionCommon.h
+    bullet/src/btBulletDynamicsCommon.h
+    bullet/src/BulletCollision/Gimpact/gim_box_set.h
+    bullet/src/BulletCollision/Gimpact/btGImpactQuantizedBvh.h
+    bullet/src/BulletCollision/Gimpact/btQuantization.h
+    bullet/src/BulletCollision/Gimpact/gim_geom_types.h
+    bullet/src/BulletCollision/Gimpact/btTriangleShapeEx.h
+    bullet/src/BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h
+    bullet/src/BulletCollision/Gimpact/gim_basic_geometry_operations.h
+    bullet/src/BulletCollision/Gimpact/btContactProcessing.h
+    bullet/src/BulletCollision/Gimpact/gim_clip_polygon.h
+    bullet/src/BulletCollision/Gimpact/gim_radixsort.h
+    bullet/src/BulletCollision/Gimpact/btCompoundFromGimpact.h
+    bullet/src/BulletCollision/Gimpact/btClipPolygon.h
+    bullet/src/BulletCollision/Gimpact/btBoxCollision.h
+    bullet/src/BulletCollision/Gimpact/gim_box_collision.h
+    bullet/src/BulletCollision/Gimpact/btGImpactBvh.h
+    bullet/src/BulletCollision/Gimpact/gim_tri_collision.h
+    bullet/src/BulletCollision/Gimpact/btGImpactMassUtil.h
+    bullet/src/BulletCollision/Gimpact/gim_math.h
+    bullet/src/BulletCollision/Gimpact/gim_contact.h
+    bullet/src/BulletCollision/Gimpact/btGImpactShape.h
+    bullet/src/BulletCollision/Gimpact/btGeometryOperations.h
+    bullet/src/BulletCollision/Gimpact/gim_bitset.h
+    bullet/src/BulletCollision/Gimpact/gim_geometry.h
+    bullet/src/BulletCollision/Gimpact/gim_hash_table.h
+    bullet/src/BulletCollision/Gimpact/btGenericPoolAllocator.h
+    bullet/src/BulletCollision/Gimpact/gim_array.h
+    bullet/src/BulletCollision/Gimpact/gim_linear_math.h
+    bullet/src/BulletCollision/Gimpact/gim_memory.h
+    bullet/src/BulletCollision/CollisionShapes/btSphereShape.h
+    bullet/src/BulletCollision/CollisionShapes/btShapeHull.h
+    bullet/src/BulletCollision/CollisionShapes/btConvexPointCloudShape.h
+    bullet/src/BulletCollision/CollisionShapes/btConvexShape.h
+    bullet/src/BulletCollision/CollisionShapes/btBoxShape.h
+    bullet/src/BulletCollision/CollisionShapes/btStaticPlaneShape.h
+    bullet/src/BulletCollision/CollisionShapes/btConvexInternalShape.h
+    bullet/src/BulletCollision/CollisionShapes/btTetrahedronShape.h
+    bullet/src/BulletCollision/CollisionShapes/btMinkowskiSumShape.h
+    bullet/src/BulletCollision/CollisionShapes/btCollisionShape.h
+    bullet/src/BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h
+    bullet/src/BulletCollision/CollisionShapes/btTriangleShape.h
+    bullet/src/BulletCollision/CollisionShapes/btScaledBvhTriangleMeshShape.h
+    bullet/src/BulletCollision/CollisionShapes/btBox2dShape.h
+    bullet/src/BulletCollision/CollisionShapes/btConvexPolyhedron.h
+    bullet/src/BulletCollision/CollisionShapes/btTriangleCallback.h
+    bullet/src/BulletCollision/CollisionShapes/btTriangleInfoMap.h
+    bullet/src/BulletCollision/CollisionShapes/btMultimaterialTriangleMeshShape.h
+    bullet/src/BulletCollision/CollisionShapes/btTriangleMesh.h
+    bullet/src/BulletCollision/CollisionShapes/btOptimizedBvh.h
+    bullet/src/BulletCollision/CollisionShapes/btPolyhedralConvexShape.h
+    bullet/src/BulletCollision/CollisionShapes/btCompoundShape.h
+    bullet/src/BulletCollision/CollisionShapes/btConeShape.h
+    bullet/src/BulletCollision/CollisionShapes/btTriangleIndexVertexMaterialArray.h
+    bullet/src/BulletCollision/CollisionShapes/btConvex2dShape.h
+    bullet/src/BulletCollision/CollisionShapes/btTriangleBuffer.h
+    bullet/src/BulletCollision/CollisionShapes/btUniformScalingShape.h
+    bullet/src/BulletCollision/CollisionShapes/btConvexTriangleMeshShape.h
+    bullet/src/BulletCollision/CollisionShapes/btConvexHullShape.h
+    bullet/src/BulletCollision/CollisionShapes/btEmptyShape.h
+    bullet/src/BulletCollision/CollisionShapes/btMaterial.h
+    bullet/src/BulletCollision/CollisionShapes/btTriangleIndexVertexArray.h
+    bullet/src/BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h
+    bullet/src/BulletCollision/CollisionShapes/btConcaveShape.h
+    bullet/src/BulletCollision/CollisionShapes/btCapsuleShape.h
+    bullet/src/BulletCollision/CollisionShapes/btTriangleMeshShape.h
+    bullet/src/BulletCollision/CollisionShapes/btStridingMeshInterface.h
+    bullet/src/BulletCollision/CollisionShapes/btCylinderShape.h
+    bullet/src/BulletCollision/CollisionShapes/btCollisionMargin.h
+    bullet/src/BulletCollision/CollisionShapes/btMultiSphereShape.h
+    bullet/src/BulletCollision/BroadphaseCollision/btOverlappingPairCache.h
+    bullet/src/BulletCollision/BroadphaseCollision/btDispatcher.h
+    bullet/src/BulletCollision/BroadphaseCollision/btQuantizedBvh.h
+    bullet/src/BulletCollision/BroadphaseCollision/btBroadphaseInterface.h
+    bullet/src/BulletCollision/BroadphaseCollision/btAxisSweep3.h
+    bullet/src/BulletCollision/BroadphaseCollision/btMultiSapBroadphase.h
+    bullet/src/BulletCollision/BroadphaseCollision/btOverlappingPairCallback.h
+    bullet/src/BulletCollision/BroadphaseCollision/btBroadphaseProxy.h
+    bullet/src/BulletCollision/BroadphaseCollision/btDbvt.h
+    bullet/src/BulletCollision/BroadphaseCollision/btSimpleBroadphase.h
+    bullet/src/BulletCollision/BroadphaseCollision/btDbvtBroadphase.h
+    bullet/src/BulletCollision/BroadphaseCollision/btCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btCompoundCompoundCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btSimulationIslandManager.h
+    bullet/src/BulletCollision/CollisionDispatch/btBox2dBox2dCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btCollisionCreateFunc.h
+    bullet/src/BulletCollision/CollisionDispatch/SphereTriangleDetector.h
+    bullet/src/BulletCollision/CollisionDispatch/btConvex2dConvex2dAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btUnionFind.h
+    bullet/src/BulletCollision/CollisionDispatch/btConvexPlaneCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.h
+    bullet/src/BulletCollision/CollisionDispatch/btCollisionConfiguration.h
+    bullet/src/BulletCollision/CollisionDispatch/btBoxBoxCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btInternalEdgeUtility.h
+    bullet/src/BulletCollision/CollisionDispatch/btConvexConvexAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btCollisionObjectWrapper.h
+    bullet/src/BulletCollision/CollisionDispatch/btSphereBoxCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btCollisionDispatcher.h
+    bullet/src/BulletCollision/CollisionDispatch/btHashedSimplePairCache.h
+    bullet/src/BulletCollision/CollisionDispatch/btActivatingCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btManifoldResult.h
+    bullet/src/BulletCollision/CollisionDispatch/btEmptyCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btBoxBoxDetector.h
+    bullet/src/BulletCollision/CollisionDispatch/btCollisionObject.h
+    bullet/src/BulletCollision/CollisionDispatch/btCollisionWorld.h
+    bullet/src/BulletCollision/CollisionDispatch/btSphereTriangleCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btSphereSphereCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btConvexConcaveCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btCompoundCollisionAlgorithm.h
+    bullet/src/BulletCollision/CollisionDispatch/btGhostObject.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btGjkPairDetector.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btGjkConvexCast.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btContinuousConvexCollision.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btPersistentManifold.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btPolyhedralContactClipping.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btManifoldPoint.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btMinkowskiPenetrationDepthSolver.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btSimplexSolverInterface.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btRaycastCallback.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btGjkEpaPenetrationDepthSolver.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btVoronoiSimplexSolver.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btConvexPenetrationDepthSolver.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btDiscreteCollisionDetectorInterface.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btSubSimplexConvexCast.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btGjkEpa2.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btPointCollector.h
+    bullet/src/BulletCollision/NarrowPhaseCollision/btConvexCast.h
+    bullet/src/BulletDynamics/Dynamics/btSimpleDynamicsWorld.h
+    bullet/src/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h
+    bullet/src/BulletDynamics/Dynamics/btActionInterface.h
+    bullet/src/BulletDynamics/Dynamics/btRigidBody.h
+    bullet/src/BulletDynamics/Dynamics/btDynamicsWorld.h
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyJointLimitConstraint.h
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyConstraint.h
+    bullet/src/BulletDynamics/Featherstone/btMultiBodySolverConstraint.h
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyLink.h
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyJointMotor.h
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyLinkCollider.h
+    bullet/src/BulletDynamics/Featherstone/btMultiBody.h
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyPoint2Point.h
+    bullet/src/BulletDynamics/ConstraintSolver/btJacobianEntry.h
+    bullet/src/BulletDynamics/ConstraintSolver/btSolverBody.h
+    bullet/src/BulletDynamics/ConstraintSolver/btContactConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btSolve2LinearConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h
+    bullet/src/BulletDynamics/ConstraintSolver/btHingeConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btTypedConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btHinge2Constraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btPoint2PointConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btConeTwistConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btSolverConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btUniversalConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btConstraintSolver.h
+    bullet/src/BulletDynamics/ConstraintSolver/btContactSolverInfo.h
+    bullet/src/BulletDynamics/ConstraintSolver/btGearConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btSliderConstraint.h
+    bullet/src/BulletDynamics/ConstraintSolver/btFixedConstraint.h
+    bullet/src/BulletDynamics/Vehicle/btVehicleRaycaster.h
+    bullet/src/BulletDynamics/Vehicle/btWheelInfo.h
+    bullet/src/BulletDynamics/Vehicle/btRaycastVehicle.h
+    bullet/src/BulletDynamics/MLCPSolvers/btMLCPSolverInterface.h
+    bullet/src/BulletDynamics/MLCPSolvers/btSolveProjectedGaussSeidel.h
+    bullet/src/BulletDynamics/MLCPSolvers/btPATHSolver.h
+    bullet/src/BulletDynamics/MLCPSolvers/btDantzigLCP.h
+    bullet/src/BulletDynamics/MLCPSolvers/btMLCPSolver.h
+    bullet/src/BulletDynamics/MLCPSolvers/btDantzigSolver.h
+    bullet/src/BulletDynamics/Character/btCharacterControllerInterface.h
+    bullet/src/BulletDynamics/Character/btKinematicCharacterController.h
+    bullet/src/LinearMath/btSerializer.h
+    bullet/src/LinearMath/btAlignedAllocator.h
+    bullet/src/LinearMath/btConvexHull.h
+    bullet/src/LinearMath/btMinMax.h
+    bullet/src/LinearMath/btConvexHullComputer.h
+    bullet/src/LinearMath/btRandom.h
+    bullet/src/LinearMath/btAabbUtil2.h
+    bullet/src/LinearMath/btTransform.h
+    bullet/src/LinearMath/btQuadWord.h
+    bullet/src/LinearMath/btAlignedObjectArray.h
+    bullet/src/LinearMath/btMatrixX.h
+    bullet/src/LinearMath/btMatrix3x3.h
+    bullet/src/LinearMath/btVector3.h
+    bullet/src/LinearMath/btList.h
+    bullet/src/LinearMath/btIDebugDraw.h
+    bullet/src/LinearMath/btMotionState.h
+    bullet/src/LinearMath/btQuaternion.h
+    bullet/src/LinearMath/btGeometryUtil.h
+    bullet/src/LinearMath/btPoolAllocator.h
+    bullet/src/LinearMath/btQuickprof.h
+    bullet/src/LinearMath/btScalar.h
+    bullet/src/LinearMath/btTransformUtil.h
+    bullet/src/LinearMath/btDefaultMotionState.h
+    bullet/src/LinearMath/btHashMap.h
+    bullet/src/LinearMath/btPolarDecomposition.h
+    bullet/src/LinearMath/btStackAlloc.h
+    bullet/src/LinearMath/btGrahamScan2dConvexHull.h
+    bullet/Extras/HACD/hacdCircularList.h
+    bullet/Extras/HACD/hacdVersion.h
+    bullet/Extras/HACD/hacdGraph.h
+    bullet/Extras/HACD/hacdManifoldMesh.h
+    bullet/Extras/HACD/hacdVector.h
+    bullet/Extras/HACD/hacdHACD.h
+    bullet/Extras/HACD/hacdICHull.h
+    bullet/Extras/Serialize/BulletFileLoader/bDefines.h
+    bullet/Extras/Serialize/BulletFileLoader/autogenerated/bullet.h
+    bullet/Extras/Serialize/BulletFileLoader/bDNA.h
+    bullet/Extras/Serialize/BulletFileLoader/btBulletFile.h
+    bullet/Extras/Serialize/BulletFileLoader/bChunk.h
+    bullet/Extras/Serialize/BulletFileLoader/bCommon.h
+    bullet/Extras/Serialize/BulletFileLoader/bFile.h
+    bullet/Extras/Serialize/BulletWorldImporter/btWorldImporter.h
+    bullet/Extras/Serialize/BulletWorldImporter/btBulletWorldImporter.h
+)
+
+set(BULLET_SOURCE_FILES
+    bullet/src/BulletCollision/Gimpact/btContactProcessing.cpp
+    bullet/src/BulletCollision/Gimpact/gim_tri_collision.cpp
+    bullet/src/BulletCollision/Gimpact/btGImpactQuantizedBvh.cpp
+    bullet/src/BulletCollision/Gimpact/btGImpactBvh.cpp
+    bullet/src/BulletCollision/Gimpact/btGImpactCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/Gimpact/gim_memory.cpp
+    bullet/src/BulletCollision/Gimpact/gim_contact.cpp
+    bullet/src/BulletCollision/Gimpact/btGenericPoolAllocator.cpp
+    bullet/src/BulletCollision/Gimpact/btTriangleShapeEx.cpp
+    bullet/src/BulletCollision/Gimpact/btGImpactShape.cpp
+    bullet/src/BulletCollision/Gimpact/gim_box_set.cpp
+    bullet/src/BulletCollision/CollisionShapes/btTriangleIndexVertexArray.cpp
+    bullet/src/BulletCollision/CollisionShapes/btTriangleMesh.cpp
+    bullet/src/BulletCollision/CollisionShapes/btCylinderShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btTriangleBuffer.cpp
+    bullet/src/BulletCollision/CollisionShapes/btConvexHullShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btEmptyShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btBox2dShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btMultiSphereShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btTriangleIndexVertexMaterialArray.cpp
+    bullet/src/BulletCollision/CollisionShapes/btConvexTriangleMeshShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btShapeHull.cpp
+    bullet/src/BulletCollision/CollisionShapes/btMinkowskiSumShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btPolyhedralConvexShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btUniformScalingShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btHeightfieldTerrainShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btCompoundShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btCapsuleShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btConvexInternalShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btMultimaterialTriangleMeshShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btConvexPolyhedron.cpp
+    bullet/src/BulletCollision/CollisionShapes/btBoxShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btConvex2dShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btCollisionShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btStaticPlaneShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btBvhTriangleMeshShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btConcaveShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btSphereShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btStridingMeshInterface.cpp
+    bullet/src/BulletCollision/CollisionShapes/btConeShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btTriangleCallback.cpp
+    bullet/src/BulletCollision/CollisionShapes/btConvexShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btScaledBvhTriangleMeshShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btTriangleMeshShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btConvexPointCloudShape.cpp
+    bullet/src/BulletCollision/CollisionShapes/btOptimizedBvh.cpp
+    bullet/src/BulletCollision/CollisionShapes/btTetrahedronShape.cpp
+    bullet/src/BulletCollision/BroadphaseCollision/btCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/BroadphaseCollision/btAxisSweep3.cpp
+    bullet/src/BulletCollision/BroadphaseCollision/btBroadphaseProxy.cpp
+    bullet/src/BulletCollision/BroadphaseCollision/btMultiSapBroadphase.cpp
+    bullet/src/BulletCollision/BroadphaseCollision/btDbvtBroadphase.cpp
+    bullet/src/BulletCollision/BroadphaseCollision/btSimpleBroadphase.cpp
+    bullet/src/BulletCollision/BroadphaseCollision/btDispatcher.cpp
+    bullet/src/BulletCollision/BroadphaseCollision/btDbvt.cpp
+    bullet/src/BulletCollision/BroadphaseCollision/btOverlappingPairCache.cpp
+    bullet/src/BulletCollision/BroadphaseCollision/btQuantizedBvh.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btConvexConcaveCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btCollisionDispatcher.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btInternalEdgeUtility.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btBoxBoxCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btCompoundCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btBox2dBox2dCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btConvexConvexAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btSphereSphereCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btEmptyCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btHashedSimplePairCache.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btBoxBoxDetector.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btSphereBoxCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btConvex2dConvex2dAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btGhostObject.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btSphereTriangleCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btManifoldResult.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btCompoundCompoundCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btActivatingCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btConvexPlaneCollisionAlgorithm.cpp
+    bullet/src/BulletCollision/CollisionDispatch/SphereTriangleDetector.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btUnionFind.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btCollisionObject.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btSimulationIslandManager.cpp
+    bullet/src/BulletCollision/CollisionDispatch/btCollisionWorld.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btGjkEpaPenetrationDepthSolver.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btConvexCast.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btPolyhedralContactClipping.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btContinuousConvexCollision.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btGjkPairDetector.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btGjkConvexCast.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btPersistentManifold.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btGjkEpa2.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btRaycastCallback.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btVoronoiSimplexSolver.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btSubSimplexConvexCast.cpp
+    bullet/src/BulletCollision/NarrowPhaseCollision/btMinkowskiPenetrationDepthSolver.cpp
+    bullet/src/BulletDynamics/Dynamics/Bullet-C-API.cpp
+    bullet/src/BulletDynamics/Dynamics/btSimpleDynamicsWorld.cpp
+    bullet/src/BulletDynamics/Dynamics/btRigidBody.cpp
+    bullet/src/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.cpp
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyConstraint.cpp
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyPoint2Point.cpp
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyConstraintSolver.cpp
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyJointLimitConstraint.cpp
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyJointMotor.cpp
+    bullet/src/BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.cpp
+    bullet/src/BulletDynamics/Featherstone/btMultiBody.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btHingeConstraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btConeTwistConstraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btGearConstraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btPoint2PointConstraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btTypedConstraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btSolve2LinearConstraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btSliderConstraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btFixedConstraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btUniversalConstraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btHinge2Constraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.cpp
+    bullet/src/BulletDynamics/ConstraintSolver/btContactConstraint.cpp
+    bullet/src/BulletDynamics/Vehicle/btWheelInfo.cpp
+    bullet/src/BulletDynamics/Vehicle/btRaycastVehicle.cpp
+    bullet/src/BulletDynamics/MLCPSolvers/btDantzigLCP.cpp
+    bullet/src/BulletDynamics/MLCPSolvers/btMLCPSolver.cpp
+    bullet/src/BulletDynamics/Character/btKinematicCharacterController.cpp
+    bullet/src/LinearMath/btConvexHull.cpp
+    bullet/src/LinearMath/btQuickprof.cpp
+    bullet/src/LinearMath/btVector3.cpp
+    bullet/src/LinearMath/btConvexHullComputer.cpp
+    bullet/src/LinearMath/btAlignedAllocator.cpp
+    bullet/src/LinearMath/btPolarDecomposition.cpp
+    bullet/src/LinearMath/btGeometryUtil.cpp
+    bullet/src/LinearMath/btSerializer.cpp
+    bullet/Extras/HACD/hacdManifoldMesh.cpp
+    bullet/Extras/HACD/hacdGraph.cpp
+    bullet/Extras/HACD/hacdICHull.cpp
+    bullet/Extras/HACD/hacdHACD.cpp
+    bullet/Extras/Serialize/BulletFileLoader/bChunk.cpp
+    bullet/Extras/Serialize/BulletFileLoader/bFile.cpp
+    bullet/Extras/Serialize/BulletFileLoader/btBulletFile.cpp
+    bullet/Extras/Serialize/BulletFileLoader/bDNA.cpp
+    bullet/Extras/Serialize/BulletWorldImporter/btWorldImporter.cpp
+    bullet/Extras/Serialize/BulletWorldImporter/btBulletWorldImporter.cpp
+) 
+
+add_library(bullet STATIC ${BULLET_HEADER_FILES} ${BULLET_SOURCE_FILES})
+target_include_directories(bullet PRIVATE bullet/src bullet/Extras/Serialize/BulletWorldImporter bullet/Extras/HACD)
+target_include_directories(bullet INTERFACE bullet/src bullet/Extras/Serialize/BulletWorldImporter bullet/Extras/HACD)
+
+###################################################################################################
+# GLSLCompiler Library
+###################################################################################################
+set(GLSLCompiler_HEADER_FILES
+    GLSLCompiler/mesa/src/glsl/glcpp/glcpp.h
+    GLSLCompiler/mesa/src/glsl/glcpp/glcpp-parse.h
+    GLSLCompiler/mesa/src/glsl/ast.h
+    GLSLCompiler/mesa/src/glsl/builtin_type_macros.h
+    GLSLCompiler/mesa/src/glsl/glsl_parser.h
+    GLSLCompiler/mesa/src/glsl/glsl_parser_extras.h
+    GLSLCompiler/mesa/src/glsl/glsl_symbol_table.h
+    GLSLCompiler/mesa/src/glsl/glsl_types.h
+    GLSLCompiler/mesa/src/glsl/ir_basic_block.h
+    GLSLCompiler/mesa/src/glsl/ir_builder.h
+    GLSLCompiler/mesa/src/glsl/ir_expression_flattening.h
+    GLSLCompiler/mesa/src/glsl/ir_function_inlining.h
+    GLSLCompiler/mesa/src/glsl/ir.h
+    GLSLCompiler/mesa/src/glsl/ir_hierarchical_visitor.h
+    GLSLCompiler/mesa/src/glsl/ir_optimization.h
+    GLSLCompiler/mesa/src/glsl/ir_print_visitor.h
+    GLSLCompiler/mesa/src/glsl/ir_reader.h
+    GLSLCompiler/mesa/src/glsl/ir_rvalue_visitor.h
+    GLSLCompiler/mesa/src/glsl/ir_uniform.h
+    GLSLCompiler/mesa/src/glsl/ir_variable_refcount.h
+    GLSLCompiler/mesa/src/glsl/ir_visitor.h
+    GLSLCompiler/mesa/src/glsl/linker.h
+    GLSLCompiler/mesa/src/glsl/link_uniform_block_active_visitor.h
+    GLSLCompiler/mesa/src/glsl/link_varyings.h
+    GLSLCompiler/mesa/src/glsl/list.h
+    GLSLCompiler/mesa/src/glsl/loop_analysis.h
+    GLSLCompiler/mesa/src/glsl/program.h
+    GLSLCompiler/mesa/src/glsl/s_expression.h
+    GLSLCompiler/mesa/src/glsl/standalone_scaffolding.h
+    GLSLCompiler/mesa/src/util/format_srgb.h
+    GLSLCompiler/mesa/src/util/hash_table.h
+    GLSLCompiler/mesa/src/util/macros.h
+    GLSLCompiler/mesa/src/util/ralloc.h
+    GLSLCompiler/mesa/src/util/strtod.h
+    GLSLCompiler/GLSLCompiler.h
+    GLSLCompiler/GLSLCompilerImpl.h
+    GLSLCompiler/ir_print_glsl_visitor.h
+)
+
+set(GLSLCompiler_SOURCE_FILES
+    GLSLCompiler/mesa/src/glsl/glcpp/glcpp-lex.c
+    GLSLCompiler/mesa/src/glsl/glcpp/glcpp-parse.c
+    GLSLCompiler/mesa/src/glsl/glcpp/pp.c
+    GLSLCompiler/mesa/src/glsl/hlslpp/hlslpp.c
+    GLSLCompiler/mesa/src/glsl/hlslpp/hlslpp-lex.c
+    GLSLCompiler/mesa/src/glsl/hlslpp/hlslpp-parse.c
+    GLSLCompiler/mesa/src/glsl/ast_array_index.cpp
+    GLSLCompiler/mesa/src/glsl/ast_expr.cpp
+    GLSLCompiler/mesa/src/glsl/ast_function.cpp
+    GLSLCompiler/mesa/src/glsl/ast_to_hir.cpp
+    GLSLCompiler/mesa/src/glsl/ast_type.cpp
+    GLSLCompiler/mesa/src/glsl/builtin_functions.cpp
+    GLSLCompiler/mesa/src/glsl/builtin_types.cpp
+    GLSLCompiler/mesa/src/glsl/builtin_variables.cpp
+    GLSLCompiler/mesa/src/glsl/hlsl_conversion.cpp
+    GLSLCompiler/mesa/src/glsl/hlsl_lexer.cpp
+    GLSLCompiler/mesa/src/glsl/hlsl_parser.cpp
+    GLSLCompiler/mesa/src/glsl/glsl_lexer.cpp
+    GLSLCompiler/mesa/src/glsl/glsl_parser.cpp
+    GLSLCompiler/mesa/src/glsl/glsl_parser_extras.cpp
+    GLSLCompiler/mesa/src/glsl/glsl_symbol_table.cpp
+    GLSLCompiler/mesa/src/glsl/glsl_types.cpp
+    GLSLCompiler/mesa/src/glsl/hir_field_selection.cpp
+    GLSLCompiler/mesa/src/glsl/ir_basic_block.cpp
+    GLSLCompiler/mesa/src/glsl/ir_builder.cpp
+    GLSLCompiler/mesa/src/glsl/ir_clone.cpp
+    GLSLCompiler/mesa/src/glsl/ir_constant_expression.cpp
+    GLSLCompiler/mesa/src/glsl/ir.cpp
+    GLSLCompiler/mesa/src/glsl/ir_equals.cpp
+    GLSLCompiler/mesa/src/glsl/ir_expression_flattening.cpp
+    GLSLCompiler/mesa/src/glsl/ir_function_can_inline.cpp
+    GLSLCompiler/mesa/src/glsl/ir_function.cpp
+    GLSLCompiler/mesa/src/glsl/ir_function_detect_recursion.cpp
+    GLSLCompiler/mesa/src/glsl/ir_hierarchical_visitor.cpp
+    GLSLCompiler/mesa/src/glsl/ir_hv_accept.cpp
+    GLSLCompiler/mesa/src/glsl/ir_import_prototypes.cpp
+    GLSLCompiler/mesa/src/glsl/ir_print_visitor.cpp
+    GLSLCompiler/mesa/src/glsl/ir_reader.cpp
+    GLSLCompiler/mesa/src/glsl/ir_rvalue_visitor.cpp
+    GLSLCompiler/mesa/src/glsl/ir_set_program_inouts.cpp
+    GLSLCompiler/mesa/src/glsl/ir_validate.cpp
+    GLSLCompiler/mesa/src/glsl/ir_variable_refcount.cpp
+    GLSLCompiler/mesa/src/glsl/link_atomics.cpp
+    GLSLCompiler/mesa/src/glsl/linker.cpp
+    GLSLCompiler/mesa/src/glsl/link_functions.cpp
+    GLSLCompiler/mesa/src/glsl/link_interface_blocks.cpp
+    GLSLCompiler/mesa/src/glsl/link_uniform_block_active_visitor.cpp
+    GLSLCompiler/mesa/src/glsl/link_uniform_blocks.cpp
+    GLSLCompiler/mesa/src/glsl/link_uniform_initializers.cpp
+    GLSLCompiler/mesa/src/glsl/link_uniforms.cpp
+    GLSLCompiler/mesa/src/glsl/link_varyings.cpp
+    GLSLCompiler/mesa/src/glsl/loop_analysis.cpp
+    GLSLCompiler/mesa/src/glsl/loop_controls.cpp
+    GLSLCompiler/mesa/src/glsl/loop_unroll.cpp
+    GLSLCompiler/mesa/src/glsl/lower_clip_distance.cpp
+    GLSLCompiler/mesa/src/glsl/lower_const_arrays_to_uniforms.cpp
+    GLSLCompiler/mesa/src/glsl/lower_discard.cpp
+    GLSLCompiler/mesa/src/glsl/lower_discard_flow.cpp
+    GLSLCompiler/mesa/src/glsl/lower_if_to_cond_assign.cpp
+    GLSLCompiler/mesa/src/glsl/lower_instructions.cpp
+    GLSLCompiler/mesa/src/glsl/lower_jumps.cpp
+    GLSLCompiler/mesa/src/glsl/lower_mat_op_to_vec.cpp
+    GLSLCompiler/mesa/src/glsl/lower_named_interface_blocks.cpp
+    GLSLCompiler/mesa/src/glsl/lower_noise.cpp
+    GLSLCompiler/mesa/src/glsl/lower_offset_array.cpp
+    GLSLCompiler/mesa/src/glsl/lower_output_reads.cpp
+    GLSLCompiler/mesa/src/glsl/lower_packed_varyings.cpp
+    GLSLCompiler/mesa/src/glsl/lower_packing_builtins.cpp
+    GLSLCompiler/mesa/src/glsl/lower_texture_projection.cpp
+    GLSLCompiler/mesa/src/glsl/lower_ubo_reference.cpp
+    GLSLCompiler/mesa/src/glsl/lower_variable_index_to_cond_assign.cpp
+    GLSLCompiler/mesa/src/glsl/lower_vec_index_to_cond_assign.cpp
+    GLSLCompiler/mesa/src/glsl/lower_vec_index_to_swizzle.cpp
+    GLSLCompiler/mesa/src/glsl/lower_vertex_id.cpp
+    GLSLCompiler/mesa/src/glsl/lower_vector.cpp
+    GLSLCompiler/mesa/src/glsl/lower_vector_insert.cpp
+    GLSLCompiler/mesa/src/glsl/opt_algebraic.cpp
+    GLSLCompiler/mesa/src/glsl/opt_array_splitting.cpp
+    GLSLCompiler/mesa/src/glsl/opt_conditional_discard.cpp
+    GLSLCompiler/mesa/src/glsl/opt_constant_folding.cpp
+    GLSLCompiler/mesa/src/glsl/opt_constant_propagation.cpp
+    GLSLCompiler/mesa/src/glsl/opt_constant_variable.cpp
+    GLSLCompiler/mesa/src/glsl/opt_copy_propagation.cpp
+    GLSLCompiler/mesa/src/glsl/opt_copy_propagation_elements.cpp
+    GLSLCompiler/mesa/src/glsl/opt_cse.cpp
+    GLSLCompiler/mesa/src/glsl/opt_dead_builtin_variables.cpp
+    GLSLCompiler/mesa/src/glsl/opt_dead_builtin_varyings.cpp
+    GLSLCompiler/mesa/src/glsl/opt_dead_code.cpp
+    GLSLCompiler/mesa/src/glsl/opt_dead_code_local.cpp
+    GLSLCompiler/mesa/src/glsl/opt_dead_functions.cpp
+    GLSLCompiler/mesa/src/glsl/opt_flatten_nested_if_blocks.cpp
+    GLSLCompiler/mesa/src/glsl/opt_flip_matrices.cpp
+    GLSLCompiler/mesa/src/glsl/opt_function_inlining.cpp
+    GLSLCompiler/mesa/src/glsl/opt_if_simplification.cpp
+    GLSLCompiler/mesa/src/glsl/opt_minmax.cpp
+    GLSLCompiler/mesa/src/glsl/opt_noop_swizzle.cpp
+    GLSLCompiler/mesa/src/glsl/opt_rebalance_tree.cpp
+    GLSLCompiler/mesa/src/glsl/opt_redundant_jumps.cpp
+    GLSLCompiler/mesa/src/glsl/opt_structure_splitting.cpp
+    GLSLCompiler/mesa/src/glsl/opt_swizzle_swizzle.cpp
+    GLSLCompiler/mesa/src/glsl/opt_tree_grafting.cpp
+    GLSLCompiler/mesa/src/glsl/opt_vectorize.cpp
+    GLSLCompiler/mesa/src/glsl/s_expression.cpp
+    GLSLCompiler/mesa/src/glsl/standalone_scaffolding.cpp
+    GLSLCompiler/mesa/src/mesa/main/imports.c
+    GLSLCompiler/mesa/src/mesa/program/prog_hash_table.c
+    GLSLCompiler/mesa/src/mesa/program/symbol_table.c
+    GLSLCompiler/mesa/src/util/hash_table.c
+    GLSLCompiler/mesa/src/util/ralloc.c
+    GLSLCompiler/mesa/src/util/strtod.c
+    GLSLCompiler/GLSLCompiler.cpp
+    GLSLCompiler/GLSLCompilerImpl.cpp
+    GLSLCompiler/GLSLCompilerImplHLSLPP.cpp
+    GLSLCompiler/ir_print_glsl_visitor.cpp
+#    GLSLCompiler/Test.cpp
+)
+
+if(HAVE_GLSLCOMPILER)   
+    add_library(libGLSLCompiler STATIC ${GLSLCompiler_HEADER_FILES} ${GLSLCompiler_SOURCE_FILES})
+    #add_executable(libGLSLCompiler ${GLSLCompiler_HEADER_FILES} ${GLSLCompiler_SOURCE_FILES})
+    target_include_directories(libGLSLCompiler PUBLIC $(CMAKE_CURRENT_LIST_DIR)/GLSLCompiler)
+    target_include_directories(libGLSLCompiler PRIVATE $(CMAKE_CURRENT_LIST_DIR) GLSLCompiler/mesa/include GLSLCompiler/mesa/src GLSLCompiler/mesa/src/mesa GLSLCompiler/mesa/src/mapi GLSLCompiler/mesa/src/glsl GLSLCompiler/mesa/src/gallium/auxiliary GLSLCompiler/mesa/src/gallium/include)
+
+    # fixup for threads compile
+    if(UNIX OR APPLE)
+        set_property(TARGET libGLSLCompiler APPEND PROPERTY COMPILE_DEFINITIONS "HAVE_PTHREAD=1")
+    endif()
+
+    set(GLSLValidator_HEADER_FILES 
+    )
+    
+    set(GLSLValidator_SOURCE_FILES
+        GLSLCompiler/GLSLValidator.cpp
+    )
+    
+    add_executable(GLSLValidator ${GLSLValidator_HEADER_FILES} ${GLSLValidator_SOURCE_FILES})
+    target_link_libraries(GLSLValidator libGLSLCompiler)
+endif()
+
+###################################################################################################
+# imgui Library
+###################################################################################################
+set(IMGUI_HEADER_FILES
+    imgui/imgui.h
+    imgui/stb_rect_pack.h
+    imgui/stb_textedit.h
+    imgui/stb_truetype.h
+    imgui/imconfig.h
+)
+
+set(IMGUI_SOURCE_FILES
+    imgui/imgui.cpp
+)
+
+if(WITH_IMGUI)
+    add_library(imgui STATIC ${IMGUI_HEADER_FILES} ${IMGUI_SOURCE_FILES})
+    target_include_directories(imgui PUBLIC imgui)
+    #set_property(TARGET imgui APPEND PROPERTY COMPILE_DEFINITIONS "imgui_USE_SSE=2")
+endif()
+
+###################################################################################################
+# YBaseLib Library
+###################################################################################################
+set(YBASELIB_HEADER_FILES
+    YBaseLib/Include/YBaseLib/AlignedMemArray.h
+    YBaseLib/Include/YBaseLib/Android/AndroidBarrier.h
+    YBaseLib/Include/YBaseLib/Android/AndroidConditionVariable.h
+    YBaseLib/Include/YBaseLib/Android/AndroidEvent.h
+    YBaseLib/Include/YBaseLib/Android/AndroidMutex.h
+    YBaseLib/Include/YBaseLib/Android/AndroidReadWriteLock.h
+    YBaseLib/Include/YBaseLib/Android/AndroidRecursiveMutex.h
+    YBaseLib/Include/YBaseLib/Android/AndroidThread.h
+    YBaseLib/Include/YBaseLib/Array.h
+    YBaseLib/Include/YBaseLib/Assert.h
+    YBaseLib/Include/YBaseLib/Atomic.h
+    YBaseLib/Include/YBaseLib/AutoReleasePtr.h
+    YBaseLib/Include/YBaseLib/Barrier.h
+    YBaseLib/Include/YBaseLib/BinaryBlob.h
+    YBaseLib/Include/YBaseLib/BinaryReadBuffer.h
+    YBaseLib/Include/YBaseLib/BinaryReader.h
+    YBaseLib/Include/YBaseLib/BinaryWriteBuffer.h
+    YBaseLib/Include/YBaseLib/BinaryWriter.h
+    YBaseLib/Include/YBaseLib/BitSet.h
+    YBaseLib/Include/YBaseLib/ByteStream.h
+    YBaseLib/Include/YBaseLib/CallbackQueue.h
+    YBaseLib/Include/YBaseLib/CIStringHashTable.h
+    YBaseLib/Include/YBaseLib/Common.h
+    YBaseLib/Include/YBaseLib/ConditionVariable.h
+    YBaseLib/Include/YBaseLib/CPUID.h
+    YBaseLib/Include/YBaseLib/CRC32.h
+    YBaseLib/Include/YBaseLib/CString.h
+    YBaseLib/Include/YBaseLib/Endian.h
+    YBaseLib/Include/YBaseLib/Error.h
+    YBaseLib/Include/YBaseLib/Event.h
+    YBaseLib/Include/YBaseLib/Exception.h
+    YBaseLib/Include/YBaseLib/FileSystem.h
+    YBaseLib/Include/YBaseLib/Functor.h
+    YBaseLib/Include/YBaseLib/HashTable.h
+    YBaseLib/Include/YBaseLib/HashTrait.h
+    YBaseLib/Include/YBaseLib/HTML5/HTML5Barrier.h
+    YBaseLib/Include/YBaseLib/HTML5/HTML5ConditionVariable.h
+    YBaseLib/Include/YBaseLib/HTML5/HTML5Event.h
+    YBaseLib/Include/YBaseLib/HTML5/HTML5Mutex.h
+    YBaseLib/Include/YBaseLib/HTML5/HTML5ReadWriteLock.h
+    YBaseLib/Include/YBaseLib/HTML5/HTML5RecursiveMutex.h
+    YBaseLib/Include/YBaseLib/HTML5/HTML5Thread.h
+    YBaseLib/Include/YBaseLib/IntrusiveLinkedList.h
+    YBaseLib/Include/YBaseLib/KeyValuePair.h
+    YBaseLib/Include/YBaseLib/LinkedList.h
+    YBaseLib/Include/YBaseLib/Log.h
+    YBaseLib/Include/YBaseLib/Math.h
+    YBaseLib/Include/YBaseLib/MD5Digest.h
+    YBaseLib/Include/YBaseLib/MemArray.h
+    YBaseLib/Include/YBaseLib/Memory.h
+    YBaseLib/Include/YBaseLib/Mutex.h
+    YBaseLib/Include/YBaseLib/MutexLock.h
+    YBaseLib/Include/YBaseLib/NameTable.h
+    YBaseLib/Include/YBaseLib/NonCopyable.h
+    YBaseLib/Include/YBaseLib/NumericLimits.h
+    YBaseLib/Include/YBaseLib/Pair.h
+    YBaseLib/Include/YBaseLib/Platform.h
+    YBaseLib/Include/YBaseLib/PODArray.h
+    YBaseLib/Include/YBaseLib/POSIX/POSIXBarrier.h
+    YBaseLib/Include/YBaseLib/POSIX/POSIXConditionVariable.h
+    YBaseLib/Include/YBaseLib/POSIX/POSIXEvent.h
+    YBaseLib/Include/YBaseLib/POSIX/POSIXMutex.h
+    YBaseLib/Include/YBaseLib/POSIX/POSIXReadWriteLock.h
+    YBaseLib/Include/YBaseLib/POSIX/POSIXRecursiveMutex.h
+    YBaseLib/Include/YBaseLib/POSIX/POSIXSubprocess.h
+    YBaseLib/Include/YBaseLib/POSIX/POSIXThread.h
+    YBaseLib/Include/YBaseLib/ProgressCallbacks.h
+    YBaseLib/Include/YBaseLib/ReadWriteLock.h
+    YBaseLib/Include/YBaseLib/RecursiveMutex.h
+    YBaseLib/Include/YBaseLib/RecursiveMutexLock.h
+    YBaseLib/Include/YBaseLib/ReferenceCounted.h
+    YBaseLib/Include/YBaseLib/ReferenceCountedHolder.h
+    YBaseLib/Include/YBaseLib/Singleton.h
+    YBaseLib/Include/YBaseLib/StringConverter.h
+    YBaseLib/Include/YBaseLib/String.h
+    YBaseLib/Include/YBaseLib/StringHashTable.h
+    YBaseLib/Include/YBaseLib/StringParser.h
+    YBaseLib/Include/YBaseLib/Subprocess.h
+    YBaseLib/Include/YBaseLib/TextReader.h
+    YBaseLib/Include/YBaseLib/TextWriter.h
+    YBaseLib/Include/YBaseLib/Thread.h
+    YBaseLib/Include/YBaseLib/ThreadPool.h
+    YBaseLib/Include/YBaseLib/Timer.h
+    YBaseLib/Include/YBaseLib/Timestamp.h
+    YBaseLib/Include/YBaseLib/Windows/WindowsBarrier.h
+    YBaseLib/Include/YBaseLib/Windows/WindowsConditionVariable.h
+    YBaseLib/Include/YBaseLib/Windows/WindowsEvent.h
+    YBaseLib/Include/YBaseLib/Windows/WindowsHeaders.h
+    YBaseLib/Include/YBaseLib/Windows/WindowsMutex.h
+    YBaseLib/Include/YBaseLib/Windows/WindowsReadWriteLock.h
+    YBaseLib/Include/YBaseLib/Windows/WindowsRecursiveMutex.h
+    YBaseLib/Include/YBaseLib/Windows/WindowsSubprocess.h
+    YBaseLib/Include/YBaseLib/Windows/WindowsThread.h
+    YBaseLib/Include/YBaseLib/XMLReader.h
+    YBaseLib/Include/YBaseLib/XMLWriter.h
+    YBaseLib/Include/YBaseLib/ZipArchive.h
+    YBaseLib/Include/YBaseLib/ZLibHelpers.h
+)
+
+set(YBASELIB_SOURCE_FILES
+    YBaseLib/Source/YBaseLib/Android/AndroidBarrier.cpp
+    YBaseLib/Source/YBaseLib/Android/AndroidConditionVariable.cpp
+    YBaseLib/Source/YBaseLib/Android/AndroidEvent.cpp
+    YBaseLib/Source/YBaseLib/Android/AndroidFileSystem.cpp
+    YBaseLib/Source/YBaseLib/Android/AndroidPlatform.cpp
+    YBaseLib/Source/YBaseLib/Android/AndroidReadWriteLock.cpp
+    YBaseLib/Source/YBaseLib/Android/AndroidThread.cpp
+    YBaseLib/Source/YBaseLib/Assert.cpp
+    YBaseLib/Source/YBaseLib/Atomic.cpp
+    YBaseLib/Source/YBaseLib/BinaryBlob.cpp
+    YBaseLib/Source/YBaseLib/BinaryReadBuffer.cpp
+    YBaseLib/Source/YBaseLib/BinaryReader.cpp
+    YBaseLib/Source/YBaseLib/BinaryWriteBuffer.cpp
+    YBaseLib/Source/YBaseLib/BinaryWriter.cpp
+    YBaseLib/Source/YBaseLib/ByteStream.cpp
+    YBaseLib/Source/YBaseLib/CallbackQueue.cpp
+    YBaseLib/Source/YBaseLib/CPUID.cpp
+    YBaseLib/Source/YBaseLib/CRC32.cpp
+    YBaseLib/Source/YBaseLib/CString.cpp
+    YBaseLib/Source/YBaseLib/Endian.cpp
+    YBaseLib/Source/YBaseLib/Error.cpp
+    YBaseLib/Source/YBaseLib/Exception.cpp
+    YBaseLib/Source/YBaseLib/FileSystem.cpp
+    YBaseLib/Source/YBaseLib/HashTrait.cpp
+    YBaseLib/Source/YBaseLib/HTML5/HTML5Barrier.cpp
+    YBaseLib/Source/YBaseLib/HTML5/HTML5ConditionVariable.cpp
+    YBaseLib/Source/YBaseLib/HTML5/HTML5FileSystem.cpp
+    YBaseLib/Source/YBaseLib/HTML5/HTML5Platform.cpp
+    YBaseLib/Source/YBaseLib/HTML5/HTML5ReadWriteLock.cpp
+    YBaseLib/Source/YBaseLib/HTML5/HTML5Thread.cpp
+    YBaseLib/Source/YBaseLib/Log.cpp
+    YBaseLib/Source/YBaseLib/Math.cpp
+    YBaseLib/Source/YBaseLib/MD5Digest.cpp
+    YBaseLib/Source/YBaseLib/Memory.cpp
+    YBaseLib/Source/YBaseLib/NameTable.cpp
+    YBaseLib/Source/YBaseLib/NumericLimits.cpp
+    YBaseLib/Source/YBaseLib/POSIX/POSIXBarrier.cpp
+    YBaseLib/Source/YBaseLib/POSIX/POSIXConditionVariable.cpp
+    YBaseLib/Source/YBaseLib/POSIX/POSIXFileSystem.cpp
+    YBaseLib/Source/YBaseLib/POSIX/POSIXPlatform.cpp
+    YBaseLib/Source/YBaseLib/POSIX/POSIXReadWriteLock.cpp
+    YBaseLib/Source/YBaseLib/POSIX/POSIXSubprocess.cpp
+    YBaseLib/Source/YBaseLib/POSIX/POSIXThread.cpp
+    YBaseLib/Source/YBaseLib/ProgressCallbacks.cpp
+    YBaseLib/Source/YBaseLib/ReferenceCounted.cpp
+    YBaseLib/Source/YBaseLib/StringConverter.cpp
+    YBaseLib/Source/YBaseLib/String.cpp
+    YBaseLib/Source/YBaseLib/StringParser.cpp
+    YBaseLib/Source/YBaseLib/TextReader.cpp
+    YBaseLib/Source/YBaseLib/TextWriter.cpp
+    YBaseLib/Source/YBaseLib/ThreadPool.cpp
+    YBaseLib/Source/YBaseLib/Timer.cpp
+    YBaseLib/Source/YBaseLib/Timestamp.cpp
+    YBaseLib/Source/YBaseLib/Windows/WindowsBarrier.cpp
+    YBaseLib/Source/YBaseLib/Windows/WindowsConditionVariable.cpp
+    YBaseLib/Source/YBaseLib/Windows/WindowsFileSystem.cpp
+    YBaseLib/Source/YBaseLib/Windows/WindowsPlatform.cpp
+    YBaseLib/Source/YBaseLib/Windows/WindowsReadWriteLock.cpp
+    YBaseLib/Source/YBaseLib/Windows/WindowsSubprocess.cpp
+    YBaseLib/Source/YBaseLib/Windows/WindowsThread.cpp
+    YBaseLib/Source/YBaseLib/XMLReader.cpp
+    YBaseLib/Source/YBaseLib/XMLWriter.cpp
+    YBaseLib/Source/YBaseLib/ZipArchive.cpp
+    YBaseLib/Source/YBaseLib/ZLibHelpers.cpp
+)
+
+set(YBASELIB_EXTRA_DEFINES "")
+set(YBASELIB_EXTRA_LIBRARIES "")
+if(HAVE_LIBXML2)
+    LIST(APPEND YBASELIB_EXTRA_DEFINES "HAVE_LIBXML2")
+    LIST(APPEND YBASELIB_EXTRA_LIBRARIES ${LIBXML2_LIBRARIES})
+endif()
+if(HAVE_ZLIB)
+    LIST(APPEND YBASELIB_EXTRA_DEFINES "HAVE_ZLIB")
+    LIST(APPEND YBASELIB_EXTRA_LIBRARIES ${ZLIB_LIBRARIES})
+endif()
+
+add_library(YBaseLib STATIC ${YBASELIB_HEADER_FILES} ${YBASELIB_SOURCE_FILES})
+target_include_directories(YBaseLib PRIVATE YBaseLib/Include YBaseLib/Source ${LIBXML2_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS})
+target_include_directories(YBaseLib PUBLIC YBaseLib/Include)
+target_compile_definitions(YBaseLib PRIVATE ${YBASELIB_EXTRA_DEFINES})
+target_link_libraries(YBaseLib ${YBASELIB_EXTRA_LIBRARIES})
+
+

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_SpawnLifetime" base="ParticleSystemModule" can-create="true">
+    <displayname>Spawn Lifetime</displayname>
+    <category>Spawn Modules</category>
+    <properties>
+      <property type="float" name="MinTime">
+        <category>Lifetime</category>
+        <label>Minimum Lifetime</label>
+        <description>Minimum lifetime of the particle</description>
+        <default>1.0</default>
+      </property>
+      <property type="float" name="MaxTime">
+        <category>Lifetime</category>
+        <label>Maximum Lifetime</label>
+        <description>Maximum lifetime of the particle</description>
+        <default>1.0</default>
+      </property>
+    </properties>
+</object-template>

@@ -1,0 +1,352 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{EB5F8093-B994-4088-B019-D8506CCF159A}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>HLSLTranslator</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>NotSet</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>NotSet</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineDependancies-HLSLTranslator-$(Configuration)\</IntDir>
+    <TargetName>HLSLTranslator-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineDependancies-HLSLTranslator-$(Configuration)\</IntDir>
+    <TargetName>HLSLTranslator-$(Configuration)</TargetName>
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineDependancies-HLSLTranslator-$(Configuration)\</IntDir>
+    <TargetName>HLSLTranslator-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineDependancies-HLSLTranslator-$(Configuration)\</IntDir>
+    <TargetName>HLSLTranslator-$(Configuration)</TargetName>
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;HLSLTRANSLATOR_EXPORTS;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)HLSLTranslator\include;$(ProjectDir)HLSLTranslator\src;$(ProjectDir)HLSLTranslator\src\glsl;$(ProjectDir)HLSLTranslator\src\mesa;$(ProjectDir)HLSLTranslator\src\mesa\main;$(ProjectDir)HLSLTranslator\src\gallium\auxiliary</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4291;4800;4099;4005;4090;4244;4018</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;HLSLTRANSLATOR_EXPORTS;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)HLSLTranslator\include;$(ProjectDir)HLSLTranslator\src;$(ProjectDir)HLSLTranslator\src\glsl;$(ProjectDir)HLSLTranslator\src\mesa;$(ProjectDir)HLSLTranslator\src\mesa\main;$(ProjectDir)HLSLTranslator\src\gallium\auxiliary</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4291;4800;4099;4005;4090;4244;4018</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NEBUG;_WINDOWS;_USRDLL;HLSLTRANSLATOR_EXPORTS;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)HLSLTranslator\include;$(ProjectDir)HLSLTranslator\src;$(ProjectDir)HLSLTranslator\src\glsl;$(ProjectDir)HLSLTranslator\src\mesa;$(ProjectDir)HLSLTranslator\src\mesa\main;$(ProjectDir)HLSLTranslator\src\gallium\auxiliary</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4291;4800;4099;4005;4090;4244;4018</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NEBUG;_WINDOWS;_USRDLL;HLSLTRANSLATOR_EXPORTS;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)HLSLTranslator\include;$(ProjectDir)HLSLTranslator\src;$(ProjectDir)HLSLTranslator\src\glsl;$(ProjectDir)HLSLTranslator\src\mesa;$(ProjectDir)HLSLTranslator\src\mesa\main;$(ProjectDir)HLSLTranslator\src\gallium\auxiliary</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4291;4800;4099;4005;4090;4244;4018</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <LargeAddressAware>true</LargeAddressAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="HLSLTranslator\src\gallium\auxiliary\util\u_cpu_detect.c" />
+    <ClCompile Include="HLSLTranslator\src\gallium\auxiliary\util\u_math.c" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ast_array_index.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ast_expr.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ast_function.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ast_to_hir.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ast_type.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\blob.c" />
+    <ClCompile Include="HLSLTranslator\src\glsl\builtin_functions.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\builtin_types.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\builtin_variables.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\glsl_parser_extras.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\glsl_symbol_table.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\glsl_types.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\hir_field_selection.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\hlslpp\hlslpp-lex.c" />
+    <ClCompile Include="HLSLTranslator\src\glsl\hlslpp\hlslpp-parse.c" />
+    <ClCompile Include="HLSLTranslator\src\glsl\hlslpp\hlslpp.c" />
+    <ClCompile Include="HLSLTranslator\src\glsl\hlsl_conversion.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\hlsl_lexer.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\hlsl_parser.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_basic_block.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_builder.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_clone.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_constant_expression.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_equals.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_expression_flattening.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_function.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_function_can_inline.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_function_detect_recursion.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_hierarchical_visitor.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_hv_accept.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_import_prototypes.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_print_visitor.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_reader.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_rvalue_visitor.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_set_program_inouts.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_validate.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\ir_variable_refcount.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\linker.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\link_atomics.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\link_functions.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\link_interface_blocks.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\link_uniforms.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\link_uniform_blocks.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\link_uniform_block_active_visitor.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\link_uniform_initializers.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\link_varyings.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\loop_analysis.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\loop_controls.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\loop_unroll.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_clip_distance.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_const_arrays_to_uniforms.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_discard.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_discard_flow.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_if_to_cond_assign.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_instructions.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_jumps.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_mat_op_to_vec.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_named_interface_blocks.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_noise.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_offset_array.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_output_reads.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_packed_varyings.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_packing_builtins.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_texture_projection.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_ubo_reference.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_variable_index_to_cond_assign.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_vector.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_vector_insert.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_vec_index_to_cond_assign.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_vec_index_to_swizzle.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\lower_vertex_id.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_algebraic.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_array_splitting.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_conditional_discard.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_constant_folding.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_constant_propagation.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_constant_variable.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_copy_propagation.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_copy_propagation_elements.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_cse.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_dead_builtin_variables.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_dead_builtin_varyings.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_dead_code.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_dead_code_local.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_dead_functions.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_flatten_nested_if_blocks.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_flip_matrices.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_function_inlining.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_if_simplification.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_minmax.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_noop_swizzle.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_rebalance_tree.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_redundant_jumps.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_structure_splitting.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_swizzle_swizzle.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_tree_grafting.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\opt_vectorize.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\standalone_scaffolding.cpp" />
+    <ClCompile Include="HLSLTranslator\src\glsl\s_expression.cpp" />
+    <ClCompile Include="HLSLTranslator\src\HLSLTranslator.cpp" />
+    <ClCompile Include="HLSLTranslator\src\ir_print_glsl_visitor.cpp" />
+    <ClCompile Include="HLSLTranslator\src\mesa\main\imports.c" />
+    <ClCompile Include="HLSLTranslator\src\mesa\program\prog_hash_table.c" />
+    <ClCompile Include="HLSLTranslator\src\mesa\program\symbol_table.c" />
+    <ClCompile Include="HLSLTranslator\src\util\hash_table.c" />
+    <ClCompile Include="HLSLTranslator\src\util\ralloc.c" />
+    <ClCompile Include="HLSLTranslator\src\util\strtod.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="HLSLTranslator\include\HLSLTranslator.h" />
+    <ClInclude Include="HLSLTranslator\include\HLSLTranslator_GLSL.h" />
+    <ClInclude Include="HLSLTranslator\src\gallium\auxiliary\util\u_atomic.h" />
+    <ClInclude Include="HLSLTranslator\src\gallium\auxiliary\util\u_cpu_detect.h" />
+    <ClInclude Include="HLSLTranslator\src\gallium\auxiliary\util\u_debug.h" />
+    <ClInclude Include="HLSLTranslator\src\gallium\auxiliary\util\u_math.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ast.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\blob.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\builtin_type_macros.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\glsl_parser_extras.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\glsl_symbol_table.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\glsl_types.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\hlslpp\hlslpp-parse.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\hlslpp\hlslpp.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\hlsl_parser.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_basic_block.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_builder.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_expression_flattening.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_function_inlining.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_hierarchical_visitor.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_optimization.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_print_visitor.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_reader.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_rvalue_visitor.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_uniform.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_variable_refcount.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\ir_visitor.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\linker.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\link_uniform_block_active_visitor.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\link_varyings.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\list.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\loop_analysis.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\program.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\shader_enums.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\standalone_scaffolding.h" />
+    <ClInclude Include="HLSLTranslator\src\glsl\s_expression.h" />
+    <ClInclude Include="HLSLTranslator\src\ir_print_glsl_visitor.h" />
+    <ClInclude Include="HLSLTranslator\src\mesa\program\hash_table.h" />
+    <ClInclude Include="HLSLTranslator\src\mesa\program\ir_to_mesa.h" />
+    <ClInclude Include="HLSLTranslator\src\mesa\program\prog_instruction.h" />
+    <ClInclude Include="HLSLTranslator\src\mesa\program\prog_parameter.h" />
+    <ClInclude Include="HLSLTranslator\src\mesa\program\prog_statevars.h" />
+    <ClInclude Include="HLSLTranslator\src\mesa\program\symbol_table.h" />
+    <ClInclude Include="HLSLTranslator\src\util\hash_table.h" />
+    <ClInclude Include="HLSLTranslator\src\util\list.h" />
+    <ClInclude Include="HLSLTranslator\src\util\macros.h" />
+    <ClInclude Include="HLSLTranslator\src\util\ralloc.h" />
+    <ClInclude Include="HLSLTranslator\src\util\rounding.h" />
+    <ClInclude Include="HLSLTranslator\src\util\simple_list.h" />
+    <ClInclude Include="HLSLTranslator\src\util\strtod.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="HLSLTranslator\src\glsl\hlslpp\hlslpp-lex.l" />
+    <None Include="HLSLTranslator\src\glsl\hlslpp\hlslpp-parse.y" />
+    <None Include="HLSLTranslator\src\glsl\hlsl_lexer.ll" />
+    <None Include="HLSLTranslator\src\glsl\hlsl_parser.yy" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

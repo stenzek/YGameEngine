@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_OpacityOverTime" base="ParticleSystemModule_TimeBased" can-create="true">
+    <displayname>Opacity Over Time</displayname>
+    <category>Time-Based Modifiers</category>
+    <properties>
+      <property type="float" name="StartOpacity">
+        <category>Opacity</category>
+        <label>Starting Opacity</label>
+        <description>Starting opacity of the particle</description>
+        <default>1.0</default>
+      </property>
+      <property type="float" name="EndOpacity">
+        <category>Opacity</category>
+        <label>Ending Opacity</label>
+        <description>Ending opacity of the particle</description>
+        <default>1.0</default>
+      </property>
+    </properties>
+</object-template>

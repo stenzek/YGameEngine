@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_TimeBased" base="ParticleSystemModule" can-create="true">
+    <displayname>Time Based Module</displayname>
+    <category>Time Based Modifiers</category>
+    <properties>
+      <property type="float" name="TimeFraction">
+        <category>Time</category>
+        <label>Time Fraction</label>
+        <description>Fraction of the particle's life span that this module will be applied to</description>
+        <default>0.0</default>
+      </property>
+      <property type="float" name="EasingFunction">
+        <category>Time</category>
+        <label>Easing Function</label>
+        <description>Easing function that will be applied to the time value</description>
+        <default>0</default>
+        <selector type="choice">
+            <choice value="0">Linear</choice>
+            <choice value="1">Quadratic</choice>
+            <choice value="2">Cubic</choice>
+            <choice value="3">Quart</choice>
+            <choice value="4">Quint</choice>
+            <choice value="5">Expo</choice>
+            <choice value="6">EaseInSine</choice>
+            <choice value="7">EaseOutSine</choice>
+            <choice value="8">EaseInOutSine</choice>
+            <choice value="9">EaseInCirc</choice>
+            <choice value="10">EaseOutCirc</choice>
+            <choice value="11">EaseInOutCirc</choice>
+            <choice value="12">EaseInElastic</choice>
+            <choice value="13">EaseOutElastic</choice>
+            <choice value="14">EaseInOutElastic</choice>
+            <choice value="15">EaseInBack</choice>
+            <choice value="16">EaseOutBack</choice>
+            <choice value="17">EaseInOutBack</choice>
+            <choice value="18">EaseInBounce</choice>
+            <choice value="19">EaseOutBounce</choice>
+            <choice value="20">EaseInOutBounce</choice>
+        </selector>
+      </property>
+    </properties>
+</object-template>

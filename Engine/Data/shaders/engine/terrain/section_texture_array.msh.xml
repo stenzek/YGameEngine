@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="none" />
+	<lighting type="Reflective" model="Phong" normal-space="World" two-sided="false" />
+	<parameters>
+		<uniform name="TerrainTextureArrayIndices" type="float4" />
+        <uniform name="TerrainTextureArrayRepeatIntervals" type="float4" />
+        <texture name="NormalMap" type="Texture2D" />
+        <texture name="BaseLayerAlphaMap" type="Texture2D" />
+		<texture name="BaseLayerDiffuseMap" type="Texture2DArray" />
+	</parameters>
+	<sources>
+		<code platform="d3d11"><![CDATA[
+
+Texture2D MTLTextureParameter_NormalMap;
+SamplerState MTLTextureParameter_NormalMap_SamplerState;
+
+Texture2D MTLTextureParameter_BaseLayerAlphaMap;
+SamplerState MTLTextureParameter_BaseLayerAlphaMap_SamplerState;
+
+Texture2DArray MTLTextureParameter_BaseLayerDiffuseMap;
+SamplerState MTLTextureParameter_BaseLayerDiffuseMap_SamplerState;
+
+float4 MTLUniformParameter_TerrainTextureArrayIndices;
+float4 MTLUniformParameter_TerrainTextureArrayRepeatIntervals;
+
+#if MATERIAL_NEEDS_NORMAL
+
+#if !MATERIAL_NEEDS_PS_INPUT_TEXCOORD_2
+    #define MATERIAL_NEEDS_PS_INPUT_TEXCOORD_2 1
+#endif
+
+float3 MaterialGetNormal(MaterialPSInputParameters InputParameters)
+{
+    float2 normalMapTexCoord = InputParameters.TexCoord1.xy;
+    return UnpackFromColorRange3(MTLTextureParameter_NormalMap.Sample(MTLTextureParameter_NormalMap_SamplerState, normalMapTexCoord).xyz);
+}
+#endif
+
+#if MATERIAL_NEEDS_BASE_COLOR
+
+#if !MATERIAL_NEEDS_PS_INPUT_TEXCOORD
+    #define MATERIAL_NEEDS_PS_INPUT_TEXCOORD 1
+#endif
+
+#if !MATERIAL_NEEDS_PS_INPUT_TEXCOORD_2
+    #define MATERIAL_NEEDS_PS_INPUT_TEXCOORD_2 1
+#endif
+
+float3 MaterialGetBaseColor(MaterialPSInputParameters InputParameters)
+{
+	float2 diffuseMapTexCoord = InputParameters.TexCoord0.xy;
+	float2 alphaMapTexCoord = InputParameters.TexCoord1.xy;
+	float3 diffuseColor = float3(0, 0, 0);
+
+	float4 textureWeights = MTLTextureParameter_BaseLayerAlphaMap.Sample(MTLTextureParameter_BaseLayerAlphaMap_SamplerState, alphaMapTexCoord);
+	
+	// sample the textures
+	diffuseColor += MTLTextureParameter_BaseLayerDiffuseMap.Sample(MTLTextureParameter_BaseLayerDiffuseMap_SamplerState, float3(diffuseMapTexCoord * MTLUniformParameter_TerrainTextureArrayRepeatIntervals.x, MTLUniformParameter_TerrainTextureArrayIndices.x)).rgb * textureWeights.xxx;
+	diffuseColor += MTLTextureParameter_BaseLayerDiffuseMap.Sample(MTLTextureParameter_BaseLayerDiffuseMap_SamplerState, float3(diffuseMapTexCoord * MTLUniformParameter_TerrainTextureArrayRepeatIntervals.y, MTLUniformParameter_TerrainTextureArrayIndices.y)).rgb * textureWeights.yyy;
+	diffuseColor += MTLTextureParameter_BaseLayerDiffuseMap.Sample(MTLTextureParameter_BaseLayerDiffuseMap_SamplerState, float3(diffuseMapTexCoord * MTLUniformParameter_TerrainTextureArrayRepeatIntervals.z, MTLUniformParameter_TerrainTextureArrayIndices.z)).rgb * textureWeights.zzz;
+	diffuseColor += MTLTextureParameter_BaseLayerDiffuseMap.Sample(MTLTextureParameter_BaseLayerDiffuseMap_SamplerState, float3(diffuseMapTexCoord * MTLUniformParameter_TerrainTextureArrayRepeatIntervals.w, MTLUniformParameter_TerrainTextureArrayIndices.w)).rgb * textureWeights.www;
+
+	return diffuseColor;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_COEFFICIENT
+float MaterialGetSpecularCoefficient(MaterialPSInputParameters InputParameters)
+{
+	return 0.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_EXPONENT
+float MaterialGetSpecularExponent(MaterialPSInputParameters InputParameters)
+{
+	return 16.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_OPACITY
+float MaterialGetOpacity(MaterialPSInputParameters InputParameters)
+{
+    return 1.0;
+}
+#endif
+
+
+        ]]></code>
+        <code platform="opengl"><![CDATA[
+
+uniform sampler2D MTLTextureParameter_NormalMap;
+uniform sampler2D MTLTextureParameter_BaseLayerAlphaMap;
+uniform sampler2DArray MTLTextureParameter_BaseLayerDiffuseMap;
+
+uniform vec4 MTLUniformParameter_TerrainTextureArrayIndices;
+uniform vec4 MTLUniformParameter_TerrainTextureArrayRepeatIntervals;
+
+#if MATERIAL_NEEDS_NORMAL
+
+#if !MATERIAL_NEEDS_PS_INPUT_TEXCOORD_2
+    #define MATERIAL_NEEDS_PS_INPUT_TEXCOORD_2 1
+#endif
+
+vec3 MaterialGetNormal(MaterialPSInputParameters InputParameters)
+{
+    vec2 normalMapTexCoord = InputParameters.TexCoord1.xy;
+    return UnpackFromColorRange(texture(MTLTextureParameter_NormalMap, normalMapTexCoord).xyz);
+}
+#endif
+
+#if MATERIAL_NEEDS_BASE_COLOR
+
+#if !MATERIAL_NEEDS_PS_INPUT_TEXCOORD
+    #define MATERIAL_NEEDS_PS_INPUT_TEXCOORD 1
+#endif
+
+#if !MATERIAL_NEEDS_PS_INPUT_TEXCOORD_2
+    #define MATERIAL_NEEDS_PS_INPUT_TEXCOORD_2 1
+#endif
+
+vec3 MaterialGetBaseColor(MaterialPSInputParameters InputParameters)
+{
+	vec2 diffuseMapTexCoord = InputParameters.TexCoord0.xy;
+	vec2 alphaMapTexCoord = InputParameters.TexCoord1.xy;
+	vec3 diffuseColor = vec3(0, 0, 0);
+
+	vec4 textureWeights = texture(MTLTextureParameter_BaseLayerAlphaMap, alphaMapTexCoord);
+	
+	// sample the textures
+	diffuseColor += texture(MTLTextureParameter_BaseLayerDiffuseMap, vec3(diffuseMapTexCoord * MTLUniformParameter_TerrainTextureArrayRepeatIntervals.x, MTLUniformParameter_TerrainTextureArrayIndices.x)).rgb * textureWeights.xxx;
+	diffuseColor += texture(MTLTextureParameter_BaseLayerDiffuseMap, vec3(diffuseMapTexCoord * MTLUniformParameter_TerrainTextureArrayRepeatIntervals.y, MTLUniformParameter_TerrainTextureArrayIndices.y)).rgb * textureWeights.yyy;
+	diffuseColor += texture(MTLTextureParameter_BaseLayerDiffuseMap, vec3(diffuseMapTexCoord * MTLUniformParameter_TerrainTextureArrayRepeatIntervals.z, MTLUniformParameter_TerrainTextureArrayIndices.z)).rgb * textureWeights.zzz;
+	diffuseColor += texture(MTLTextureParameter_BaseLayerDiffuseMap, vec3(diffuseMapTexCoord * MTLUniformParameter_TerrainTextureArrayRepeatIntervals.w, MTLUniformParameter_TerrainTextureArrayIndices.w)).rgb * textureWeights.www;
+
+	return diffuseColor;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_COEFFICIENT
+float MaterialGetSpecularCoefficient(MaterialPSInputParameters InputParameters)
+{
+	return 0.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_EXPONENT
+float MaterialGetSpecularExponent(MaterialPSInputParameters InputParameters)
+{
+	return 16.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_OPACITY
+float MaterialGetOpacity(MaterialPSInputParameters InputParameters)
+{
+    return 1.0;
+}
+#endif
+
+
+        ]]></code>
+	</sources>
+</shader>
+

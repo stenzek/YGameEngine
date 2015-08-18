@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="Brush" base="Object" can-create="false">
+    <displayname>Brush</displayname>
+    <category></category>
+    <description>Base class for all static world objects</description>
+    <properties>
+        <property type="float3" name="Position">
+            <category>Positioning</category>
+            <label>Base Position</label>
+            <description>Entity base position in world space.</description>
+            <default>0 0 0</default>
+        </property>     
+        <property type="quaternion" name="Rotation">
+            <category>Positioning</category>
+            <label>Base Rotation</label>
+            <description>Entity base rotation (pitch, yaw, roll)</description>
+            <default>0 0 0 1</default>
+            <selector type="euler-angles" />
+        </property>
+		<property type="float3" name="Scale">
+			<category>Positioning</category>
+			<label>Base Scale</label>
+			<description>Entity base scale</description>
+			<default>1 1 1</default>
+		</property>
+    </properties>
+</object-template>

@@ -1,0 +1,475 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="DebugFast|Win32">
+      <Configuration>DebugFast</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="DebugFast|x64">
+      <Configuration>DebugFast</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Shipping|Win32">
+      <Configuration>Shipping</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Shipping|x64">
+      <Configuration>Shipping</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Renderer\Common.h" />
+    <ClInclude Include="Source\Renderer\DecalManager.h" />
+    <ClInclude Include="Source\Renderer\ImGuiBridge.h" />
+    <ClInclude Include="Source\Renderer\MiniGUIContext.h" />
+    <ClInclude Include="Source\Renderer\PrecompiledHeader.h" />
+    <ClInclude Include="Source\Renderer\Renderer.h" />
+    <ClInclude Include="Source\Renderer\RendererStateBlock.h" />
+    <ClInclude Include="Source\Renderer\RendererTypes.h" />
+    <ClInclude Include="Source\Renderer\RenderProfiler.h" />
+    <ClInclude Include="Source\Renderer\RenderProxies\BlockMeshRenderProxy.h" />
+    <ClInclude Include="Source\Renderer\RenderProxies\CompositeRenderProxy.h" />
+    <ClInclude Include="Source\Renderer\RenderProxies\DirectionalLightRenderProxy.h" />
+    <ClInclude Include="Source\Renderer\RenderProxies\PointLightRenderProxy.h" />
+    <ClInclude Include="Source\Renderer\RenderProxies\SkeletalMeshRenderProxy.h" />
+    <ClInclude Include="Source\Renderer\RenderProxies\SpriteRenderProxy.h" />
+    <ClInclude Include="Source\Renderer\RenderProxies\StaticMeshRenderProxy.h" />
+    <ClInclude Include="Source\Renderer\RenderProxies\VolumetricLightRenderProxy.h" />
+    <ClInclude Include="Source\Renderer\RenderProxy.h" />
+    <ClInclude Include="Source\Renderer\RenderQueue.h" />
+    <ClInclude Include="Source\Renderer\RenderWorld.h" />
+    <ClInclude Include="Source\Renderer\ShaderCompilerFrontend.h" />
+    <ClInclude Include="Source\Renderer\ShaderComponent.h" />
+    <ClInclude Include="Source\Renderer\ShaderComponentTypeInfo.h" />
+    <ClInclude Include="Source\Renderer\ShaderConstantBuffer.h" />
+    <ClInclude Include="Source\Renderer\ShaderMap.h" />
+    <ClInclude Include="Source\Renderer\ShaderProgram.h" />
+    <ClInclude Include="Source\Renderer\ShaderProgramSelector.h" />
+    <ClInclude Include="Source\Renderer\Shaders\DeferredShadingShaders.h" />
+    <ClInclude Include="Source\Renderer\Shaders\DepthOnlyShader.h" />
+    <ClInclude Include="Source\Renderer\Shaders\DownsampleShader.h" />
+    <ClInclude Include="Source\Renderer\Shaders\ForwardShadingShaders.h" />
+    <ClInclude Include="Source\Renderer\Shaders\FullBrightShader.h" />
+    <ClInclude Include="Source\Renderer\Shaders\MobileShaders.h" />
+    <ClInclude Include="Source\Renderer\Shaders\OneColorShader.h" />
+    <ClInclude Include="Source\Renderer\Shaders\OverlayShader.h" />
+    <ClInclude Include="Source\Renderer\Shaders\PlainShader.h" />
+    <ClInclude Include="Source\Renderer\Shaders\ShadowMapShader.h" />
+    <ClInclude Include="Source\Renderer\Shaders\SSAOShader.h" />
+    <ClInclude Include="Source\Renderer\Shaders\TextureBlitShader.h" />
+    <ClInclude Include="Source\Renderer\VertexBufferBindingArray.h" />
+    <ClInclude Include="Source\Renderer\VertexFactories\BlockMeshVertexFactory.h" />
+    <ClInclude Include="Source\Renderer\VertexFactories\LocalVertexFactory.h" />
+    <ClInclude Include="Source\Renderer\VertexFactories\PlainVertexFactory.h" />
+    <ClInclude Include="Source\Renderer\VertexFactories\SkeletalMeshVertexFactory.h" />
+    <ClInclude Include="Source\Renderer\VertexFactory.h" />
+    <ClInclude Include="Source\Renderer\VertexFactoryTypeInfo.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderer.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderers\CompositingWorldRenderer.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderers\CSMShadowMapRenderer.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderers\CubeMapShadowMapRenderer.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderers\DebugNormalsWorldRenderer.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderers\DeferredShadingWorldRenderer.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderers\ForwardShadingWorldRenderer.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderers\FullBrightWorldRenderer.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderers\MobileWorldRenderer.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderers\SingleShaderWorldRenderer.h" />
+    <ClInclude Include="Source\Renderer\WorldRenderers\SSMShadowMapRenderer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Renderer\DecalManager.cpp" />
+    <ClCompile Include="Source\Renderer\ImGuiBridge.cpp" />
+    <ClCompile Include="Source\Renderer\MiniGUIContext.cpp" />
+    <ClCompile Include="Source\Renderer\PrecompiledHeader.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer\Renderer.cpp" />
+    <ClCompile Include="Source\Renderer\RendererStateBlock.cpp" />
+    <ClCompile Include="Source\Renderer\RendererTypes.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProfiler.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProxies\BlockMeshRenderProxy.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProxies\CompositeRenderProxy.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProxies\DirectionalLightRenderProxy.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProxies\PointLightRenderProxy.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProxies\SkeletalMeshRenderProxy.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProxies\SpriteRenderProxy.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProxies\StaticMeshRenderProxy.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProxies\VolumetricLightRenderProxy.cpp" />
+    <ClCompile Include="Source\Renderer\RenderProxy.cpp" />
+    <ClCompile Include="Source\Renderer\RenderQueue.cpp" />
+    <ClCompile Include="Source\Renderer\RenderWorld.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderCompilerFrontend.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderComponent.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderComponentTypeInfo.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderConstantBuffer.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderMap.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderProgram.cpp" />
+    <ClCompile Include="Source\Renderer\ShaderProgramSelector.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\DeferredShadingShaders.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\DepthOnlyShader.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\DownsampleShader.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\ForwardShadingShaders.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\FullBrightShader.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\MobileShaders.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\OneColorShader.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\OverlayShader.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\PlainShader.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\ShadowMapShader.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\SSAOShader.cpp" />
+    <ClCompile Include="Source\Renderer\Shaders\TextureBlitShader.cpp" />
+    <ClCompile Include="Source\Renderer\VertexBufferBindingArray.cpp" />
+    <ClCompile Include="Source\Renderer\VertexFactories\BlockMeshVertexFactory.cpp" />
+    <ClCompile Include="Source\Renderer\VertexFactories\LocalVertexFactory.cpp" />
+    <ClCompile Include="Source\Renderer\VertexFactories\PlainVertexFactory.cpp" />
+    <ClCompile Include="Source\Renderer\VertexFactories\SkeletalMeshVertexFactory.cpp" />
+    <ClCompile Include="Source\Renderer\VertexFactory.cpp" />
+    <ClCompile Include="Source\Renderer\VertexFactoryTypeInfo.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderers\CompositingWorldRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderers\CSMShadowMapRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderers\CubeMapShadowMapRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderers\DebugNormalsWorldRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderers\DeferredShadingWorldRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderers\ForwardShadingWorldRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderers\FullBrightWorldRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderers\MobileWorldRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderers\SingleShaderWorldRenderer.cpp" />
+    <ClCompile Include="Source\Renderer\WorldRenderers\SSMShadowMapRenderer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="Core.vcxproj">
+      <Project>{ef58423d-a088-4ef2-81db-0b4b04184ed0}</Project>
+    </ProjectReference>
+    <ProjectReference Include="D3D11Renderer.vcxproj">
+      <Project>{99336339-33af-4057-90c6-bf13cabfa522}</Project>
+    </ProjectReference>
+    <ProjectReference Include="D3D12Renderer.vcxproj">
+      <Project>{6450ec50-691a-4bd9-a17a-b5c7cead8f5e}</Project>
+    </ProjectReference>
+    <ProjectReference Include="MathLib.vcxproj">
+      <Project>{a30ae7c5-fb84-4021-80c2-8cb02efd12c5}</Project>
+    </ProjectReference>
+    <ProjectReference Include="OpenGLESRenderer.vcxproj">
+      <Project>{fa5de2cc-3e5b-4d2f-9bfb-96fd276a2e87}</Project>
+    </ProjectReference>
+    <ProjectReference Include="OpenGLRenderer.vcxproj">
+      <Project>{a09b416c-453d-49b1-a555-19bbb8f1f916}</Project>
+    </ProjectReference>
+    <ProjectReference Include="ResourceCompilerInterface.vcxproj">
+      <Project>{46d10782-4194-4188-b196-c712f15f3b58}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{C5EF4BE8-393A-4235-BB52-FA771C492ECB}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>Renderer</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineRenderer-$(Configuration)\</IntDir>
+    <TargetName>EngineRenderer-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|Win32'">
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineRenderer-$(Configuration)\</IntDir>
+    <TargetName>EngineRenderer-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineRenderer-$(Configuration)\</IntDir>
+    <TargetName>EngineRenderer-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|x64'">
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineRenderer-$(Configuration)\</IntDir>
+    <TargetName>EngineRenderer-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineRenderer-$(Configuration)\</IntDir>
+    <TargetName>EngineRenderer-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|Win32'">
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineRenderer-$(Configuration)\</IntDir>
+    <TargetName>EngineRenderer-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineRenderer-$(Configuration)\</IntDir>
+    <TargetName>EngineRenderer-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|x64'">
+    <OutDir>$(SolutionDir)Binaries\$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)Binaries\$(Platform)Build\EngineRenderer-$(Configuration)\</IntDir>
+    <TargetName>EngineRenderer-$(Configuration)</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(ProjectDir)Dependancies\YBaseLib\Include;$(ProjectDir)Dependancies\bullet\src;$(ProjectDir)Dependancies\bullet\Extras\Serialize\BulletWorldImporter;$(ProjectDir)Dependancies\lua\src;$(ProjectDir)Dependancies\imgui;$(ProjectDir)Dependancies\microprofile;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>false</MinimalRebuild>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <PrecompiledHeaderFile>Renderer/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_DEBUGFAST;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(ProjectDir)Dependancies\YBaseLib\Include;$(ProjectDir)Dependancies\bullet\src;$(ProjectDir)Dependancies\bullet\Extras\Serialize\BulletWorldImporter;$(ProjectDir)Dependancies\lua\src;$(ProjectDir)Dependancies\imgui;$(ProjectDir)Dependancies\microprofile;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>false</MinimalRebuild>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeaderFile>Renderer/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Lib />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(ProjectDir)Dependancies\YBaseLib\Include;$(ProjectDir)Dependancies\bullet\src;$(ProjectDir)Dependancies\bullet\Extras\Serialize\BulletWorldImporter;$(ProjectDir)Dependancies\lua\src;$(ProjectDir)Dependancies\imgui;$(ProjectDir)Dependancies\microprofile;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>false</MinimalRebuild>
+      <PrecompiledHeaderFile>Renderer/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugFast|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_DEBUGFAST;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(ProjectDir)Dependancies\YBaseLib\Include;$(ProjectDir)Dependancies\bullet\src;$(ProjectDir)Dependancies\bullet\Extras\Serialize\BulletWorldImporter;$(ProjectDir)Dependancies\lua\src;$(ProjectDir)Dependancies\imgui;$(ProjectDir)Dependancies\microprofile;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>false</MinimalRebuild>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeaderFile>Renderer/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(ProjectDir)Dependancies\YBaseLib\Include;$(ProjectDir)Dependancies\bullet\src;$(ProjectDir)Dependancies\bullet\Extras\Serialize\BulletWorldImporter;$(ProjectDir)Dependancies\lua\src;$(ProjectDir)Dependancies\imgui;$(ProjectDir)Dependancies\microprofile;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>false</MinimalRebuild>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <AdditionalOptions>/Zo %(AdditionalOptions)</AdditionalOptions>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <PrecompiledHeaderFile>Renderer/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_SHIPPING;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(ProjectDir)Dependancies\YBaseLib\Include;$(ProjectDir)Dependancies\bullet\src;$(ProjectDir)Dependancies\bullet\Extras\Serialize\BulletWorldImporter;$(ProjectDir)Dependancies\lua\src;$(ProjectDir)Dependancies\imgui;$(ProjectDir)Dependancies\microprofile;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>false</MinimalRebuild>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <AdditionalOptions>/Zo %(AdditionalOptions)</AdditionalOptions>
+      <PrecompiledHeaderFile>Renderer/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(ProjectDir)Dependancies\YBaseLib\Include;$(ProjectDir)Dependancies\bullet\src;$(ProjectDir)Dependancies\bullet\Extras\Serialize\BulletWorldImporter;$(ProjectDir)Dependancies\lua\src;$(ProjectDir)Dependancies\imgui;$(ProjectDir)Dependancies\microprofile;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>false</MinimalRebuild>
+      <AdditionalOptions>/Zo %(AdditionalOptions)</AdditionalOptions>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <PrecompiledHeaderFile>Renderer/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Shipping|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_SHIPPING;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(ProjectDir)Dependancies\YBaseLib\Include;$(ProjectDir)Dependancies\bullet\src;$(ProjectDir)Dependancies\bullet\Extras\Serialize\BulletWorldImporter;$(ProjectDir)Dependancies\lua\src;$(ProjectDir)Dependancies\imgui;$(ProjectDir)Dependancies\microprofile;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>false</MinimalRebuild>
+      <AdditionalOptions>/Zo %(AdditionalOptions)</AdditionalOptions>
+      <PrecompiledHeaderFile>Renderer/PrecompiledHeader.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

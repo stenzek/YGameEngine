@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_SpawnLocation" base="ParticleSystemModule" can-create="true">
+    <displayname>Spawn Location</displayname>
+    <category>Spawn Modules</category>
+    <properties>
+      <property type="uint" name="LocationType">
+        <category>Location</category>
+        <label>Location</label>
+        <description>Spawn location type</description>
+        <default>0</default>
+      </property>
+      <property type="float3" name="PointPosition">
+        <category>Location</category>
+        <label>Position Offset</label>
+        <description>Offset to the emitter that will be applied when the particle is spawned</description>
+        <default>0 0 0</default>
+      </property>
+    </properties>
+</object-template>

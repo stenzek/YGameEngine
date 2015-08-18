@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>EditorCreateTerrainDialog</class>
+ <widget class="QDialog" name="EditorCreateTerrainDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>433</width>
+    <height>347</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Create Heightfield Terrain</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <layout class="QFormLayout" name="formLayout">
+     <property name="fieldGrowthPolicy">
+      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+     </property>
+     <item row="0" column="0" colspan="2">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>To create heightfield terrain for this map, provide the following details:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Layer List: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="EditorResourceSelectionWidget" name="layerListSelection"/>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Section Size: 
+(the size of each terrain texture)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QSpinBox" name="sectionSize"/>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>Resolution:
+(world units per terrain point)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QSpinBox" name="unitsPerPoint"/>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_9">
+       <property name="text">
+        <string>Patch Size: 
+(minimum node size)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QSpinBox" name="patchSize"/>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_5">
+       <property name="text">
+        <string>Height Format: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QComboBox" name="heightFormat"/>
+     </item>
+     <item row="6" column="0">
+      <widget class="QLabel" name="label_7">
+       <property name="text">
+        <string>Minimum Height: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="QSpinBox" name="minimumHeight"/>
+     </item>
+     <item row="7" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Maximum Height: </string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QSpinBox" name="maximumHeight"/>
+     </item>
+     <item row="8" column="0">
+      <widget class="QLabel" name="label_8">
+       <property name="text">
+        <string>Base Height:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="1">
+      <widget class="QSpinBox" name="baseHeight"/>
+     </item>
+     <item row="9" column="1">
+      <widget class="QSpinBox" name="textureRepeatInterval"/>
+     </item>
+     <item row="10" column="1">
+      <widget class="QCheckBox" name="createCenterSectionCheckBox">
+       <property name="text">
+        <string>Create Center Section</string>
+       </property>
+      </widget>
+     </item>
+     <item row="9" column="0">
+      <widget class="QLabel" name="label_10">
+       <property name="text">
+        <string>Texture Repeat Interval:</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Expanding</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="createButton">
+       <property name="text">
+        <string>Create</string>
+       </property>
+       <property name="default">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="cancelButton">
+       <property name="text">
+        <string>Cancel</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>EditorResourceSelectionWidget</class>
+   <extends>QLineEdit</extends>
+   <header>Editor/EditorResourceSelectionWidget.h</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>layerListSelection</tabstop>
+  <tabstop>sectionSize</tabstop>
+  <tabstop>unitsPerPoint</tabstop>
+  <tabstop>patchSize</tabstop>
+  <tabstop>heightFormat</tabstop>
+  <tabstop>minimumHeight</tabstop>
+  <tabstop>maximumHeight</tabstop>
+  <tabstop>baseHeight</tabstop>
+  <tabstop>textureRepeatInterval</tabstop>
+  <tabstop>createCenterSectionCheckBox</tabstop>
+  <tabstop>createButton</tabstop>
+  <tabstop>cancelButton</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>

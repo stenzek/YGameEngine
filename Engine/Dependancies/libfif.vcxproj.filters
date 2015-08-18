@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="libfif\src\fif_internal.h" />
+    <ClInclude Include="libfif\src\fif_format.h" />
+    <ClInclude Include="libfif\include\libfif\fif_io.h" />
+    <ClInclude Include="libfif\include\libfif\fif_types.h" />
+    <ClInclude Include="libfif\include\libfif\fif.h" />
+    <ClInclude Include="libfif\src\trace_stream.h" />
+    <ClInclude Include="libfif\src\trace.h" />
+    <ClInclude Include="libfif\src\trace_format.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="libfif\src\file.c" />
+    <ClCompile Include="libfif\src\inode.c" />
+    <ClCompile Include="libfif\src\io_local.c" />
+    <ClCompile Include="libfif\src\log.c" />
+    <ClCompile Include="libfif\src\mount.c" />
+    <ClCompile Include="libfif\src\util.c" />
+    <ClCompile Include="libfif\src\block.c" />
+    <ClCompile Include="libfif\src\compressor.c" />
+    <ClCompile Include="libfif\src\compressor_zlib.c" />
+    <ClCompile Include="libfif\src\dir.c" />
+    <ClCompile Include="libfif\src\io_memory.c" />
+    <ClCompile Include="libfif\src\trace.c" />
+    <ClCompile Include="libfif\src\trace_stream.c" />
+  </ItemGroup>
+</Project>

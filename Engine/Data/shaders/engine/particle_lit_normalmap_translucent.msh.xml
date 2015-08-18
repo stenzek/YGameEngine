@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="straight" />
+	<lighting type="Reflective" model="Phong" normal-space="Tangent" two-sided="false" />
+	<parameters>	
+		<!-- base texture -->
+		<staticswitch name="UseBaseTexture" default="true" />
+		<uniform name="BaseColor" type="float4" default="1 1 1 1" />
+		<texture name="BaseTexture" type="Texture2D" default="textures/engine/default_d" />
+    
+    <!-- normal map -->
+    <texture name="NormalMap" type="Texture2D" default="textures/engine/default_n" />
+		
+		<!-- blend with vertex colors -->
+		<staticswitch name="BlendVertexColor" default="true" />
+        <staticswitch name="UseAlphaFromNormalMap" default="false" />
+	</parameters>
+    <sources>
+		<graph featurelevel="es2" nextnodeid="16">
+        	<nodes>
+                <node name="BaseColor" type="ShaderGraphNode_Float4Parameter" parametername="BaseColor" />
+                <node name="BaseTexture" type="ShaderGraphNode_Texture2DParameter" parametername="BaseTexture" />
+                <node name="UseBaseTexture" type="ShaderGraphNode_StaticSwitchParameter" parametername="UseBaseTexture" />
+                <node name="BaseTextureSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+                <node name="NormalMap" type="ShaderGraphNode_Texture2DParameter" parametername="NormalMap" />
+                <node name="NormalMapSample" type="ShaderGraphNode_TextureSample" unpack-operation="NormalMap" />
+                <node name="NormalMapAlphaSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+                <node name="BlendVertexColor" type="ShaderGraphNode_StaticSwitchParameter" parametername="BlendVertexColor" />
+                <node name="BlendVertexColor2" type="ShaderGraphNode_StaticSwitchParameter" parametername="BlendVertexColor" />
+                <node name="UseAlphaFromNormalMap" type="ShaderGraphNode_StaticSwitchParameter" parametername="UseAlphaFromNormalMap" />
+                <node name="VertexColorMultiply" type="ShaderGraphNode_Multiply" />
+                <node name="VertexColorMultiply2" type="ShaderGraphNode_Multiply" />
+                <node name="ColorPremultiply" type="ShaderGraphNode_Multiply" />
+                <node name="NormalNegate" type="ShaderGraphNode_Negate" />
+            </nodes>
+            <links>               
+                <link target="BaseTextureSample" input="Texture" source="BaseTexture" output="Texture" />
+                <link target="BaseTextureSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                <link target="UseBaseTexture" input="IfEnabled" source="BaseTextureSample" output="Result" swizzle="rgba" />
+                <link target="UseBaseTexture" input="IfDisabled" source="BaseColor" output="Value" swizzle="rgba" />
+                <link target="VertexColorMultiply" input="A" source="UseBaseTexture" output="Result" swizzle="rgba" />
+                <link target="VertexColorMultiply" input="B" source="SHADER_INPUTS" output="VertexColor" swizzle="rgba" />
+                <link target="BlendVertexColor" input="IfEnabled" source="VertexColorMultiply" output="Result" swizzle="rgba" />
+                <link target="BlendVertexColor" input="IfDisabled" source="UseBaseTexture" output="Result" swizzle="rgba" />
+
+                <link target="NormalMapSample" input="Texture" source="NormalMap" output="Texture" />
+                <link target="NormalMapSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                
+                <link target="NormalMapAlphaSample" input="Texture" source="NormalMap" output="Texture" />
+                <link target="NormalMapAlphaSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                <link target="UseAlphaFromNormalMap" input="IfEnabled" source="NormalMapAlphaSample" output="Result" swizzle="a" />
+                <link target="UseAlphaFromNormalMap" input="IfDisabled" source="BlendVertexColor" output="Result" swizzle="a" />
+                <link target="VertexColorMultiply2" input="A" source="UseAlphaFromNormalMap" output="Result" />
+                <link target="VertexColorMultiply2" input="B" source="SHADER_INPUTS" output="VertexColor" swizzle="a" />
+                <link target="BlendVertexColor2" input="IfEnabled" source="VertexColorMultiply2" output="Result" />
+                <link target="BlendVertexColor2" input="IfDisabled" source="UseAlphaFromNormalMap" output="Result" />
+                
+                <link target="NormalNegate" input="Value" source="NormalMapSample" output="Result" swizzle="rgb" />
+                
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="BlendVertexColor" output="Result" swizzle="rgb" />
+                <link target="SHADER_OUTPUTS" input="Opacity" source="BlendVertexColor2" output="Result" />
+                <link target="SHADER_OUTPUTS" input="Normal" source="NormalMapSample" output="Result" swizzle="rgb" />
+                <!--<link target="SHADER_OUTPUTS" input="Normal" source="NormalNegate" output="Value" swizzle="rgb" />-->
+            </links>
+        </graph>
+	</sources>
+</shader>

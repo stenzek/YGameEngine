@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<material>
+	<shader name="shaders/engine/phong_lit_normalmap">
+        <parameters>
+            <texture name="NormalMap" value="textures/engine/default_n" />
+            <texture name="BaseTexture" value="textures/engine/default_d" />
+            <staticswitch name="UseBaseTexture" value="true" />
+        </parameters>
+	</shader>
+</material>

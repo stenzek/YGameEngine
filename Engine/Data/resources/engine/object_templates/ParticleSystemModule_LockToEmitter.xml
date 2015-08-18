@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_LockToEmitter" base="ParticleSystemModule" can-create="true">
+    <displayname>Lock To Emitter</displayname>
+    <category>Constant Operators</category>
+    <properties>
+      <property type="float3" name="OffsetPosition">
+        <category>Positioning</category>
+        <label>Position Offset</label>
+        <description>Offset that will be applied to the particle when following the emitter</description>
+        <default>0 0 0</default>
+      </property>
+    </properties>
+</object-template>

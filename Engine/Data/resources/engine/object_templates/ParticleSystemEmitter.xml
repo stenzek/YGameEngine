@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemEmitter" base="Object" can-create="false">
+    <displayname>Emitter</displayname>
+    <category>Emitters</category>
+    <properties>
+      <property type="uint" name="MaxActiveParticles">
+        <category>Emitter</category>
+        <label>Maximum Active Particles</label>
+        <description>Maximum number of particles the system can handle at once</description>
+        <default>100</default>
+      </property>
+      <property type="float" name="UpdateInterval">
+        <category>Emitter</category>
+        <label>Update Interval</label>
+        <description>Rate (in seconds) in between updates of the particle system</description>
+        <default>0.016</default>
+      </property>
+      <property type="float" name="SpawnRate">
+        <category>Emitter</category>
+        <label>Spawn Rate</label>
+        <description>Rate (in seconds) in between particle spawn attempts</description>
+        <default>1</default>
+      </property>
+      <property type="uint" name="SpawnCount">
+        <category>Emitter</category>
+        <label>Spawn Count</label>
+        <description>Number of particles emitted at each spawn time</description>
+        <default>1</default>
+      </property>
+    </properties>
+</object-template>

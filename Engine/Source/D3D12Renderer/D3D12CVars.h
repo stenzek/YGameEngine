@@ -1,0 +1,10 @@
+#pragma once
+#include "Engine/Common.h"
+
+namespace CVars
+{
+    // D3D11 CVars
+    extern CVar r_d3d12_force_ref;
+    extern CVar r_d3d12_force_warp;
+}
+

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="none" />
+	<lighting type="Reflective" model="Phong" normal-space="World" two-sided="false" />
+	<parameters>
+	</parameters>
+	<sources>
+		<graph featurelevel="es2">
+        	<nodes>
+            </nodes>
+            <links>
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="SHADER_INPUTS" output="VertexColor" swizzle="rgb" />
+                <link target="SHADER_OUTPUTS" input="Opacity" source="SHADER_INPUTS" output="VertexColor" swizzle="a" />
+            </links>
+        </graph>
+	</sources>
+</shader>
+

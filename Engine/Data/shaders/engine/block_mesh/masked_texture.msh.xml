@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="masked" />
+	<lighting type="Reflective" model="Phong" normal-space="World" two-sided="false" />
+	<parameters>
+		<texture name="DiffuseMap" type="Texture2D" />
+        <texture name="SpecularMap" type="Texture2D" />
+        
+        <staticswitch name="UseSpecularMap" default="false" />
+	</parameters>
+	<sources>
+		<graph featurelevel="es2" nextnodeid="3">
+        	<nodes>
+                <node name="Texture2DParameter_1" type="ShaderGraphNode_Texture2DParameter" parametername="DiffuseMap" />
+                <node name="TextureSample_2" type="ShaderGraphNode_TextureSample" unpack-operation="none" />
+            </nodes>
+            <links>
+                <link target="TextureSample_2" input="Texture" source="Texture2DParameter_1" output="Texture" />
+                <link target="TextureSample_2" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="TextureSample_2" output="Result" swizzle="rgb" />
+                <link target="SHADER_OUTPUTS" input="Opacity" source="TextureSample_2" output="Result" swizzle="a" />
+            </links>
+        </graph>
+	</sources>
+</shader>
+

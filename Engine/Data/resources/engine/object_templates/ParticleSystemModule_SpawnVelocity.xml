@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_SpawnVelocity" base="ParticleSystemModule" can-create="true">
+    <displayname>Spawn Location</displayname>
+    <category>Spawn Modules</category>
+    <properties>
+      <property type="uint" name="Type">
+        <category>Velocity</category>
+        <label>Velocity</label>
+        <description>Spawn velocity type</description>
+        <default>0</default>
+      </property>
+      <property type="float3" name="FixedVelocity">
+        <category>Velocity</category>
+        <label>Fixed Velocity</label>
+        <description>Initial velocity that is applied to the particle when it is emitted</description>
+        <default>0 0 0</default>
+      </property>
+    </properties>
+</object-template>

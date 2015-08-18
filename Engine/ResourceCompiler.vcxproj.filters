@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Source\ResourceCompiler\BlockPaletteGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\MaterialGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\MaterialShaderGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ResourceCompiler.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\StaticMeshGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\TerrainLayerListGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\TextureGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\BlockMeshGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\SkeletalMeshGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\SkeletonGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\SkeletalAnimationGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ParticleSystemGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ClassTableGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ObjectTemplateManager.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ObjectTemplate.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\FontGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ShaderGraphBuiltinNodes.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ShaderGraphCompiler.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ShaderGraphCompilerHLSL.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ShaderGraphNode.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ShaderGraphNodeType.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ShaderGraphSchema.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ShaderCompiler.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ShaderGraph.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ShaderCompilerOpenGL.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ResourceCompilerInterfaceIntegrated.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ResourceCompilerInterfaceRemoteServer.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\CollisionShapeGenerator.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\PrecompiledHeader.cpp" />
+    <ClCompile Include="Source\ResourceCompiler\ShaderCompilerD3D.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\ResourceCompiler\BlockPaletteGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\Common.h" />
+    <ClInclude Include="Source\ResourceCompiler\MaterialGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\MaterialShaderGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\ResourceCompiler.h" />
+    <ClInclude Include="Source\ResourceCompiler\StaticMeshGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\TerrainLayerListGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\TextureGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\BlockMeshGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\SkeletalMeshGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\SkeletonGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\SkeletalAnimationGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\ParticleSystemGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\ClassTableGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\ObjectTemplate.h" />
+    <ClInclude Include="Source\ResourceCompiler\ObjectTemplateManager.h" />
+    <ClInclude Include="Source\ResourceCompiler\FontGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\ResourceCompilerCallbacks.h" />
+    <ClInclude Include="Source\ResourceCompiler\ShaderGraph.h" />
+    <ClInclude Include="Source\ResourceCompiler\ShaderGraphBuiltinNodes.h" />
+    <ClInclude Include="Source\ResourceCompiler\ShaderGraphCompiler.h" />
+    <ClInclude Include="Source\ResourceCompiler\ShaderGraphCompilerHLSL.h" />
+    <ClInclude Include="Source\ResourceCompiler\ShaderGraphNode.h" />
+    <ClInclude Include="Source\ResourceCompiler\ShaderGraphNodeType.h" />
+    <ClInclude Include="Source\ResourceCompiler\ShaderGraphSchema.h" />
+    <ClInclude Include="Source\ResourceCompiler\ShaderCompiler.h" />
+    <ClInclude Include="Source\ResourceCompiler\ShaderCompilerOpenGL.h" />
+    <ClInclude Include="Source\ResourceCompiler\CollisionShapeGenerator.h" />
+    <ClInclude Include="Source\ResourceCompiler\PrecompiledHeader.h" />
+    <ClInclude Include="Source\ResourceCompiler\ShaderCompilerD3D.h" />
+  </ItemGroup>
+</Project>

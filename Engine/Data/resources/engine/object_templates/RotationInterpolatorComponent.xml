@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="RotationInterpolatorComponent" base="Component" can-create="true">
+    <displayname>Rotation Interpolator Component</displayname>
+    <category>Interpolator Components</category>
+    <description>Component that will rotate the entity from the starting rotation to its offset.</description>
+    <properties>
+        <property type="float" name="MoveDuration">
+            <category>Interpolator</category>
+            <label>Move Duration</label>
+            <description>Time it takes to move from starting to ending position.</description>
+            <default>1.0</default>
+        </property>
+        <property type="float" name="PauseDuration">
+            <category>Interpolator</category>
+            <label>Pause Duration</label>
+            <description>Time the component will pause animation at the start/end.</description>
+            <default>0.0</default>
+        </property>
+        <property type="bool" name="ReverseCycle">
+			<category>Interpolator</category>
+			<label>Reverse Cycle</label>
+			<description>Controls whether the enity will warp back to its original position, or animate in reverse back.</description>
+			<default>true</default>
+		</property>
+		<property type="uint" name="RepeatCount">
+			<category>Interpolator</category>
+			<label>Repeat Count</label>
+			<description>Number of times the animation will repeat for. 0 will repeat infinite times.</description>
+			<default>0</default>
+		</property>
+        <property type="bool" name="AutoActivate">
+            <category>Interpolator</category>
+            <label>Auto Activate</label>
+            <description>Determines whether the animation will automatically start or has to be manually triggered.</description>
+            <default>true</default>
+        </property>
+        <property type="float" name="EasingFunction">
+            <category>Interpolator</category>
+            <label>Easing Function</label>
+            <description>Easing function that will be applied to the time value</description>
+            <default>0</default>
+            <selector type="choice">
+                <choice value="0">Linear</choice>
+                <choice value="1">Quadratic</choice>
+                <choice value="2">Cubic</choice>
+                <choice value="3">Quart</choice>
+                <choice value="4">Quint</choice>
+                <choice value="5">Expo</choice>
+                <choice value="6">EaseInSine</choice>
+                <choice value="7">EaseOutSine</choice>
+                <choice value="8">EaseInOutSine</choice>
+                <choice value="9">EaseInCirc</choice>
+                <choice value="10">EaseOutCirc</choice>
+                <choice value="11">EaseInOutCirc</choice>
+                <choice value="12">EaseInElastic</choice>
+                <choice value="13">EaseOutElastic</choice>
+                <choice value="14">EaseInOutElastic</choice>
+                <choice value="15">EaseInBack</choice>
+                <choice value="16">EaseOutBack</choice>
+                <choice value="17">EaseInOutBack</choice>
+                <choice value="18">EaseInBounce</choice>
+                <choice value="19">EaseOutBounce</choice>
+                <choice value="20">EaseInOutBounce</choice>
+            </selector>
+      </property>
+    </properties>
+</object-template>

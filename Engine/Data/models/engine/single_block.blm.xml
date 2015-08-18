@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<blockmesh palette="resources/blockpalettes/testnew" scale="1.000000" lod-count="1" ambient-occlusion="true" collision-shape-type="TriangleMesh">
+    <lod level="0" minx="0" miny="0" minz="0" maxx="0" maxy="0" maxz="0">
+        <block x="0" y="0" z="0" type="3"/>
+    </lod>
+</blockmesh>

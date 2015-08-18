@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="none" />
+	<lighting type="Reflective" model="Phong" normal-space="Tangent" two-sided="false" />
+	<parameters>
+		<texture name="DiffuseMap" type="Texture2D" unpacktype="none" />
+        <texture name="SpecularMap" type="Texture2D" unpacktype="none" />
+        <texture name="NormalMap" type="Texture2D" unpacktype="normalmap" />
+        
+        <staticswitch name="UseSpecularMap" default="false" />
+        <staticswitch name="BlendVertexColors" default="false" />
+	</parameters>
+	<sources>
+		<code platform="d3d11"><![CDATA[
+#if MATERIAL_NEEDS_DIFFUSE_COLOR && !MATERIAL_NEEDS_PIXEL_INPUT_PARAMETER_TEXCOORD
+    #define MATERIAL_NEEDS_PIXEL_INPUT_PARAMETER_TEXCOORD 1
+#endif
+#if MTLStaticSwitch_UseSpecularMap && MATERIAL_NEEDS_SPECULAR_COEFFICIENT && !MATERIAL_NEEDS_PIXEL_INPUT_PARAMETER_TEXCOORD
+    #define MATERIAL_NEEDS_PIXEL_INPUT_PARAMETER_TEXCOORD 1
+#endif
+#if MATERIAL_NEEDS_NORMAL
+    #if !MATERIAL_NEEDS_PIXEL_INPUT_PARAMETER_TEXCOORD
+        #define MATERIAL_NEEDS_PIXEL_INPUT_PARAMETER_TEXCOORD 1
+    #endif
+#endif
+#if MTLStaticSwitch_BlendVertexColors && (MATERIAL_NEEDS_DIFFUSE_COLOR) && !MATERIAL_NEEDS_PIXEL_INPUT_PARAMETER_VERTEX_COLOR
+    #define MATERIAL_NEEDS_PIXEL_INPUT_PARAMETER_VERTEX_COLOR 1
+#endif
+
+Texture2D MTLTextureParameter_NormalMap;
+SamplerState MTLTextureParameter_NormalMap_SamplerState;
+
+Texture2D MTLTextureParameter_DiffuseMap;
+SamplerState MTLTextureParameter_DiffuseMap_SamplerState;
+
+Texture2D MTLTextureParameter_SpecularMap;
+SamplerState MTLTextureParameter_SpecularMap_SamplerState;
+
+float2 MTLUniformParameter_DiffuseMapDimensions;
+float2 MTLUniformParameter_SpecularMapDimensions;
+float2 MTLUniformParameter_NormalMapDimensions;
+
+float4 SampleAtlasTexture(float2 texCoords, float4 atlasTexCoords, float2 textureDimensions, Texture2D textureToUse, SamplerState samplerToUse)
+{
+    float2 fracPart = frac(texCoords);
+    float2 realTexCoords = atlasTexCoords.xy + (atlasTexCoords.zw * fracPart);
+    
+    //float2 realTexCoords = ((atlasTexCoords.zw - atlasTexCoords.xy) * fracPart) + atlasTexCoords.xy;
+    //realTexCoords = min(max(realTexCoords, atlasTexCoords.xy), atlasTexCoords.zw);
+    
+    //return textureToUse.SampleGrad(samplerToUse, realTexCoords, ddx(texCoords), ddy(texCoords));
+    return textureToUse.Sample(samplerToUse, realTexCoords);
+}
+
+#if MATERIAL_NEEDS_NORMAL
+float3 MaterialGetNormal(MaterialPixelInputParameters InputParameters)
+{
+	float3 TangentNormalBiased = SampleAtlasTexture(InputParameters.TexCoords[0].xy, InputParameters.TexCoords[1].xyzw, 
+                                                    MTLUniformParameter_NormalMapDimensions, 
+                                                    MTLTextureParameter_NormalMap, MTLTextureParameter_NormalMap_SamplerState)
+                                                    .xyz;
+                                                    
+    float3 TangentNormal = normalize(UnpackFromColorRange3(TangentNormalBiased));
+    return normalize(mul(InputParameters.TangentToWorld, TangentNormal));
+}
+#endif
+
+#if MATERIAL_NEEDS_BASE_COLOR
+float3 MaterialGetBaseColor(MaterialPixelInputParameters InputParameters)
+{
+	float3 resultColor = SampleAtlasTexture(InputParameters.TexCoords[0].xy, InputParameters.TexCoords[1].xyzw, 
+                                            MTLUniformParameter_DiffuseMapDimensions, 
+                                            MTLTextureParameter_DiffuseMap, MTLTextureParameter_DiffuseMap_SamplerState)
+                                            .rgb;
+                                            
+    #if MTLStaticSwitch_BlendVertexColors
+        resultColor *= InputParameters.VertexColor.rgb;
+    #endif
+    return resultColor;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_COEFFICIENT
+float MaterialGetSpecularCoefficient(MaterialPixelInputParameters InputParameters)
+{
+#if MTLStaticSwitch_UseSpecularMap
+    return SampleAtlasTexture(InputParameters.TexCoords[0].xy, InputParameters.TexCoords[1].xyzw, 
+                              MTLUniformParameter_SpecularMapDimensions, 
+                              MTLTextureParameter_SpecularMap, MTLTextureParameter_SpecularMap_SamplerState)
+                              .r;
+#else
+	return 1.0;
+#endif
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_EXPONENT
+float MaterialGetSpecularExponent(MaterialPixelInputParameters InputParameters)
+{
+	return 16.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_OPACITY
+float MaterialGetOpacity(MaterialPixelInputParameters InputParameters)
+{
+    return 1.0;
+}
+#endif
+
+
+        ]]></code>
+	</sources>
+</shader>
+

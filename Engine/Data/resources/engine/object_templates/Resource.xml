@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="Resource" can-create="false">
+    <displayname>Resource</displayname>
+    <category></category>
+    <properties>
+    </properties>
+</object-template>

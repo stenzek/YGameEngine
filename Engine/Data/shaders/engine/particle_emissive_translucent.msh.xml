@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="premultiplied" />
+	<lighting type="Emissive" model="Phong" normal-space="World" two-sided="false" />
+	<parameters>	
+		<!-- base texture -->
+		<staticswitch name="UseBaseTexture" default="true" />
+		<uniform name="BaseColor" type="float4" default="1 1 1 1" />
+		<texture name="BaseTexture" type="Texture2D" default="textures/engine/default_d" />
+		
+		<!-- blend with vertex colors -->
+		<staticswitch name="BlendVertexColor" default="true" />
+	</parameters>
+    <sources>
+		<graph featurelevel="es2" nextnodeid="16">
+        	<nodes>
+                <node name="BaseColor" type="ShaderGraphNode_Float4Parameter" parametername="BaseColor" />
+                <node name="BaseTexture" type="ShaderGraphNode_Texture2DParameter" parametername="BaseTexture" />
+                <node name="UseBaseTexture" type="ShaderGraphNode_StaticSwitchParameter" parametername="UseBaseTexture" />
+                <node name="BaseTextureSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+                <node name="BlendVertexColor" type="ShaderGraphNode_StaticSwitchParameter" parametername="BlendVertexColor" />
+                <node name="VertexColorMultiply" type="ShaderGraphNode_Multiply" />
+            </nodes>
+            <links>               
+                <link target="BaseTextureSample" input="Texture" source="BaseTexture" output="Texture" />
+                <link target="BaseTextureSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                <link target="UseBaseTexture" input="IfEnabled" source="BaseTextureSample" output="Result" swizzle="rgba" />
+                <link target="UseBaseTexture" input="IfDisabled" source="BaseColor" output="Value" swizzle="rgba" />
+                <link target="VertexColorMultiply" input="A" source="UseBaseTexture" output="Result" swizzle="rgba" />
+                <link target="VertexColorMultiply" input="B" source="SHADER_INPUTS" output="VertexColor" swizzle="rgba" />
+                <link target="BlendVertexColor" input="IfEnabled" source="VertexColorMultiply" output="Result" swizzle="rgba" />
+                <link target="BlendVertexColor" input="IfDisabled" source="UseBaseTexture" output="Result" swizzle="rgba" />
+                
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="BlendVertexColor" output="Result" swizzle="rgb" />
+                <link target="SHADER_OUTPUTS" input="Opacity" source="BlendVertexColor" output="Result" swizzle="a" />
+            </links>
+        </graph>
+	</sources>
+</shader>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="SpriteEntity" base="Entity" can-create="true">
+    <displayname>Sprite</displayname>
+    <category>Movables</category>
+    <description>Entity that is a simple sprite.</description>
+    <properties>
+        <property type="bool" name="Visible">
+			<category>Rendering</category>
+			<label>Visible</label>
+			<description>Controls entity render visibility.</description>
+			<default>true</default>
+		</property>
+        <property type="string" name="TextureName">
+            <category>Sprite</category>
+            <label>Texture Name</label>
+            <description>Texture to render.</description>
+            <default>textures/engine/default</default>
+            <selector type="resource" resource-type="Texture2D" />
+        </property>
+        <property type="int" name="DrawBlending">
+            <category>Sprite</category>
+            <label>Blending Type</label>
+            <description>Blending mode in which to render this sprite.</description>
+            <default>0</default>
+            <selector type="choice">
+                <choice value="0">No Blending</choice>
+                <choice value="1">Straight Alpha Blending</choice>
+                <choice value="2">Premultiplied Alpha Blending</choice>
+                <choice value="3">Masked Alpha (Alpha Kill)</choice>
+            </selector>
+        </property>
+        <property type="float" name="DrawWidth">
+            <category>Sprite</category>
+            <label>Draw Width</label>
+            <description>Width in world units to draw this sprite at.</description>
+            <default>128</default>
+            <selector type="slider" min="1" max="2048" />
+        </property>
+        <property type="float" name="DrawHeight">
+            <category>Sprite</category>
+            <label>Draw Width</label>
+            <description>Width in world units to draw this sprite at.</description>
+            <default>128</default>
+            <selector type="slider" min="1" max="2048" />
+        </property>
+    </properties>
+</object-template>

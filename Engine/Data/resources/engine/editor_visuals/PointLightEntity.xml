@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<editor-visual name="PointLightEntity">
+	<visual type="Sprite">
+		<position from-property="Position" />
+		<texture name="resources/editor/textures/light_point" />
+		<blending mode="straight" />
+		<width value="2" />
+		<height value="2" />
+		<shadowflags value="0" />
+		<selected-tint-color value="#dbeafd" />
+	</visual>
+	<visual type="PointLight">
+		<enabled from-property="Enabled" />
+		<position from-property="Position" />
+		<range from-property="Range" />
+		<color from-property="Color" />
+		<brightness from-property="Brightness" />
+		<falloff-exponent from-property="FalloffExponent" />
+		<shadowflags from-property="LightShadowFlags" />
+	</visual>
+</editor-visual>

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="none" />
+	<lighting type="Emissive" model="Phong" normal-space="World" two-sided="false" />
+	<render mode="Normal" layer="SkyBox" depth-clamping="true" depth-tests="false" depth-writes="false" />
+	<parameters>
+        <texture name="SkyDomeCubeMap" type="TextureCube" />
+	</parameters>
+	<sources>
+		<code platform="d3d11"><![CDATA[
+
+TextureCube MTLTextureParameter_SkyDomeCubeMap;
+SamplerState MTLTextureParameter_SkyDomeCubeMap_SamplerState;
+
+#if MATERIAL_NEEDS_NORMAL
+float3 MaterialGetNormal(MaterialPSInputParameters InputParameters)
+{
+    return InputParameters.WorldNormal;
+}
+#endif
+
+#if MATERIAL_NEEDS_BASE_COLOR
+
+#if !MATERIAL_NEEDS_PS_INPUT_WORLD_POSITION
+    #define MATERIAL_NEEDS_PS_INPUT_WORLD_POSITION 1
+#endif
+
+float3 MaterialGetBaseColor(MaterialPSInputParameters InputParameters)
+{
+    return MTLTextureParameter_SkyDomeCubeMap.Sample(MTLTextureParameter_SkyDomeCubeMap_SamplerState, InputParameters.WorldPosition.xzy).rgb;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_COEFFICIENT
+float MaterialGetSpecularCoefficient(MaterialPSInputParameters InputParameters)
+{
+	return 1.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_EXPONENT
+float MaterialGetSpecularExponent(MaterialPSInputParameters InputParameters)
+{
+	return 16.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_OPACITY
+float MaterialGetOpacity(MaterialPSInputParameters InputParameters)
+{
+    return 1.0;
+}
+#endif
+
+
+        ]]></code>
+        <code platform="opengl"><![CDATA[
+
+uniform samplerCube MTLTextureParameter_SkyDomeCubeMap;
+
+#if MATERIAL_NEEDS_NORMAL
+vec3 MaterialGetNormal(MaterialPSInputParameters InputParameters)
+{
+    return InputParameters.WorldNormal;
+}
+#endif
+
+#if MATERIAL_NEEDS_BASE_COLOR
+
+#if !MATERIAL_NEEDS_PS_INPUT_WORLD_POSITION
+    #define MATERIAL_NEEDS_PS_INPUT_WORLD_POSITION 1
+#endif
+
+vec3 MaterialGetBaseColor(MaterialPSInputParameters InputParameters)
+{
+    return texture(MTLTextureParameter_SkyDomeCubeMap, InputParameters.WorldPosition.xzy).xyz;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_COEFFICIENT
+float MaterialGetSpecularCoefficient(MaterialPSInputParameters InputParameters)
+{
+	return 1.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_EXPONENT
+float MaterialGetSpecularExponent(MaterialPSInputParameters InputParameters)
+{
+	return 16.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_OPACITY
+float MaterialGetOpacity(MaterialPSInputParameters InputParameters)
+{
+    return 1.0;
+}
+#endif
+
+
+        ]]></code>
+	</sources>
+</shader>
+

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema version="3">
+  <globals>
+    <global name="WorldTime" displayname="World Time" type="float3" variable="WorldParameters.WorldTime" />
+    <global name="EyePosition" displayname="Camera Eye Position" type="float3" variable="ViewConstants.EyePosition" />
+  </globals>
+  <inputs>
+    <input name="WorldPosition" displayname="World Position" type="float3">
+      <access stage="PixelShader" define="MATERIAL_NEEDS_PS_INPUT_WORLD_POSITION" variable="inputParameters.WorldPosition" />
+    </input>
+    <input name="WorldNormal" displayname="World Normal" type="float3">
+      <access stage="PixelShader" define="MATERIAL_NEEDS_PS_INPUT_WORLD_NORMAL" variable="inputParameters.WorldNormal" />
+    </input>
+    <input name="TexCoord0" displayname="Texture Coordinates" type="float4">
+      <access stage="PixelShader" define="MATERIAL_NEEDS_PS_INPUT_TEXCOORD" variable="inputParameters.TexCoord0" />
+    </input>
+    <input name="TexCoord1" displayname="Secondary Texture Coordinates" type="float4">
+      <access stage="PixelShader" define="MATERIAL_NEEDS_PS_INPUT_TEXCOORD_2" variable="inputParameters.TexCoord1" />
+    </input>
+    <input name="VertexColor" displayname="Vertex Color" type="float4">
+      <access stage="PixelShader" define="MATERIAL_NEEDS_PS_INPUT_VERTEX_COLOR" variable="inputParameters.VertexColor" />
+    </input>
+    <input name="TangentToWorld" displayname="Tangent to World Matrix" type="float3x3">
+      <access stage="PixelShader" define="MATERIAL_NEEDS_PS_INPUT_TANGENTTOWORLD" variable="inputParameters.TangentToWorld" />
+    </input>
+  </inputs>
+  <outputs>
+    <output stage="PixelShader"
+            name="Normal"
+            displayname="Normal"
+            define="MATERIAL_NEEDS_NORMAL"
+            type="float3"
+            signature="MaterialGetNormal(MaterialPSInputParameters inputParameters)"
+            default="input:WorldNormal">
+    </output>
+    <output stage="PixelShader"
+            displayname="Base Color"
+            name="BaseColor"
+            define="MATERIAL_NEEDS_BASE_COLOR"
+            type="float3"
+            signature="MaterialGetBaseColor(MaterialPSInputParameters inputParameters)"
+            default="0 0 0">
+    </output>
+    <output stage="PixelShader"
+            name="SpecularCoefficient"
+            displayname="Specular Coefficient"
+            signature="MaterialGetSpecularCoefficient(MaterialPSInputParameters inputParameters)"
+            type="float"
+            define="MATERIAL_NEEDS_SPECULAR_COEFFICIENT"
+            default="0.5">
+    </output>
+    <output stage="PixelShader"
+            name="SpecularExponent"
+            displayname="Specular Exponent"
+            define="MATERIAL_NEEDS_SPECULAR_EXPONENT"
+            type="float"
+            signature="MaterialGetSpecularExponent(MaterialPSInputParameters inputParameters)"
+            default="32">
+    </output>
+    <output stage="PixelShader"
+            name="Opacity"
+            displayname="Opacity"
+            define="MATERIAL_NEEDS_OPACITY"
+            type="float"
+            signature="MaterialGetOpacity(MaterialPSInputParameters inputParameters)"
+            default="1">
+    </output>
+  </outputs>
+</schema>

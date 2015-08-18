@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_SizeOverTime" base="ParticleSystemModule_TimeBased" can-create="true">
+    <displayname>Size Over Time</displayname>
+    <category>Time-Based Modifiers</category>
+    <properties>
+      <property type="float" name="StartWidth">
+        <category>Size</category>
+        <label>Starting Width</label>
+        <description>Starting width of the particle in world units</description>
+        <default>1.0</default>
+      </property>
+      <property type="float" name="EndWidth">
+        <category>Size</category>
+        <label>Ending Width</label>
+        <description>Ending width of the particle in world units</description>
+        <default>1.0</default>
+      </property>
+      <property type="float" name="StartHeight">
+        <category>Size</category>
+        <label>Starting Height</label>
+        <description>Starting height of the particle in world units</description>
+        <default>1.0</default>
+      </property>
+      <property type="float" name="EndHeight">
+        <category>Size</category>
+        <label>Ending Height</label>
+        <description>Ending height of the particle in world units</description>
+        <default>1.0</default>
+      </property>
+    </properties>
+</object-template>

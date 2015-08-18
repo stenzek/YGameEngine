@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="none" />
+	<lighting type="Emissive" model="Phong" normal-space="World" two-sided="false" />
+	<parameters>
+		<texture name="ShadowMap" type="Texture2D" default="textures/engine/default" />
+	</parameters>
+    <sources>
+		<graph featurelevel="es2" nextnodeid="5">
+        	<nodes>
+                <node name="ShadowMap" type="ShaderGraphNode_Texture2DParameter" parametername="ShadowMap" />
+                <node name="ShadowMapSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+            </nodes>
+            <links>               
+                <link target="ShadowMapSample" input="Texture" source="ShadowMap" output="Texture" />
+                <link target="ShadowMapSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="ShadowMapSample" output="Result" />
+            </links>
+        </graph>
+	</sources>
+</shader>
+

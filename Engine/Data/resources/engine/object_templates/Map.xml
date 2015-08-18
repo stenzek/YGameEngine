@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="Map" can-create="false">
+    <displayname>Map</displayname>
+    <category></category>
+    <description></description>
+	<properties>
+		<property type="uint" name="RegionLoadRadius">
+			<category>Streaming</category>
+			<label>Region Load Radius</label>
+			<description>Number of regions around the viewpoint that will be loaded at full LOD</description>
+			<default>2</default>
+		</property>
+		<property type="uint" name="RegionActivationRadius">
+			<category>Streaming</category>
+			<label>Region Activation Radius</label>
+			<description>Number of regions around the viewpoint that will be active</description>
+			<default>1</default>
+		</property>
+		<property type="bool" name="SunEnabled">
+			<category>Sun</category>
+			<label>Enable Sun</label>
+			<description>Enable the global sun light</description>
+			<default>false</default>
+		</property>
+		<property type="bool" name="SunStatic">
+			<category>Sun</category>
+			<label>Static Sun</label>
+			<description>Forces the sun to be a static light. Time of day changes will have no effect.</description>
+			<default>false</default>
+		</property>
+		<property type="float3" name="SunDirection">
+			<category>Sun</category>
+			<label>Initial Rotation</label>
+			<description>Initial sun direction, this field is temporary</description>
+			<default>0 0 -1</default>
+			<selector type="euler-angles" />
+		</property>
+		<property type="float3" name="SunColor">
+			<category>Sun</category>
+			<label>Color</label>
+			<description>Sun colour at brightest time of day</description>
+			<default>1 1 1</default>
+			<selector type="color" />
+		</property>
+		<property type="float" name="SunBrightness">
+			<category>Sun</category>
+			<label>Brightness</label>
+			<description>Sun brightness at brightest time of day</description>
+			<default>1.0</default>
+			<selector type="slider" min="0.1" max="16.0" />
+		</property>
+		<property type="float" name="SunAmbientFactor">
+			<category>Sun</category>
+			<label>Ambient Factor</label>
+			<description>Sun ambient factor at brightest time of day</description>
+			<default>0.2</default>
+			<selector type="slider" min="0.1" max="0.9" />
+		</property>
+		<property type="bool" name="SkyEnabled">
+			<category>Sky</category>
+			<label>Enabled</label>
+			<description>Enable sky</description>
+			<default>false</default>
+		</property>
+		<property type="string" name="SkyMaterial">
+			<category>Sky</category>
+			<label>Material</label>
+			<description>Material to use for rendering sky</description>
+			<default>materials/engine/default</default>
+			<selector type="resource" resource-type="Material" />
+		</property>
+		<property type="uint" name="SkyType">
+			<category>Sky</category>
+			<label>Type</label>
+			<description>Determines the mesh type for sky</description>
+			<default>0</default>
+			<selector type="choice">
+				<choice value="0">Sky Box</choice>
+				<choice value="1">Sky Sphere</choice>
+				<choice value="2">Sky Dome</choice>
+			</selector>
+		</property>
+		<property type="float" name="SkySize">
+			<category>Sky</category>
+			<label>Size</label>
+			<description>Determines the fixed size for the sky, if set to zero, it is generated automatically</description>
+			<default>0</default>
+		</property>
+    <property type="float" name="SkyGroundLevel">
+      <category>Sky</category>
+      <label>Ground Level</label>
+      <description>Determines the ground level for the sky to be positioned relative to</description>
+      <default>0</default>
+    </property>
+	</properties>
+</object-template>

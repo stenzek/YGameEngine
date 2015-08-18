@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Source\Core\ChunkFileWriter.cpp" />
+    <ClCompile Include="Source\Core\ClassTable.cpp" />
+    <ClCompile Include="Source\Core\DDSReader.cpp" />
+    <ClCompile Include="Source\Core\DDSWriter.cpp" />
+    <ClCompile Include="Source\Core\DefinitionFile.cpp" />
+    <ClCompile Include="Source\Core\FIFVolume.cpp" />
+    <ClCompile Include="Source\Core\Image.cpp" />
+    <ClCompile Include="Source\Core\ImageCodec.cpp" />
+    <ClCompile Include="Source\Core\ImageCodecBMP.cpp" />
+    <ClCompile Include="Source\Core\ImageCodecDDS.cpp" />
+    <ClCompile Include="Source\Core\ImageCodecDevIL.cpp" />
+    <ClCompile Include="Source\Core\ImageCodecFreeImage.cpp" />
+    <ClCompile Include="Source\Core\ImageCodecJPEG.cpp" />
+    <ClCompile Include="Source\Core\MeshUtilties.cpp" />
+    <ClCompile Include="Source\Core\Object.cpp" />
+    <ClCompile Include="Source\Core\ObjectSerializer.cpp" />
+    <ClCompile Include="Source\Core\ObjectTypeInfo.cpp" />
+    <ClCompile Include="Source\Core\PixelFormat.cpp" />
+    <ClCompile Include="Source\Core\PixelFormatConverters.cpp" />
+    <ClCompile Include="Source\Core\Property.cpp" />
+    <ClCompile Include="Source\Core\PropertyTable.cpp" />
+    <ClCompile Include="Source\Core\PropertyTemplate.cpp" />
+    <ClCompile Include="Source\Core\RandomNumberGenerator.cpp" />
+    <ClCompile Include="Source\Core\Resource.cpp" />
+    <ClCompile Include="Source\Core\ResourceTypeInfo.cpp" />
+    <ClCompile Include="Source\Core\TexturePacker.cpp" />
+    <ClCompile Include="Source\Core\VirtualFileSystem.cpp" />
+    <ClCompile Include="Source\Core\XDisplay.cpp" />
+    <ClCompile Include="Source\Core\ChunkFileReader.cpp" />
+    <ClCompile Include="Source\Core\Console.cpp" />
+    <ClCompile Include="Source\Core\PrecompiledHeader.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Core\ChunkFileWriter.h" />
+    <ClInclude Include="Source\Core\ClassTable.h" />
+    <ClInclude Include="Source\Core\Common.h" />
+    <ClInclude Include="Source\Core\DDSFormat.h" />
+    <ClInclude Include="Source\Core\DDSReader.h" />
+    <ClInclude Include="Source\Core\DDSWriter.h" />
+    <ClInclude Include="Source\Core\DefinitionFile.h" />
+    <ClInclude Include="Source\Core\FIFVolume.h" />
+    <ClInclude Include="Source\Core\Image.h" />
+    <ClInclude Include="Source\Core\ImageCodec.h" />
+    <ClInclude Include="Source\Core\KDTree.h" />
+    <ClInclude Include="Source\Core\MeshUtilties.h" />
+    <ClInclude Include="Source\Core\Object.h" />
+    <ClInclude Include="Source\Core\ObjectSerializer.h" />
+    <ClInclude Include="Source\Core\ObjectTypeInfo.h" />
+    <ClInclude Include="Source\Core\PixelFormat.h" />
+    <ClInclude Include="Source\Core\Property.h" />
+    <ClInclude Include="Source\Core\PropertyTable.h" />
+    <ClInclude Include="Source\Core\PropertyTemplate.h" />
+    <ClInclude Include="Source\Core\RandomNumberGenerator.h" />
+    <ClInclude Include="Source\Core\Resource.h" />
+    <ClInclude Include="Source\Core\ResourceTypeInfo.h" />
+    <ClInclude Include="Source\Core\TexturePacker.h" />
+    <ClInclude Include="Source\Core\TypeRegistry.h" />
+    <ClInclude Include="Source\Core\VirtualFileSystem.h" />
+    <ClInclude Include="Source\Core\XDisplay.h" />
+    <ClInclude Include="Source\Core\BSPTree.h" />
+    <ClInclude Include="Source\Core\ChunkFileReader.h" />
+    <ClInclude Include="Source\Core\ChunkDataFormat.h" />
+    <ClInclude Include="Source\Core\ClassTableDataFormat.h" />
+    <ClInclude Include="Source\Core\Console.h" />
+    <ClInclude Include="Source\Core\PrecompiledHeader.h" />
+  </ItemGroup>
+</Project>

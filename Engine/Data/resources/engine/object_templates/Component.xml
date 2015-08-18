@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="Component" base="ObjectReferenceCounted" can-create="false">
+    <displayname>Component</displayname>
+    <category></category>
+    <description>Base class for all components</description>
+    <properties>
+		<property type="float3" name="LocalPosition">
+            <category>Positioning</category>
+            <label>Local Position</label>
+            <description>Component base position in local space.</description>
+            <default>0 0 0</default>
+        </property>     
+        <property type="Quaternion" name="LocalRotation">
+            <category>Positioning</category>
+            <label>Local Rotation</label>
+            <description>Component base rotation (pitch, yaw, roll)</description>
+            <default>0 0 0 1</default>
+            <selector type="euler-angles" />
+        </property>
+		<property type="float3" name="LocalScale">
+			<category>Positioning</category>
+			<label>Local Scale</label>
+			<description>Component base scale</description>
+			<default>1 1 1</default>
+		</property>
+    </properties>
+</object-template>

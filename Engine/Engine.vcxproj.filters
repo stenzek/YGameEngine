@@ -1,0 +1,211 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Physics">
+      <UniqueIdentifier>{e738a612-4b7f-40c1-8e3e-f571f98c004c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Engine\Physics\BoxCollisionShape.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\CollisionObject.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\CollisionShape.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\ConvexHullCollisionShape.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysicsProxy.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\PhysicsWorld.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\RigidBody.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\ScaledTriangleMeshCollisionShape.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\SphereCollisionShape.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\TriangleMeshCollisionShape.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\BulletHeaders.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\GhostObject.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\KinematicObject.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\StaticObject.h">
+      <Filter>Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\PrecompiledHeader.h" />
+    <ClInclude Include="Source\Engine\BlockMeshBuilder.h" />
+    <ClInclude Include="Source\Engine\BlockMeshCollisionShape.h" />
+    <ClInclude Include="Source\Engine\BlockMeshUtilities.h" />
+    <ClInclude Include="Source\Engine\BlockMeshVolume.h" />
+    <ClInclude Include="Source\Engine\BlockPalette.h" />
+    <ClInclude Include="Source\Engine\Brush.h" />
+    <ClInclude Include="Source\Engine\BulletDebugDraw.h" />
+    <ClInclude Include="Source\Engine\Camera.h" />
+    <ClInclude Include="Source\Engine\CommandQueue.h" />
+    <ClInclude Include="Source\Engine\Common.h" />
+    <ClInclude Include="Source\Engine\Component.h" />
+    <ClInclude Include="Source\Engine\ComponentTypeInfo.h" />
+    <ClInclude Include="Source\Engine\DataFormats.h" />
+    <ClInclude Include="Source\Engine\Defines.h" />
+    <ClInclude Include="Source\Engine\DynamicWorld.h" />
+    <ClInclude Include="Source\Engine\Engine.h" />
+    <ClInclude Include="Source\Engine\EngineCVars.h" />
+    <ClInclude Include="Source\Engine\Entity.h" />
+    <ClInclude Include="Source\Engine\EntityTypeInfo.h" />
+    <ClInclude Include="Source\Engine\Font.h" />
+    <ClInclude Include="Source\Engine\FPSCounter.h" />
+    <ClInclude Include="Source\Engine\InputManager.h" />
+    <ClInclude Include="Source\Engine\Map.h" />
+    <ClInclude Include="Source\Engine\Material.h" />
+    <ClInclude Include="Source\Engine\MaterialShader.h" />
+    <ClInclude Include="Source\Engine\OverlayConsole.h" />
+    <ClInclude Include="Source\Engine\ParticleSystem.h" />
+    <ClInclude Include="Source\Engine\ParticleSystemBuiltinEmitters.h" />
+    <ClInclude Include="Source\Engine\ParticleSystemBuiltinModules.h" />
+    <ClInclude Include="Source\Engine\ParticleSystemCommon.h" />
+    <ClInclude Include="Source\Engine\ParticleSystemEmitter.h" />
+    <ClInclude Include="Source\Engine\ParticleSystemModule.h" />
+    <ClInclude Include="Source\Engine\ParticleSystemRenderProxy.h" />
+    <ClInclude Include="Source\Engine\ParticleSystemVertexFactory.h" />
+    <ClInclude Include="Source\Engine\Profiling.h" />
+    <ClInclude Include="Source\Engine\ResourceManager.h" />
+    <ClInclude Include="Source\Engine\ScriptManager.h" />
+    <ClInclude Include="Source\Engine\ScriptObject.h" />
+    <ClInclude Include="Source\Engine\ScriptObjectTypeInfo.h" />
+    <ClInclude Include="Source\Engine\ScriptProxyFunctions.h" />
+    <ClInclude Include="Source\Engine\ScriptTypes.h" />
+    <ClInclude Include="Source\Engine\SDLHeaders.h" />
+    <ClInclude Include="Source\Engine\SkeletalAnimation.h" />
+    <ClInclude Include="Source\Engine\SkeletalAnimationPlayer.h" />
+    <ClInclude Include="Source\Engine\SkeletalMesh.h" />
+    <ClInclude Include="Source\Engine\Skeleton.h" />
+    <ClInclude Include="Source\Engine\StaticMesh.h" />
+    <ClInclude Include="Source\Engine\TerrainLayerList.h" />
+    <ClInclude Include="Source\Engine\TerrainQuadTree.h" />
+    <ClInclude Include="Source\Engine\TerrainRenderer.h" />
+    <ClInclude Include="Source\Engine\TerrainRendererCDLOD.h" />
+    <ClInclude Include="Source\Engine\TerrainRendererNull.h" />
+    <ClInclude Include="Source\Engine\TerrainSection.h" />
+    <ClInclude Include="Source\Engine\TerrainSectionCollisionShape.h" />
+    <ClInclude Include="Source\Engine\TerrainTypes.h" />
+    <ClInclude Include="Source\Engine\Texture.h" />
+    <ClInclude Include="Source\Engine\World.h" />
+    <ClInclude Include="Source\Engine\ArcBallCamera.h" />
+    <ClInclude Include="Source\Engine\BlockMesh.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Engine\Physics\BoxCollisionShape.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\CollisionObject.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\CollisionShape.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\ConvexHullCollisionShape.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysicsProxy.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysicsWorld.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\RigidBody.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\ScaledTriangleMeshCollisionShape.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\SphereCollisionShape.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\TriangleMeshCollisionShape.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\GhostObject.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\KinematicObject.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\StaticObject.cpp">
+      <Filter>Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\PrecompiledHeader.cpp" />
+    <ClCompile Include="Source\Engine\BlockMeshBuilder.cpp" />
+    <ClCompile Include="Source\Engine\BlockMeshCollisionShape.cpp" />
+    <ClCompile Include="Source\Engine\BlockMeshUtilities.cpp" />
+    <ClCompile Include="Source\Engine\BlockMeshVolume.cpp" />
+    <ClCompile Include="Source\Engine\BlockPalette.cpp" />
+    <ClCompile Include="Source\Engine\Brush.cpp" />
+    <ClCompile Include="Source\Engine\BulletDebugDraw.cpp" />
+    <ClCompile Include="Source\Engine\Camera.cpp" />
+    <ClCompile Include="Source\Engine\CommandQueue.cpp" />
+    <ClCompile Include="Source\Engine\Component.cpp" />
+    <ClCompile Include="Source\Engine\ComponentTypeInfo.cpp" />
+    <ClCompile Include="Source\Engine\Defines.cpp" />
+    <ClCompile Include="Source\Engine\DynamicWorld.cpp" />
+    <ClCompile Include="Source\Engine\Engine.cpp" />
+    <ClCompile Include="Source\Engine\EngineCVars.cpp" />
+    <ClCompile Include="Source\Engine\EngineTypes.cpp" />
+    <ClCompile Include="Source\Engine\Entity.cpp" />
+    <ClCompile Include="Source\Engine\EntityTypeInfo.cpp" />
+    <ClCompile Include="Source\Engine\Font.cpp" />
+    <ClCompile Include="Source\Engine\FPSCounter.cpp" />
+    <ClCompile Include="Source\Engine\InputManager.cpp" />
+    <ClCompile Include="Source\Engine\Map.cpp" />
+    <ClCompile Include="Source\Engine\Material.cpp" />
+    <ClCompile Include="Source\Engine\MaterialShader.cpp" />
+    <ClCompile Include="Source\Engine\OverlayConsole.cpp" />
+    <ClCompile Include="Source\Engine\ParticleSystem.cpp" />
+    <ClCompile Include="Source\Engine\ParticleSystemBuiltinEmitters.cpp" />
+    <ClCompile Include="Source\Engine\ParticleSystemBuiltinModules.cpp" />
+    <ClCompile Include="Source\Engine\ParticleSystemEmitter.cpp" />
+    <ClCompile Include="Source\Engine\ParticleSystemModule.cpp" />
+    <ClCompile Include="Source\Engine\ParticleSystemRenderProxy.cpp" />
+    <ClCompile Include="Source\Engine\ParticleSystemVertexFactory.cpp" />
+    <ClCompile Include="Source\Engine\Profiling.cpp" />
+    <ClCompile Include="Source\Engine\ResourceManager.cpp" />
+    <ClCompile Include="Source\Engine\ScriptBuiltinFunctions.cpp" />
+    <ClCompile Include="Source\Engine\ScriptManager.cpp" />
+    <ClCompile Include="Source\Engine\ScriptObject.cpp" />
+    <ClCompile Include="Source\Engine\ScriptObjectTypeInfo.cpp" />
+    <ClCompile Include="Source\Engine\ScriptPrimitiveTypes.cpp" />
+    <ClCompile Include="Source\Engine\ScriptTypes.cpp" />
+    <ClCompile Include="Source\Engine\SkeletalAnimation.cpp" />
+    <ClCompile Include="Source\Engine\SkeletalAnimationPlayer.cpp" />
+    <ClCompile Include="Source\Engine\SkeletalMesh.cpp" />
+    <ClCompile Include="Source\Engine\Skeleton.cpp" />
+    <ClCompile Include="Source\Engine\StaticMesh.cpp" />
+    <ClCompile Include="Source\Engine\TerrainLayerList.cpp" />
+    <ClCompile Include="Source\Engine\TerrainQuadTree.cpp" />
+    <ClCompile Include="Source\Engine\TerrainRenderer.cpp" />
+    <ClCompile Include="Source\Engine\TerrainRendererCDLOD.cpp" />
+    <ClCompile Include="Source\Engine\TerrainRendererNull.cpp" />
+    <ClCompile Include="Source\Engine\TerrainSection.cpp" />
+    <ClCompile Include="Source\Engine\TerrainSectionCollisionShape.cpp" />
+    <ClCompile Include="Source\Engine\TerrainTypes.cpp" />
+    <ClCompile Include="Source\Engine\Texture.cpp" />
+    <ClCompile Include="Source\Engine\World.cpp" />
+    <ClCompile Include="Source\Engine\ArcBallCamera.cpp" />
+    <ClCompile Include="Source\Engine\BlockMesh.cpp" />
+  </ItemGroup>
+</Project>

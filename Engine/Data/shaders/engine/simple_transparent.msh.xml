@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="straight" />
+	<lighting type="Reflective" model="Phong" normal-space="World" two-sided="true" />
+	<parameters>	
+		<!-- diffuse -->
+		<staticswitch name="UseDiffuseMap" default="false" />
+		<uniform name="DiffuseColor" type="float4" default="1 1 1 1" />
+		<texture name="DiffuseMap" type="Texture2D" default="textures/engine/default_d" />
+		
+		<!-- specular -->
+		<staticswitch name="UseSpecularMap" default="false" />
+		<uniform name="SpecularCoefficient" type="float" default="1" />
+		<texture name="SpecularMap" type="Texture2D" default="textures/engine/default_d" />
+		<uniform name="Shininess" type="float" default="10" />
+	</parameters>
+    <sources>
+		<graph featurelevel="es2" nextnodeid="16">
+        	<nodes>
+                <node name="DiffuseColor" type="ShaderGraphNode_Float4Parameter" parametername="DiffuseColor" />
+                <node name="DiffuseMap" type="ShaderGraphNode_Texture2DParameter" parametername="DiffuseMap" />
+                <node name="UseDiffuseMap" type="ShaderGraphNode_StaticSwitchParameter" parametername="UseDiffuseMap" />
+                
+                <node name="SpecularCoefficient" type="ShaderGraphNode_FloatParameter" parametername="SpecularCoefficient" />
+                <node name="Shininess" type="ShaderGraphNode_FloatParameter" parametername="Shininess" />
+                <node name="SpecularMap" type="ShaderGraphNode_Texture2DParameter" parametername="SpecularMap" />
+                <node name="UseSpecularMap" type="ShaderGraphNode_StaticSwitchParameter" parametername="UseSpecularMap" />
+                
+                <node name="DiffuseMapSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+                <node name="SpecularMapSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+            </nodes>
+            <links>               
+                <link target="DiffuseMapSample" input="Texture" source="DiffuseMap" output="Texture" />
+                <link target="DiffuseMapSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                <link target="UseDiffuseMap" input="IfEnabled" source="DiffuseMapSample" output="Result" swizzle="rgba" />
+                <link target="UseDiffuseMap" input="IfDisabled" source="DiffuseColor" output="Value" swizzle="rgba" />
+                
+                <link target="SpecularMapSample" input="Texture" source="SpecularMap" output="Texture" />
+                <link target="SpecularMapSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                <link target="UseSpecularMap" input="IfEnabled" source="SpecularMapSample" output="Result" swizzle="r" />
+                <link target="UseSpecularMap" input="IfDisabled" source="SpecularCoefficient" output="Value" />
+                                              
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="UseDiffuseMap" output="Result" swizzle="rgb" />
+                <link target="SHADER_OUTPUTS" input="SpecularCoefficient" source="UseSpecularMap" output="Result" />
+                <link target="SHADER_OUTPUTS" input="SpecularExponent" source="UseSpecularMap" output="Result" />
+                <link target="SHADER_OUTPUTS" input="Normal" source="SHADER_INPUTS" output="Normal" />
+                <link target="SHADER_OUTPUTS" input="Opacity" source="UseDiffuseMap" output="Result" swizzle="a" />
+            </links>
+        </graph>
+	</sources>
+</shader>

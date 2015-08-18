@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Source\D3D11Renderer\D3D11GPUContext.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11GPUQuery.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11GPUShaderProgram.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11GPUTexture.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11Renderer.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11CVars.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11Defines.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11GPUBuffer.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11RendererOutputBuffer.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\PrecompiledHeader.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\D3D11Renderer\D3D11GPUContext.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11GPUQuery.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11GPUShaderProgram.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11GPUTexture.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11Renderer.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11ShaderCacheEntry.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11Common.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11CVars.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11Defines.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11GPUBuffer.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11RendererOutputBuffer.h" />
+    <ClInclude Include="Source\D3D11Renderer\PrecompiledHeader.h" />
+  </ItemGroup>
+</Project>

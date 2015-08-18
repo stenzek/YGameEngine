@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="DirectionalLightEntity" base="Entity" can-create="true">
+    <displayname>Directional Light</displayname>
+    <category>Lights</category>
+    <description>Entity that is a directional light.</description>
+    <properties>
+        <property type="bool" name="Enabled">
+            <category>Light</category>
+            <label>Enabled</label>
+            <description>Entity emits light that affects other objects.</description>
+            <default>true</default>
+        </property>
+        <property type="float3" name="Color">
+            <category>Light</category>
+            <label>Color</label>
+            <description>Color of the light.</description>
+            <default>1 1 1</default>
+            <selector type="color" />
+        </property>
+        <property type="float" name="Brightness">
+            <category>Light</category>
+            <label>Brightness</label>
+            <description>Intensity of the light.</description>
+            <default>1.0</default>
+            <selector type="slider" min="0.1" max="16.0" />
+        </property>
+		<property type="uint" name="LightShadowFlags">
+			<category>Light</category>
+			<label>Shadow Flags</label>
+			<description>Light shadow behaviour</description>
+			<default>3</default>
+			<selector type="flags">
+				<flag value="1">
+					<label>Cast Static Shadows</label>
+					<description>Casts static shadows</description>
+				</flag>
+				<flag value="2">
+					<label>Cast Dynamic Shadows</label>
+					<description>Casts dynamic shadows</description>
+				</flag>
+			</selector>
+		</property>
+		<property type="float" name="AmbientFactor">
+			<category>Light</category>
+			<label>Ambient Factor</label>
+			<description>Factor of ambient (float) light to generate</description>
+			<default>0.2</default>
+			<selector type="slider" min="0.0" max="1.0" />
+		</property>
+    </properties>
+</object-template>
+

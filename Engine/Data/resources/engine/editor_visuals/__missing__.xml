@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<editor-visual name="__missing">
+	<visual type="Sprite">
+		<position from-property="Position" />
+		<texture name="resources/editor/textures/light_point" />
+		<blending mode="straight" />
+		<width value="2" />
+		<height value="2" />
+		<shadowflags value="0" />
+		<selected-tint-color value="#dbeafd" />
+	</visual>
+</editor-visual>

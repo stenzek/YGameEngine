@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="PointLightComponent" base="Component" can-create="true">
+    <displayname>Point Light Component</displayname>
+    <category>Lights</category>
+    <description>Component that is a point light.</description>
+    <properties>
+        <property type="bool" name="Enabled">
+            <category>Light</category>
+            <label>Enabled</label>
+            <description>Entity emits light that effects other objects.</description>
+            <default>true</default>
+        </property>
+        <property type="float" name="Range">
+            <category>Light</category>
+            <label>Range</label>
+            <description>Radius of the light.</description>
+            <default>8.0</default>
+            <selector type="slider" min="1" max="1024" />
+        </property>
+        <property type="float3" name="Color">
+            <category>Light</category>
+            <label>Color</label>
+            <description>Color of the light.</description>
+            <default>1 1 1</default>
+            <selector type="color" />
+        </property>
+        <property type="float" name="Brightness">
+            <category>Light</category>
+            <label>Brightness</label>
+            <description>Intensity of the light.</description>
+            <default>1.0</default>
+            <selector type="slider" min="0.1" max="16.0" />
+        </property>
+        <property type="float" name="FalloffExponent">
+            <category>Light</category>
+            <label>Falloff Exponent</label>
+            <description>Rate at which the light falls off from the origin.</description>
+            <default>2.0</default>
+            <selector type="slider" min="0.1" max="16.0" />
+        </property>
+		<property type="uint" name="ShadowFlags">
+			<category>Light</category>
+			<label>Shadow Flags</label>
+			<description>Light shadow behaviour</description>
+			<default>1</default>
+			<selector type="flags">
+				<flag value="1">
+					<label>Cast Static Shadows</label>
+					<description>Casts static shadows</description>
+				</flag>
+				<flag value="2">
+					<label>Cast Dynamic Shadows</label>
+					<description>Casts dynamic shadows</description>
+				</flag>
+			</selector>
+		</property>
+    </properties>
+</object-template>

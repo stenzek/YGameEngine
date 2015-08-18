@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_RotationOverTime" base="ParticleSystemModule_TimeBased" can-create="true">
+    <displayname>Rotation Over Time</displayname>
+    <category>Time-Based Modifiers</category>
+    <properties>
+      <property type="float" name="StartColor">
+        <category>Rotation</category>
+        <label>Starting Rotation</label>
+        <description>Starting rotation of the particle in degrees</description>
+        <default>0.0</default>
+      </property>
+      <property type="float" name="EndColor">
+        <category>Rotation</category>
+        <label>Ending Rotation</label>
+        <description>Ending rotation of the particle in degrees</description>
+        <default>360.0</default>
+      </property>
+    </properties>
+</object-template>

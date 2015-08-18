@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Source\DemoGame\Main.cpp" />
+    <ClCompile Include="Source\DemoGame\DemoGame.cpp" />
+    <ClCompile Include="Source\DemoGame\DemoUtilities.cpp" />
+    <ClCompile Include="Source\DemoGame\BaseDemoGameState.cpp" />
+    <ClCompile Include="Source\DemoGame\LaunchpadGameState.cpp" />
+    <ClCompile Include="Source\DemoGame\PrecompiledHeader.cpp" />
+    <ClCompile Include="Source\DemoGame\SkeletalAnimationDemo.cpp" />
+    <ClCompile Include="Source\DemoGame\DemoCamera.cpp" />
+    <ClCompile Include="Source\DemoGame\ImGuiDemo.cpp" />
+    <ClCompile Include="Source\DemoGame\BaseDemoWorldGameState.cpp" />
+    <ClCompile Include="Source\DemoGame\DrawCallStressDemo.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\DemoGame\DemoGame.h" />
+    <ClInclude Include="Source\DemoGame\DemoUtilities.h" />
+    <ClInclude Include="Source\DemoGame\BaseDemoGameState.h" />
+    <ClInclude Include="Source\DemoGame\LaunchpadGameState.h" />
+    <ClInclude Include="Source\DemoGame\PrecompiledHeader.h" />
+    <ClInclude Include="Source\DemoGame\SkeletalAnimationDemo.h" />
+    <ClInclude Include="Source\DemoGame\DemoCamera.h" />
+    <ClInclude Include="Source\DemoGame\ImGuiDemo.h" />
+    <ClInclude Include="Source\DemoGame\BaseDemoWorldGameState.h" />
+    <ClInclude Include="Source\DemoGame\DrawCallStressDemo.h" />
+  </ItemGroup>
+</Project>

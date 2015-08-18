@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="none" />
+	<lighting type="Reflective" model="Phong" normal-space="World" two-sided="false" />
+	<parameters>	
+		<!-- diffuse -->
+		<staticswitch name="UseBaseTexture" default="false" />
+		<uniform name="BaseColor" type="float3" default="1 1 1" />
+		<texture name="BaseTexture" type="Texture2D" default="textures/engine/default_d" />
+		
+		<!-- specular -->
+		<staticswitch name="UseSpecularTexture" default="false" />
+		<uniform name="SpecularCoefficient" type="float" default="0" />
+        <uniform name="SpecularExponent" type="float" default="8" />
+		<texture name="SpecularTexture" type="Texture2D" default="textures/engine/default_d" />
+	</parameters>
+	
+	<sources>
+		<graph featurelevel="es2" nextnodeid="14">
+        	<nodes>
+                <node name="BaseColor" type="ShaderGraphNode_Float3Parameter" parametername="BaseColor" />
+                <node name="BaseTexture" type="ShaderGraphNode_Texture2DParameter" parametername="BaseTexture" />
+                <node name="UseBaseTexture" type="ShaderGraphNode_StaticSwitchParameter" parametername="UseBaseTexture" />
+                
+                <node name="SpecularCoefficient" type="ShaderGraphNode_FloatParameter" parametername="SpecularCoefficient" />
+                <node name="SpecularTexture" type="ShaderGraphNode_Texture2DParameter" parametername="SpecularTexture" />
+                <node name="SpecularExponent" type="ShaderGraphNode_FloatParameter" parametername="SpecularExponent" />
+                <node name="UseSpecularTexture" type="ShaderGraphNode_StaticSwitchParameter" parametername="UseSpecularTexture" />
+                
+                <node name="BaseTextureSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+                <node name="SpecularTextureSample" type="ShaderGraphNode_TextureSample" unpack-operation="None" />
+            </nodes>
+            <links>               
+                <link target="BaseTextureSample" input="Texture" source="BaseTexture" output="Texture" />
+                <link target="BaseTextureSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                <link target="UseBaseTexture" input="IfEnabled" source="BaseTextureSample" output="Result" swizzle="rgb" />
+                <link target="UseBaseTexture" input="IfDisabled" source="BaseColor" output="Value" />
+                
+                <link target="SpecularTextureSample" input="Texture" source="SpecularTexture" output="Texture" />
+                <link target="SpecularTextureSample" input="TexCoord" source="SHADER_INPUTS" output="TexCoord0" />
+                <link target="UseSpecularTexture" input="IfEnabled" source="SpecularTextureSample" output="Result" swizzle="r" />
+                <link target="UseSpecularTexture" input="IfDisabled" source="SpecularCoefficient" output="Value" />
+                                              
+                <link target="SHADER_OUTPUTS" input="BaseColor" source="UseBaseTexture" output="Result" />
+                <link target="SHADER_OUTPUTS" input="SpecularCoefficient" source="UseSpecularTexture" output="Result" />
+                <link target="SHADER_OUTPUTS" input="SpecularExponent" source="SpecularExponent" output="Value" />
+                <link target="SHADER_OUTPUTS" input="Normal" source="SHADER_INPUTS" output="WorldNormal" />
+            </links>
+        </graph>
+	</sources>
+</shader>

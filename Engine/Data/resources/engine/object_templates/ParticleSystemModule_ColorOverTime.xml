@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_ColorOverTime" base="ParticleSystemModule_TimeBased" can-create="true">
+    <displayname>Color Over Time</displayname>
+    <category>Time-Based Modifiers</category>
+    <properties>
+      <property type="color" name="StartColor">
+        <category>Color</category>
+        <label>Starting Color</label>
+        <description>Starting colour of the particle</description>
+        <default>#ffffff</default>
+      </property>
+      <property type="color" name="EndColor">
+        <category>Color</category>
+        <label>Ending Color</label>
+        <description>Ending colour of the particle</description>
+        <default>#ffffff</default>
+      </property>
+    </properties>
+</object-template>

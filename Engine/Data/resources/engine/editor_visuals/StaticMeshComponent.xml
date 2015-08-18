@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<editor-visual name="StaticMeshEntity">
+	<visual type="StaticMesh">
+		<position from-property="Position" />
+		<rotation from-property="Rotation" />
+		<scale from-property="Scale" />
+		<visible from-property="Visible" />
+		<shadowflags from-property="ShadowFlags" />
+		<mesh from-property="MeshName" />
+		<selected-tint-color value="#529bf5" />
+	</visual>                
+</editor-visual>

@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLDefines.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLGPUBuffer.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLGPUContext.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLGPUQuery.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLGPUShaderProgram.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLGPUTexture.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLRenderer.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLRendererOutputBuffer.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLCVars.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\PrecompiledHeader.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLCommon.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLDefines.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUBuffer.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUContext.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUQuery.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUShaderProgram.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUTexture.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLRenderer.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLShaderCacheEntry.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLRendererOutputBuffer.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLCVars.h" />
+    <ClInclude Include="Source\OpenGLRenderer\PrecompiledHeader.h" />
+  </ItemGroup>
+</Project>

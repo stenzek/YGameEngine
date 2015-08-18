@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<object-template name="ParticleSystemModule_SpawnRotation" base="ParticleSystemModule" can-create="true">
+    <displayname>Spawn Rotation</displayname>
+    <category>Spawn Modules</category>
+    <properties>
+      <property type="float" name="MinRotation">
+        <category>Rotation</category>
+        <label>Minimum Rotation</label>
+        <description>Minimum lifetime of the particle (in degrees)</description>
+        <default>0.0</default>
+      </property>
+      <property type="float" name="MaxRotation">
+        <category>Rotation</category>
+        <label>Maximum Rotation</label>
+        <description>Maximum lifetime of the particle (in degrees)</description>
+        <default>0.0</default>
+      </property>
+    </properties>
+</object-template>

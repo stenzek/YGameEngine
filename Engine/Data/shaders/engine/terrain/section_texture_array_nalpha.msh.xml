@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shader>
+	<blending mode="none" />
+	<lighting type="Reflective" model="Phong" normal-space="World" two-sided="false" />
+	<parameters>
+		<uniform name="TerrainTextureArrayIndices" type="float4" />
+		<uniform name="TerrainAlphaTextureCount" type="int" />
+        <texture name="BaseLayerAlphaMap" type="Texture2DArray" />
+		<texture name="BaseLayerDiffuseMap" type="Texture2DArray" />
+	</parameters>
+	<sources>
+		<code platform="d3d11"><![CDATA[
+#if MATERIAL_NEEDS_DIFFUSE_COLOR && !MATERIAL_NEEDS_PIXEL_INPUT_PARAMETER_TEXCOORD
+    #define MATERIAL_NEEDS_PIXEL_INPUT_PARAMETER_TEXCOORD 1
+#endif
+#if !MTLStaticSwitch_UseNormalMap && MATERIAL_NEEDS_NORMAL
+    #define MATERIAL_NEEDS_PIXEL_INPUT_PARAMETER_WORLD_NORMAL 1
+#endif
+
+Texture2DArray MTLTextureParameter_BaseLayerAlphaMap;
+SamplerState MTLTextureParameter_BaseLayerAlphaMap_SamplerState;
+
+Texture2DArray MTLTextureParameter_BaseLayerDiffuseMap;
+SamplerState MTLTextureParameter_BaseLayerDiffuseMap_SamplerState;
+
+float4 TerrainTextureArrayIndices[16];
+int TerrainAlphaTextureCount;
+
+#if MATERIAL_NEEDS_NORMAL
+float3 MaterialGetNormal(MaterialInputParameters InputParameters)
+{
+    return InputParameters.WorldNormal;
+}
+#endif
+
+#if MATERIAL_NEEDS_BASE_COLOR
+float3 MaterialGetBaseColor(MaterialInputParameters InputParameters)
+{
+	float2 texCoord = InputParameters.TexCoord0.xy;
+	float3 diffuseColor = float3(0, 0, 0);
+	for (int i = 0; i < TerrainAlphaTextureCount; i++)
+	{
+		float4 textureWeights = MTLTextureParameter_BaseLayerAlphaMap.Sample(MTLTextureParameter_BaseLayerAlphaMap_SamplerState, float3(texCoord, (float)i));
+		float4 textureIndices = TerrainTextureArrayIndices[i];
+		
+		// sample the textures
+		diffuseColor += MTLTextureParameter_BaseLayerDiffuseMap.Sample(MTLTextureParameter_BaseLayerDiffuseMap_SamplerState, float3(texCoord, textureIndices.x)).rgb * textureWeights.xxx;
+		diffuseColor += MTLTextureParameter_BaseLayerDiffuseMap.Sample(MTLTextureParameter_BaseLayerDiffuseMap_SamplerState, float3(texCoord, textureIndices.y)).rgb * textureWeights.yyy;
+		diffuseColor += MTLTextureParameter_BaseLayerDiffuseMap.Sample(MTLTextureParameter_BaseLayerDiffuseMap_SamplerState, float3(texCoord, textureIndices.z)).rgb * textureWeights.zzz;
+		diffuseColor += MTLTextureParameter_BaseLayerDiffuseMap.Sample(MTLTextureParameter_BaseLayerDiffuseMap_SamplerState, float3(texCoord, textureIndices.w)).rgb * textureWeights.www;
+	}
+	return diffuseColor;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_COEFFICIENT
+float MaterialGetSpecularCoefficient(MaterialInputParameters InputParameters)
+{
+	return 1.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_SPECULAR_EXPONENT
+float MaterialGetSpecularExponent(MaterialInputParameters InputParameters)
+{
+	return 16.0;
+}
+#endif
+
+#if MATERIAL_NEEDS_OPACITY
+float MaterialGetOpacity(MaterialInputParameters InputParameters)
+{
+    return 1.0;
+}
+#endif
+
+
+        ]]></code>
+	</sources>
+</shader>
+

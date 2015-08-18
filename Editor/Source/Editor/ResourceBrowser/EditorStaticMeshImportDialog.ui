@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>EditorStaticMeshImportDialog</class>
+ <widget class="QDialog" name="EditorStaticMeshImportDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>476</width>
+    <height>605</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Static Mesh Importer</string>
+  </property>
+  <property name="sizeGripEnabled">
+   <bool>true</bool>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="mainHeading">
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:16pt; font-weight:600;&quot;&gt;Static Mesh Importer&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Fill out this form to import an object, or multiple objects into the engine. After importing is complete, an editor window will open with the imported mesh.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::RichText</enum>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Source File</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="fileNameLabel">
+        <property name="text">
+         <string>File Name: </string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QLineEdit" name="fileNameLineEdit"/>
+        </item>
+        <item>
+         <widget class="QPushButton" name="fileNameBrowseButton">
+          <property name="text">
+           <string>Browse...</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="subObjectLabel">
+        <property name="text">
+         <string>Sub Object: </string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="subObjectComboBox"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="coordinateSystemLabel">
+        <property name="text">
+         <string>Coordinate System: </string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="coordinateSystemComboBox">
+        <property name="currentIndex">
+         <number>1</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>Y-Up Left Handed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Y-Up Right Handed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Z-Up Left Handed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Z-Up Right Handed</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="flipWindingLabel">
+        <property name="text">
+         <string>Flip Faces: </string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QCheckBox" name="flipWindingCheckBox"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>Post Processing Options</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout_2">
+      <property name="fieldGrowthPolicy">
+       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="generateTangentsLabel">
+        <property name="text">
+         <string>Generate Tangents: </string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="generateTangentsCheckBox">
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="importMaterialsLabel">
+        <property name="text">
+         <string>Import Materials: </string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="importMaterialsCheckBox"/>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="materialPrefixLabel">
+        <property name="text">
+         <string>Material Prefix: </string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="materialPrefixLineEdit"/>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="scaleLabel">
+        <property name="text">
+         <string>Scale: </string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="EditorVectorEditWidget" name="scaleVectorEdit"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="materialDirectoryLabel">
+        <property name="text">
+         <string>Material Directory: </string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="materialDirectoryLineEdit"/>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="collisionShapeTypeLabel">
+        <property name="text">
+         <string>Collision Shape Type:  </string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QComboBox" name="collisionShapeTypeComboBox">
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>None</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Box</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Sphere</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Triangle Mesh</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Convex Hull</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="importerMessagesLabel">
+     <property name="text">
+      <string>Importer Messages: </string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QListWidget" name="importerMessagesListWidget"/>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="progressBar">
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="textVisible">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QCheckBox" name="keepOpenAfterImportingCheckBox">
+       <property name="text">
+        <string>Keep Open After Importing</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="importButton">
+       <property name="text">
+        <string>Import</string>
+       </property>
+       <property name="default">
+        <bool>true</bool>
+       </property>
+       <property name="flat">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="closeButton">
+       <property name="text">
+        <string>Close</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>EditorVectorEditWidget</class>
+   <extends>QLineEdit</extends>
+   <header>Editor/EditorVectorEditWidget.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

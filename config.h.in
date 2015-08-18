@@ -1,0 +1,30 @@
+#pragma once
+
+// Config header
+
+// Core defines
+#cmakedefine HAVE_LIBXML2
+#cmakedefine HAVE_SQUISH
+#cmakedefine HAVE_ZLIB
+#cmakedefine HAVE_SFMT
+#cmakedefine HAVE_FREEIMAGE
+#cmakedefine HAVE_HLSLTRANSLATOR
+
+// Engine defines
+#cmakedefine WITH_PROFILER
+#cmakedefine WITH_IMGUI
+#cmakedefine WITH_RENDERER_D3D11
+#cmakedefine WITH_RENDERER_D3D12
+#cmakedefine WITH_RENDERER_OPENGL
+#cmakedefine WITH_RENDERER_OPENGLES2
+#cmakedefine WITH_RESOURCECOMPILER
+#cmakedefine WITH_RESOURCECOMPILER_EMBEDDED
+#cmakedefine WITH_RESOURCECOMPILER_SUBPROCESS
+#cmakedefine WITH_RESOURCECOMPILER_STANDALONE
+#cmakedefine WITH_MAPCOMPILER
+#cmakedefine WITH_MAPCOMPILER_STANDALONE
+#cmakedefine WITH_CONTENTCONVERTER
+#cmakedefine WITH_CONTENTCONVERTER_STANDALONE
+#cmakedefine WITH_BASEGAME
+#cmakedefine WITH_EDITOR
+#cmakedefine WITH_BLOCKENGINE

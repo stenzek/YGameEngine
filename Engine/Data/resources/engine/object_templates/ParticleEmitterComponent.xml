@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<object-template name="ParticleEmitterComponent" base="Component" can-create="true">
+    <displayname>Particle Emitter Component</displayname>
+    <category>Particle Emitter</category>
+    <description>Component that creates a particle emitter instance.</description>
+    <properties>
+        <property type="bool" name="Active">
+            <category>Particle Emitter</category>
+            <label>Enabled</label>
+            <description>Enable the particle emitter.</description>
+            <default>true</default>
+        </property>
+        <property type="bool" name="AutoStart">
+            <category>Particle Emitter</category>
+            <label>Auto Start</label>
+            <description>Automatically start the particle emitter at spawn time.</description>
+            <default>true</default>
+        </property>
+        <property type="string" name="ParticleSystemName">
+            <category>Particle Emitter</category>
+            <label>Particle System</label>
+            <description>Particle system to simulate.</description>
+            <default>fx/engine/default</default>
+            <selector type="resource" resource-type="ParticleSystem" />
+        </property>
+    </properties>
+</object-template>

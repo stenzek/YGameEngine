@@ -646,6 +646,12 @@ protected:
     uint32 m_drawCallCounter;
 };
 
+class GPUCommandList
+{
+public:
+    virtual ~GPUCommandList() {}
+};
+
 struct RendererInitializationParameters
 {
     RendererInitializationParameters() 

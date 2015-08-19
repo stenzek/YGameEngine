@@ -63,6 +63,35 @@ private:
     D3D12_BLEND_DESC m_D3DBlendDesc;
 };
 
+class D3D12DescriptorHeap
+{
+public:
+    struct Handle
+    {
+        D3D12_GPU_DESCRIPTOR_HANDLE GPUHandle;
+        D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle;
+        uint32 IndexInHeap;
+    };
+
+public:
+    ~D3D12DescriptorHeap();
+
+    static D3D12DescriptorHeap *Create(ID3D12Device *pDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 descriptorCount);
+
+    bool Allocate(Handle *handle);
+    void Free(const Handle *handle);
+
+private:
+    D3D12DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 descriptorCount, ID3D12DescriptorHeap *pD3DDescriptorHeap, uint32 incrementSize);
+
+    D3D12_DESCRIPTOR_HEAP_TYPE m_type;
+    uint32 m_descriptorCount;
+
+    ID3D12DescriptorHeap *m_pD3DDescriptorHeap;
+    BitSet32 m_allocationMap;
+    uint32 m_incrementSize;
+};
+
 class D3D12Renderer : public Renderer
 {
 public:
@@ -137,4 +166,10 @@ private:
     D3D12RendererOutputWindow *m_pImplicitRenderWindow;
 
     GPUMemoryUsage m_gpuMemoryUsage;
+
+    // create descriptor heaps
+    bool CreateDescriptorHeaps();
+
+    // descriptor heaps
+    D3D12DescriptorHeap *m_pDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 };

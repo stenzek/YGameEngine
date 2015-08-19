@@ -122,7 +122,7 @@ bool MapSourceTerrainData::IsSectionAvailable(int32 sectionX, int32 sectionY) co
     int32 sectionIndex = GetSectionArrayIndex(sectionX, sectionY);
     DebugAssert(sectionIndex >= 0);
 
-    return m_availableSectionMask.IsSet(sectionIndex);
+    return m_availableSectionMask.TestBit(sectionIndex);
 }
 
 bool MapSourceTerrainData::IsSectionLoaded(int32 sectionX, int32 sectionY) const
@@ -366,13 +366,13 @@ bool MapSourceTerrainData::Load(ProgressCallbacks *pProgressCallbacks)
                                     int32 sectionX = StringConverter::StringToInt32(sectionXStr);
                                     int32 sectionY = StringConverter::StringToInt32(sectionYStr);
                                     int32 arrayIndex = GetSectionArrayIndex(sectionX, sectionY);
-                                    if (m_availableSectionMask.IsSet(arrayIndex))
+                                    if (m_availableSectionMask.TestBit(arrayIndex))
                                     {
                                         xmlReader.PrintError("duplicate defined section (%u, %u)", sectionX, sectionY);
                                         return false;
                                     }
 
-                                    m_availableSectionMask.Set(arrayIndex);
+                                    m_availableSectionMask.SetBit(arrayIndex);
                                 }
                                 else if (xmlReader.GetTokenType() == XMLREADER_TOKEN_END_ELEMENT)
                                 {
@@ -641,7 +641,7 @@ bool MapSourceTerrainData::LoadAllSections(ProgressCallbacks *pProgressCallbacks
         for (int32 sectionY = m_minSectionY; sectionY <= m_maxSectionY; sectionY++)
         {
             int32 arrayIndex = GetSectionArrayIndex(sectionX, sectionY);
-            if (m_availableSectionMask.IsSet(arrayIndex) && m_ppSections[arrayIndex] == nullptr)
+            if (m_availableSectionMask.TestBit(arrayIndex) && m_ppSections[arrayIndex] == nullptr)
             {
                 if (!LoadSection(sectionX, sectionY))
                     return false;
@@ -685,12 +685,12 @@ void MapSourceTerrainData::ResizeSectionArray(int32 newMinSectionX, int32 newMin
         {
             int32 oldIndex = ((sectionY - m_minSectionY) * m_sectionCountX) + (sectionX - m_minSectionX);
             DebugAssert(oldIndex >= 0 && oldIndex < m_sectionCount);
-            if (m_availableSectionMask.IsSet((uint32)oldIndex))
+            if (m_availableSectionMask.TestBit((uint32)oldIndex))
             {
                 int32 newIndex = ((sectionY - newMinSectionY) * newSectionCountX) + (sectionX - newMinSectionX);
                 DebugAssert(newIndex >= 0 && newIndex < newSectionCount);
 
-                newAvailableSectionMask.Set((uint32)newIndex);
+                newAvailableSectionMask.SetBit((uint32)newIndex);
                 ppNewSectionArray[newIndex] = m_ppSections[oldIndex];
             }
         }
@@ -764,8 +764,8 @@ uint32 MapSourceTerrainData::CreateSections(const int2 *pNewSectionIndices, uint
 
         // store in lod 0
         int32 arrayIndex = GetSectionArrayIndex(newSectionX, newSectionY);
-        DebugAssert(m_ppSections[arrayIndex] == NULL && !m_availableSectionMask.IsSet(arrayIndex));
-        m_availableSectionMask.Set(arrayIndex);
+        DebugAssert(m_ppSections[arrayIndex] == NULL && !m_availableSectionMask.TestBit(arrayIndex));
+        m_availableSectionMask.SetBit(arrayIndex);
         m_availableSectionsChanged = true;
         m_ppSections[arrayIndex] = pSection;
         m_loadedSections.Add(pSection);
@@ -900,7 +900,7 @@ void MapSourceTerrainData::DeleteSections(const int2 *pSectionIndices, uint32 se
             m_pEditCallbacks->OnSectionDeleted(sectionX, sectionY);
 
         // set unavailable
-        m_availableSectionMask.Unset(arrayIndex);
+        m_availableSectionMask.UnsetBit(arrayIndex);
 
         // store in deleted section list
         if (m_deletedSections.IndexOf(int2(sectionX, sectionY)) < 0)
@@ -957,7 +957,7 @@ void MapSourceTerrainData::DeleteAllSections()
 bool MapSourceTerrainData::LoadSection(int32 sectionX, int32 sectionY)
 {
     int32 arrayIndex = GetSectionArrayIndex(sectionX, sectionY);
-    Assert(m_availableSectionMask.IsSet(arrayIndex));
+    Assert(m_availableSectionMask.TestBit(arrayIndex));
 
     TerrainSection *pSection = m_ppSections[arrayIndex];
     if (pSection != nullptr)

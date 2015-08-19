@@ -102,7 +102,7 @@ void BlockWorldSection::ResizeChunkArray(int32 minChunkZ, int32 maxChunkZ)
         {
             for (int32 x = 0; x < m_sectionSize; x++)
             {
-                if (!m_chunkAvailability.IsSet(chunkIndex))
+                if (!m_chunkAvailability.TestBit(chunkIndex))
                 {
                     chunkIndex++;
                     continue;
@@ -113,7 +113,7 @@ void BlockWorldSection::ResizeChunkArray(int32 minChunkZ, int32 maxChunkZ)
                     // determine new chunk index
                     uint32 newChunkIndex = newZStride * (z - minChunkZ) + (y * m_sectionSize) + x;
                     ppChunks[newChunkIndex] = m_ppChunks[chunkIndex];
-                    newChunkAvailability.Set(newChunkIndex);
+                    newChunkAvailability.SetBit(newChunkIndex);
                 }
 
                 chunkIndex++;
@@ -138,7 +138,7 @@ bool BlockWorldSection::GetChunkAvailability(int32 chunkX, int32 chunkY, int32 c
 
     int32 arrayIndex = GetChunkArrayIndex(chunkX, chunkY, chunkZ);
     DebugAssert(arrayIndex >= 0 && arrayIndex < m_chunkCount);
-    return m_chunkAvailability.IsSet((uint32)arrayIndex);
+    return m_chunkAvailability.TestBit((uint32)arrayIndex);
 }
 
 void BlockWorldSection::SetChunkAvailability(int32 chunkX, int32 chunkY, int32 chunkZ, bool availability)
@@ -146,9 +146,9 @@ void BlockWorldSection::SetChunkAvailability(int32 chunkX, int32 chunkY, int32 c
     int32 arrayIndex = GetChunkArrayIndex(chunkX, chunkY, chunkZ);
     DebugAssert(arrayIndex >= 0 && arrayIndex < m_chunkCount);
     if (availability)
-        m_chunkAvailability.Set((uint32)arrayIndex);
+        m_chunkAvailability.SetBit((uint32)arrayIndex);
     else
-        m_chunkAvailability.Unset((uint32)arrayIndex);
+        m_chunkAvailability.UnsetBit((uint32)arrayIndex);
 }
 
 const BlockWorldChunk *BlockWorldSection::GetChunk(int32 chunkX, int32 chunkY, int32 chunkZ) const
@@ -205,7 +205,7 @@ BlockWorldChunk *BlockWorldSection::CreateChunk(int32 chunkX, int32 chunkY, int3
     int32 arrayIndex = GetChunkArrayIndex(chunkX, chunkY, chunkZ);
     DebugAssert(arrayIndex >= 0 && arrayIndex < m_chunkCount);
     m_ppChunks[arrayIndex] = pChunk;
-    m_chunkAvailability.Set(arrayIndex);
+    m_chunkAvailability.SetBit(arrayIndex);
 
     // flag as changed
     if (m_loadState == LoadState_Loaded)
@@ -221,12 +221,12 @@ void BlockWorldSection::DeleteChunk(int32 chunkX, int32 chunkY, int32 chunkZ)
         return;
 
     uint32 chunkIndex = GetChunkArrayIndex(chunkX, chunkY, chunkZ);
-    if (!m_chunkAvailability.IsSet(chunkIndex))
+    if (!m_chunkAvailability.TestBit(chunkIndex))
         return;
 
     delete m_ppChunks[chunkIndex];
     m_ppChunks[chunkIndex] = nullptr;
-    m_chunkAvailability.Unset(chunkIndex);
+    m_chunkAvailability.UnsetBit(chunkIndex);
     if (m_loadState == LoadState_Loaded)
         m_loadState = LoadState_Changed;
 }
@@ -269,11 +269,11 @@ bool BlockWorldSection::LoadFromStream(ByteStream *pStream, int32 maxLODLevel)
 
     // read mask size
     uint32 maskDwordCount;
-    if (!binaryReader.SafeReadUInt32(&maskDwordCount) || maskDwordCount != m_chunkAvailability.GetDWordCount())
+    if (!binaryReader.SafeReadUInt32(&maskDwordCount) || maskDwordCount != m_chunkAvailability.GetValueCount())
         return false;
 
     // read mask bits
-    if (!pStream->Read2(m_chunkAvailability.GetPointer(), sizeof(uint32) * maskDwordCount))
+    if (!pStream->Read2(m_chunkAvailability.GetValuesPointer(), sizeof(uint32) * maskDwordCount))
         return false;
 
     // load the actual data
@@ -308,7 +308,7 @@ bool BlockWorldSection::LoadLODs(ByteStream *pStream, int32 maxLODLevel)
 
     // read mask size
     uint32 maskDwordCount;
-    if (!binaryReader.SafeReadUInt32(&maskDwordCount) || maskDwordCount != m_chunkAvailability.GetDWordCount())
+    if (!binaryReader.SafeReadUInt32(&maskDwordCount) || maskDwordCount != m_chunkAvailability.GetValueCount())
         return false;
 
     // skip mask bits
@@ -523,14 +523,14 @@ bool BlockWorldSection::SaveToStream(ByteStream *pStream) const
     writeResult &= binaryWriter.SafeWriteInt32(m_maxChunkZ);
 
     // write bitmask
-    writeResult &= binaryWriter.SafeWriteUInt32(m_chunkAvailability.GetDWordCount());
-    writeResult &= binaryWriter.SafeWriteBytes(m_chunkAvailability.GetPointer(), sizeof(uint32) * m_chunkAvailability.GetDWordCount());
+    writeResult &= binaryWriter.SafeWriteUInt32(m_chunkAvailability.GetValueCount());
+    writeResult &= binaryWriter.SafeWriteBytes(m_chunkAvailability.GetValuesPointer(), sizeof(uint32) * m_chunkAvailability.GetValueCount());
 
     // count available chunks
     int32 availableChunkCount = 0;
     for (int32 i = 0; i < m_chunkCount; i++)
     {
-        if (m_chunkAvailability.IsSet(i))
+        if (m_chunkAvailability.TestBit(i))
             availableChunkCount++;
     }
     

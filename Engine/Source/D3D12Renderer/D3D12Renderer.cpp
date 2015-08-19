@@ -607,13 +607,13 @@ bool D3D12DescriptorHeap::Allocate(Handle *handle)
     handle->CPUHandle.ptr += index * m_incrementSize;
     handle->GPUHandle = m_pD3DDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
     handle->GPUHandle.ptr += index * m_incrementSize;
-    m_allocationMap.Set(index);
+    m_allocationMap.SetBit(index);
     return true;
 }
 
 void D3D12DescriptorHeap::Free(const Handle *handle)
 {
     // @TODO sanity check handle is correct offset and hasn't been corrupted
-    DebugAssert(handle->IndexInHeap < m_descriptorCount && m_allocationMap.IsSet(handle->IndexInHeap));
-    m_allocationMap.Unset(handle->IndexInHeap);
+    DebugAssert(handle->IndexInHeap < m_descriptorCount && m_allocationMap.TestBit(handle->IndexInHeap));
+    m_allocationMap.UnsetBit(handle->IndexInHeap);
 }

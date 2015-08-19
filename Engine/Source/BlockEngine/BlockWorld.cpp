@@ -165,12 +165,12 @@ void BlockWorld::ResizeIndex(int32 newMinSectionX, int32 newMinSectionY, int32 n
         {
             int32 oldIndex = ((sectionY - m_minSectionY) * m_sectionCountX) + (sectionX - m_minSectionX);
             DebugAssert(oldIndex >= 0 && oldIndex < m_sectionCount);
-            if (m_availableSectionMask.IsSet((uint32)oldIndex))
+            if (m_availableSectionMask.TestBit((uint32)oldIndex))
             {
                 int32 newIndex = ((sectionY - newMinSectionY) * newSectionCountX) + (sectionX - newMinSectionX);
                 DebugAssert(newIndex >= 0 && newIndex < newSectionCount);
 
-                newAvailableSectionMask.Set((uint32)newIndex);
+                newAvailableSectionMask.SetBit((uint32)newIndex);
                 ppNewSectionArray[newIndex] = m_ppSections[oldIndex];
             }
         }
@@ -593,7 +593,7 @@ void BlockWorld::GetSectionStatus(bool *available, bool *loaded, int32 sectionX,
 
     // test section availablity
     int32 sectionArrayIndex = GetSectionArrayIndex(sectionX, sectionY);
-    if (!m_availableSectionMask.IsSet(sectionArrayIndex))
+    if (!m_availableSectionMask.TestBit(sectionArrayIndex))
     {
         // query generator
         if (m_pGenerator != nullptr)
@@ -643,7 +643,7 @@ void BlockWorld::GetChunkStatus(bool *available, bool *loaded, int32 chunkX, int
 
     // test section availablity
     int32 sectionArrayIndex = GetSectionArrayIndex(sectionX, sectionY);
-    if (!m_availableSectionMask.IsSet(sectionArrayIndex))
+    if (!m_availableSectionMask.TestBit(sectionArrayIndex))
     {
         *available = false;
         *loaded = false;
@@ -932,10 +932,10 @@ bool BlockWorld::LoadIndex()
             return false;
 
         int32 arrayIndex = GetSectionArrayIndex(sectionX, sectionY);
-        if (m_availableSectionMask.IsSet((uint32)arrayIndex))
+        if (m_availableSectionMask.TestBit((uint32)arrayIndex))
             return false;
 
-        m_availableSectionMask.Set((uint32)arrayIndex);
+        m_availableSectionMask.SetBit((uint32)arrayIndex);
     }
 
     // handle animation-in-progress block type
@@ -1013,7 +1013,7 @@ bool BlockWorld::LoadSection(int32 sectionX, int32 sectionY, int32 lodLevel, boo
 
     // handle section generation
     if (sectionX < m_minSectionX || sectionX > m_maxSectionX || sectionY < m_minSectionY || sectionY > m_maxSectionY ||     // section is out-of-range
-        !m_availableSectionMask.IsSet(GetSectionArrayIndex(sectionX, sectionY)))                                            // section is not generated
+        !m_availableSectionMask.TestBit(GetSectionArrayIndex(sectionX, sectionY)))                                            // section is not generated
     {
         // we only generate at lod0 for now.. fix this later
         if (lodLevel != 0)
@@ -1199,7 +1199,7 @@ BlockWorldSection *BlockWorld::CreateSection(int32 sectionX, int32 sectionY, int
     // get index and ensure it doesn't already exist
     int32 arrayIndex = GetSectionArrayIndex(sectionX, sectionY);
     DebugAssert(m_ppSections[arrayIndex] == nullptr);
-    if (m_availableSectionMask.IsSet(arrayIndex))
+    if (m_availableSectionMask.TestBit(arrayIndex))
     {
         Log_ErrorPrintf("BlockWorld::CreateSection: Section [%i, %i] already exists", sectionX, sectionY);
         return nullptr;
@@ -1210,7 +1210,7 @@ BlockWorldSection *BlockWorld::CreateSection(int32 sectionX, int32 sectionY, int
     pSection->Create(minChunkZ, maxChunkZ);
 
     // store section
-    m_availableSectionMask.Set(arrayIndex);
+    m_availableSectionMask.SetBit(arrayIndex);
     m_ppSections[arrayIndex] = pSection;
     m_loadedSections.Add(pSection);
 
@@ -1256,7 +1256,7 @@ void BlockWorld::DeleteSection(int32 sectionX, int32 sectionY)
     }
 
     // set unavailable
-    m_availableSectionMask.Unset(arrayIndex);
+    m_availableSectionMask.UnsetBit(arrayIndex);
 }
 
 bool BlockWorld::SaveSection(int32 sectionX, int32 sectionY)
@@ -1328,7 +1328,7 @@ bool BlockWorld::LoadAllSections(int32 maxLODLevel /* = 0 */, ProgressCallbacks 
         for (int32 sectionY = m_minSectionY; sectionY <= m_maxSectionY; sectionY++)
         {
             int32 arrayIndex = GetSectionArrayIndex(sectionX, sectionY);
-            if (m_availableSectionMask.IsSet(arrayIndex) && (m_ppSections[arrayIndex] == nullptr || m_ppSections[arrayIndex]->GetLoadedLODLevel() > maxLODLevel))
+            if (m_availableSectionMask.TestBit(arrayIndex) && (m_ppSections[arrayIndex] == nullptr || m_ppSections[arrayIndex]->GetLoadedLODLevel() > maxLODLevel))
             {
                 if (!LoadSection(sectionX, sectionY, maxLODLevel, false))
                     return false;

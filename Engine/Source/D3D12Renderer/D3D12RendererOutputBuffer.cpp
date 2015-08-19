@@ -322,6 +322,8 @@ D3D12RendererOutputWindow::~D3D12RendererOutputWindow()
 
 D3D12RendererOutputWindow *D3D12RendererOutputWindow::Create(IDXGIFactory3 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice, const char *windowCaption, uint32 windowWidth, uint32 windowHeight, DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthStencilBufferFormat, RENDERER_VSYNC_TYPE vsyncType, bool visible)
 {
+    HRESULT hResult;
+
     // Determine SDL window flags
     uint32 sdlWindowFlags = SDL_WINDOW_RESIZABLE;
     if (visible)
@@ -349,53 +351,61 @@ D3D12RendererOutputWindow *D3D12RendererOutputWindow::Create(IDXGIFactory3 *pDXG
         return nullptr;
     }
 
-#if 0
     // create swap chain depending on window type
-    IDXGISwapChain3 *pDXGISwapChain;
+    IDXGISwapChain1 *pDXGISwapChain1;
     if (info.subsystem == SDL_SYSWM_WINDOWS)
     {
         // setup swap chain desc
-        DXGI_SWAP_CHAIN_DESC swapChainDesc;
-        Y_memzero(&swapChainDesc, sizeof(DXGI_SWAP_CHAIN_DESC));
-        swapChainDesc.BufferDesc.Width = windowWidth;
-        swapChainDesc.BufferDesc.Height = windowHeight;
-        swapChainDesc.BufferDesc.Format = backBufferFormat;
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
+        Y_memzero(&swapChainDesc, sizeof(swapChainDesc));
+        swapChainDesc.Width = windowWidth;
+        swapChainDesc.Height = windowHeight;
+        swapChainDesc.Format = backBufferFormat;
+        swapChainDesc.Stereo = FALSE;
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         swapChainDesc.BufferCount = CalculateDXGISwapChainBufferCount(false, vsyncType);
         swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-        swapChainDesc.OutputWindow = info.info.win.window;
-        swapChainDesc.Windowed = TRUE;
+        swapChainDesc.Scaling = DXGI_SCALING_NONE;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+        swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+        swapChainDesc.Flags = 0;
 
         // create the swapchain
-        HRESULT hResult = pDXGIFactory->CreateSwapChain(pD3DDevice, &swapChainDesc, &pDXGISwapChain);
+        hResult = pDXGIFactory->CreateSwapChainForHwnd(pD3DDevice, info.info.win.window, &swapChainDesc, nullptr, nullptr, &pDXGISwapChain1);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D12RendererOutputWindow::Create: CreateSwapChain failed with hResult %08X.", hResult);
+            Log_ErrorPrintf("D3D12RendererOutputWindow::Create: CreateSwapChainForHwnd failed with hResult %08X.", hResult);
             SDL_DestroyWindow(pSDLWindow);
             return nullptr;
         }
 
         // disable alt+enter, we handle it elsewhere
-        hResult = pDXGIFactory->MakeWindowAssociation(swapChainDesc.OutputWindow, DXGI_MWA_NO_ALT_ENTER);
+        hResult = pDXGIFactory->MakeWindowAssociation(info.info.win.window, DXGI_MWA_NO_ALT_ENTER);
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("D3D12RendererOutputWindow::Create: MakeWindowAssociation failed with hResult %08X.", hResult);
-            pDXGISwapChain->Release();
+            pDXGISwapChain1->Release();
             SDL_DestroyWindow(pSDLWindow);
             return nullptr;
         }
     }
     else
-#endif
     {
         Log_ErrorPrintf("D3D12RendererOutputWindow::Create: Unhandled syswm: %u", (uint32)info.subsystem);
         SDL_DestroyWindow(pSDLWindow);
         return nullptr;
     }
 
-#if 0
+    // query swapchain3 interface
+    IDXGISwapChain3 *pDXGISwapChain;
+    if (FAILED((hResult = pDXGISwapChain1->QueryInterface(__uuidof(IDXGISwapChain3), (void **)&pDXGISwapChain))))
+    {
+        Log_ErrorPrintf("D3D12RendererOutputWindow::Create: QueryInterface(IDXGISwapChain3) failed with hResult %08X.", hResult);
+        return false;
+    }
+
     // create the buffer
     D3D12RendererOutputBuffer *pOutputBuffer;
     {
@@ -417,7 +427,6 @@ D3D12RendererOutputWindow *D3D12RendererOutputWindow::Create(IDXGIFactory3 *pDXG
 
     // done
     return pOutputWindow;
-#endif
 }
 
 bool D3D12RendererOutputWindow::SetFullScreen(RENDERER_FULLSCREEN_STATE state, uint32 width /* = 0 */, uint32 height /* = 0 */)

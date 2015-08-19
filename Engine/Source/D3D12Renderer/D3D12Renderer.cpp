@@ -6,6 +6,8 @@
 #include "Engine/EngineCVars.h"
 Log_SetChannel(D3D12Renderer);
 
+static HMODULE s_hD3D12DLL = nullptr;
+
 D3D12SamplerState::D3D12SamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const D3D12_SAMPLER_DESC *pD3DSamplerDesc)
     : GPUSamplerState(pSamplerStateDesc)
 {
@@ -153,11 +155,36 @@ D3D12Renderer::~D3D12Renderer()
         }
     }
 #endif
+
+    // release handle to d3d12
+    if (s_hD3D12DLL != nullptr)
+    {
+        FreeLibrary(s_hD3D12DLL);
+        s_hD3D12DLL = nullptr;
+    }
 }
 
 bool D3D12Renderer::Create(const RendererInitializationParameters *pInitializationParameters)
 {
     HRESULT hResult;
+
+    // load d3d12 library
+    DebugAssert(s_hD3D12DLL == nullptr);
+    s_hD3D12DLL = LoadLibraryA("d3d12.dll");
+    if (s_hD3D12DLL == nullptr)
+    {
+        Log_ErrorPrintf("D3D12Renderer::Create: Failed to load d3d12.dll library.");
+        return false;
+    }
+
+    // get function entry points
+    PFN_D3D12_CREATE_DEVICE fnD3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(s_hD3D12DLL, "D3D12CreateDevice");
+    PFN_D3D12_GET_DEBUG_INTERFACE fnD3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(s_hD3D12DLL, "D3D12GetDebugInterface");
+    if (fnD3D12CreateDevice == nullptr || fnD3D12GetDebugInterface == nullptr)
+    {
+        Log_ErrorPrintf("D3D12Renderer::Create: Missing D3D12 device entry points.");
+        return false;
+    }
 
     // select formats
     m_swapChainBackBufferFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(pInitializationParameters->BackBufferFormat);
@@ -177,6 +204,83 @@ bool D3D12Renderer::Create(const RendererInitializationParameters *pInitializati
     else
         driverType = D3D_DRIVER_TYPE_HARDWARE;
 
+    // todo: get adapter based on driver type
+    hResult = CreateDXGIFactory2((CVars::r_use_debug_device.GetBool()) ? DXGI_CREATE_FACTORY_DEBUG : 0, __uuidof(IDXGIFactory3), (void **)&m_pDXGIFactory);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("D3D12Renderer::Create: Failed to create DXGI factory with hResult %08X", hResult);
+        return false;
+    }
+
+    // iterate over adapters
+    for (uint32 adapterIndex = 0; ; adapterIndex++)
+    {
+        IDXGIAdapter *pAdapter;
+        hResult = m_pDXGIFactory->EnumAdapters(adapterIndex, &pAdapter);
+        if (hResult == DXGI_ERROR_NOT_FOUND)
+            break;
+
+        if (SUCCEEDED(hResult))
+        {
+            hResult = pAdapter->QueryInterface(__uuidof(IDXGIAdapter3), (void **)&m_pDXGIAdapter);
+            if (FAILED(hResult))
+            {
+                Log_ErrorPrintf("D3D12Renderer::Create: IDXGIAdapter::QueryInterface(IDXGIAdapter3) failed.");
+                pAdapter->Release();
+                return false;
+            }
+
+            pAdapter->Release();
+            break;
+        }
+
+        Log_WarningPrintf("IDXGIFactory::EnumAdapters(%u) failed with hResult %08X", hResult);
+    }
+
+    // found an adapter
+    if (m_pDXGIAdapter == nullptr)
+    {
+        Log_ErrorPrintf("D3D12Renderer::Create: Failed to find an acceptable adapter.", hResult);
+        return false;
+    }
+
+    // print device name
+    {
+        // get adapter desc
+        DXGI_ADAPTER_DESC DXGIAdapterDesc;
+        hResult = m_pDXGIAdapter->GetDesc(&DXGIAdapterDesc);
+        DebugAssert(hResult == S_OK);
+
+        char deviceName[128];
+        WideCharToMultiByte(CP_ACP, 0, DXGIAdapterDesc.Description, -1, deviceName, countof(deviceName), NULL, NULL);
+        Log_InfoPrintf("D3D12Renderer using DXGI Adapter: %s.", deviceName);
+    }
+
+    // acquire debug interface
+    if (CVars::r_use_debug_device.GetBool())
+    {
+        Log_PerfPrintf("Enabling Direct3D 12 debug layer, performance will suffer as a result.");
+        ID3D12Debug *pD3D12Debug;
+        hResult = fnD3D12GetDebugInterface(__uuidof(ID3D12Debug), (void **)&pD3D12Debug);
+        if (SUCCEEDED(hResult))
+        {
+            pD3D12Debug->EnableDebugLayer();
+            pD3D12Debug->Release();
+        }
+        else
+        {
+            Log_WarningPrintf("D3D12GetDebugInterface failed with hResult %08X. Debug layer will not be enabled.", hResult);
+        }
+    }
+
+    // create the device
+    hResult = fnD3D12CreateDevice(m_pDXGIAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), (void **)&m_pD3DDevice);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("D3D12Renderer::Create: Could not create D3D12 device: %08X.", hResult);
+        return false;
+    }
+
 //     // feature levels
 //     D3D_FEATURE_LEVEL acquiredFeatureLevel;
 //     static const D3D_FEATURE_LEVEL requestedFeatureLevels[] =
@@ -193,15 +297,6 @@ bool D3D12Renderer::Create(const RendererInitializationParameters *pInitializati
 //         Log_PerfPrintf("Creating a debug Direct3D 12 device, performance will suffer as a result.");
 //         deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 //     }
-
-    // create the device
-    //hResult = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_10_0, __uuidof(ID3D12Device), (void **)&m_pD3DDevice);
-    hResult = E_FAIL;
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("D3D12Renderer::Create: Could not create D3D12 device: %08X.", hResult);
-        return false;
-    }
 
     // logging
     //Log_DevPrintf("D3D12Renderer::Create: Returned a device with feature level %s.", D3D12TypeConversion::D3DFeatureLevelToString(acquiredFeatureLevel));
@@ -224,54 +319,11 @@ bool D3D12Renderer::Create(const RendererInitializationParameters *pInitializati
 //         return false;
 //     }
 
-//     // retrieve handles to DXGI from the created device
-//     {
-//         // get a temporary handle to the dxgi device interface
-//         IDXGIDevice3 *pDXGIDevice;
-//         hResult = m_pD3DDevice->QueryInterface(__uuidof(IDXGIDevice3), reinterpret_cast<void **>(&pDXGIDevice));
-//         if (FAILED(hResult))
-//         {
-//             Log_ErrorPrintf("D3D12Renderer::Create: Could not get DXGI device from D3D11 device.", hResult);
-//             pD3DImmediateContext->Release();
-//             return false;
-//         }
-// 
-//         // get the adapter from this
-//         hResult = pDXGIDevice->GetAdapter(&m_pDXGIAdapter);
-//         if (FAILED(hResult))
-//         {
-//             Log_ErrorPrintf("D3D12Renderer::Create: Could not get DXGI adapter from device.", hResult);
-//             pDXGIDevice->Release();
-//             pD3DImmediateContext->Release();
-//             return false;
-//         }
-// 
-//         // get the parent of the adapter (factory)
-//         hResult = m_pDXGIAdapter->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void **>(&m_pDXGIFactory));
-//         if (FAILED(hResult))
-//         {
-//             Log_ErrorPrintf("D3D12Renderer::Create: Could not get DXGI factory from device.", hResult);
-//             pDXGIDevice->Release();
-//             pD3DImmediateContext->Release();
-//             return false;
-//         }
-// 
-//         // dxgi device is no longer needed
-//         pDXGIDevice->Release();
-//     }
-
-//     // print device name
-//     {
-//         // get adapter desc
-//         DXGI_ADAPTER_DESC DXGIAdapterDesc;
-//         hResult = m_pDXGIAdapter->GetDesc(&DXGIAdapterDesc);
-//         DebugAssert(hResult == S_OK);
-// 
-//         char deviceName[128];
-//         WideCharToMultiByte(CP_ACP, 0, DXGIAdapterDesc.Description, -1, deviceName, countof(deviceName), NULL, NULL);
-//         Log_InfoPrintf("D3D12Renderer using DXGI Adapter: %s.", deviceName);
-//         Log_InfoPrintf("Texture Platform: %s", NameTable_GetNameString(NameTables::TexturePlatform, m_eTexturePlatform));
-//     }
+    // find texture platform
+    {
+        m_eTexturePlatform = TEXTURE_PLATFORM_DXTC;
+        Log_InfoPrintf("Texture Platform: %s", NameTable_GetNameString(NameTables::TexturePlatform, m_eTexturePlatform));
+    }
 
 //     // check for threading support
 //     D3D11_FEATURE_DATA_THREADING threadingFeatureData;

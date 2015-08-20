@@ -597,12 +597,13 @@ D3D12DescriptorHeap *D3D12DescriptorHeap::Create(ID3D12Device *pDevice, D3D12_DE
 bool D3D12DescriptorHeap::Allocate(Handle *handle)
 {
     // find a free index
-    uint32 index;
+    size_t index;
     if (!m_allocationMap.FindFirstClearBit(&index))
         return false;
 
     // create handle
-    handle->IndexInHeap = index;
+    handle->StartIndex = (uint32)index;
+    handle->DescriptorCount = 1;
     handle->CPUHandle = m_pD3DDescriptorHeap->GetCPUDescriptorHandleForHeapStart();     // @TODO cache this
     handle->CPUHandle.ptr += index * m_incrementSize;
     handle->GPUHandle = m_pD3DDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
@@ -611,9 +612,34 @@ bool D3D12DescriptorHeap::Allocate(Handle *handle)
     return true;
 }
 
+bool D3D12DescriptorHeap::AllocateRange(uint32 count, Handle *handle)
+{
+    size_t startIndex;
+    if (!m_allocationMap.FindContiguousClearBits(count, &startIndex))
+        return false;
+
+    // create handle
+    handle->StartIndex = (uint32)startIndex;
+    handle->DescriptorCount = count;
+    handle->CPUHandle = m_pD3DDescriptorHeap->GetCPUDescriptorHandleForHeapStart();     // @TODO cache this
+    handle->CPUHandle.ptr += startIndex * m_incrementSize;
+    handle->GPUHandle = m_pD3DDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+    handle->GPUHandle.ptr += startIndex * m_incrementSize;
+    for (uint32 i = 0; i < count; i++)
+        m_allocationMap.SetBit(startIndex + i);
+
+    return true;
+}
+
 void D3D12DescriptorHeap::Free(const Handle *handle)
 {
     // @TODO sanity check handle is correct offset and hasn't been corrupted
-    DebugAssert(handle->IndexInHeap < m_descriptorCount && m_allocationMap.TestBit(handle->IndexInHeap));
-    m_allocationMap.UnsetBit(handle->IndexInHeap);
+    uint32 startIndex = handle->StartIndex;
+    DebugAssert(startIndex < m_descriptorCount);
+
+    for (uint32 i = 0; i < handle->DescriptorCount; i++)
+    {
+        DebugAssert(m_allocationMap.TestBit(handle->StartIndex + i));
+        m_allocationMap.UnsetBit(handle->StartIndex + i);
+    }
 }

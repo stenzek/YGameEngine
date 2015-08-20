@@ -70,7 +70,8 @@ public:
     {
         D3D12_GPU_DESCRIPTOR_HANDLE GPUHandle;
         D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle;
-        uint32 IndexInHeap;
+        uint32 StartIndex;
+        uint32 DescriptorCount;
     };
 
 public:
@@ -79,6 +80,7 @@ public:
     static D3D12DescriptorHeap *Create(ID3D12Device *pDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 descriptorCount);
 
     bool Allocate(Handle *handle);
+    bool AllocateRange(uint32 count, Handle *handle);
     void Free(const Handle *handle);
 
 private:

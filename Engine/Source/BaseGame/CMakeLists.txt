@@ -5,6 +5,7 @@ set(HEADER_FILES
     GameState.h
     InteractiveEntity.h
     LivingEntity.h
+    LoadingScreenProgressCallbacks.h
 )
 
 set(SOURCE_FILES
@@ -12,6 +13,7 @@ set(SOURCE_FILES
     GameEntity.cpp
     InteractiveEntity.cpp
     LivingEntity.cpp
+    LoadingScreenProgressCallbacks.cpp
 )
 
 include_directories(${ENGINE_BASE_DIRECTORY}

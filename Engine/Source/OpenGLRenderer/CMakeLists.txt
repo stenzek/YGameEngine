@@ -4,7 +4,6 @@ set(HEADER_FILES
     OpenGLDefines.h
     OpenGLGPUBuffer.h
     OpenGLGPUContext.h
-    OpenGLGPUInputLayout.h
     OpenGLGPUQuery.h
     OpenGLGPUShaderProgram.h
     OpenGLGPUTexture.h
@@ -18,7 +17,6 @@ set(SOURCE_FILES
     OpenGLDefines.cpp
     OpenGLGPUBuffer.cpp
     OpenGLGPUContext.cpp
-    OpenGLGPUInputLayout.cpp
     OpenGLGPUQuery.cpp
     OpenGLGPUShaderProgram.cpp
     OpenGLGPUTexture.cpp

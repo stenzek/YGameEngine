@@ -581,189 +581,6 @@ target_include_directories(bullet PRIVATE bullet/src bullet/Extras/Serialize/Bul
 target_include_directories(bullet INTERFACE bullet/src bullet/Extras/Serialize/BulletWorldImporter bullet/Extras/HACD)
 
 ###################################################################################################
-# GLSLCompiler Library
-###################################################################################################
-set(GLSLCompiler_HEADER_FILES
-    GLSLCompiler/mesa/src/glsl/glcpp/glcpp.h
-    GLSLCompiler/mesa/src/glsl/glcpp/glcpp-parse.h
-    GLSLCompiler/mesa/src/glsl/ast.h
-    GLSLCompiler/mesa/src/glsl/builtin_type_macros.h
-    GLSLCompiler/mesa/src/glsl/glsl_parser.h
-    GLSLCompiler/mesa/src/glsl/glsl_parser_extras.h
-    GLSLCompiler/mesa/src/glsl/glsl_symbol_table.h
-    GLSLCompiler/mesa/src/glsl/glsl_types.h
-    GLSLCompiler/mesa/src/glsl/ir_basic_block.h
-    GLSLCompiler/mesa/src/glsl/ir_builder.h
-    GLSLCompiler/mesa/src/glsl/ir_expression_flattening.h
-    GLSLCompiler/mesa/src/glsl/ir_function_inlining.h
-    GLSLCompiler/mesa/src/glsl/ir.h
-    GLSLCompiler/mesa/src/glsl/ir_hierarchical_visitor.h
-    GLSLCompiler/mesa/src/glsl/ir_optimization.h
-    GLSLCompiler/mesa/src/glsl/ir_print_visitor.h
-    GLSLCompiler/mesa/src/glsl/ir_reader.h
-    GLSLCompiler/mesa/src/glsl/ir_rvalue_visitor.h
-    GLSLCompiler/mesa/src/glsl/ir_uniform.h
-    GLSLCompiler/mesa/src/glsl/ir_variable_refcount.h
-    GLSLCompiler/mesa/src/glsl/ir_visitor.h
-    GLSLCompiler/mesa/src/glsl/linker.h
-    GLSLCompiler/mesa/src/glsl/link_uniform_block_active_visitor.h
-    GLSLCompiler/mesa/src/glsl/link_varyings.h
-    GLSLCompiler/mesa/src/glsl/list.h
-    GLSLCompiler/mesa/src/glsl/loop_analysis.h
-    GLSLCompiler/mesa/src/glsl/program.h
-    GLSLCompiler/mesa/src/glsl/s_expression.h
-    GLSLCompiler/mesa/src/glsl/standalone_scaffolding.h
-    GLSLCompiler/mesa/src/util/format_srgb.h
-    GLSLCompiler/mesa/src/util/hash_table.h
-    GLSLCompiler/mesa/src/util/macros.h
-    GLSLCompiler/mesa/src/util/ralloc.h
-    GLSLCompiler/mesa/src/util/strtod.h
-    GLSLCompiler/GLSLCompiler.h
-    GLSLCompiler/GLSLCompilerImpl.h
-    GLSLCompiler/ir_print_glsl_visitor.h
-)
-
-set(GLSLCompiler_SOURCE_FILES
-    GLSLCompiler/mesa/src/glsl/glcpp/glcpp-lex.c
-    GLSLCompiler/mesa/src/glsl/glcpp/glcpp-parse.c
-    GLSLCompiler/mesa/src/glsl/glcpp/pp.c
-    GLSLCompiler/mesa/src/glsl/hlslpp/hlslpp.c
-    GLSLCompiler/mesa/src/glsl/hlslpp/hlslpp-lex.c
-    GLSLCompiler/mesa/src/glsl/hlslpp/hlslpp-parse.c
-    GLSLCompiler/mesa/src/glsl/ast_array_index.cpp
-    GLSLCompiler/mesa/src/glsl/ast_expr.cpp
-    GLSLCompiler/mesa/src/glsl/ast_function.cpp
-    GLSLCompiler/mesa/src/glsl/ast_to_hir.cpp
-    GLSLCompiler/mesa/src/glsl/ast_type.cpp
-    GLSLCompiler/mesa/src/glsl/builtin_functions.cpp
-    GLSLCompiler/mesa/src/glsl/builtin_types.cpp
-    GLSLCompiler/mesa/src/glsl/builtin_variables.cpp
-    GLSLCompiler/mesa/src/glsl/hlsl_conversion.cpp
-    GLSLCompiler/mesa/src/glsl/hlsl_lexer.cpp
-    GLSLCompiler/mesa/src/glsl/hlsl_parser.cpp
-    GLSLCompiler/mesa/src/glsl/glsl_lexer.cpp
-    GLSLCompiler/mesa/src/glsl/glsl_parser.cpp
-    GLSLCompiler/mesa/src/glsl/glsl_parser_extras.cpp
-    GLSLCompiler/mesa/src/glsl/glsl_symbol_table.cpp
-    GLSLCompiler/mesa/src/glsl/glsl_types.cpp
-    GLSLCompiler/mesa/src/glsl/hir_field_selection.cpp
-    GLSLCompiler/mesa/src/glsl/ir_basic_block.cpp
-    GLSLCompiler/mesa/src/glsl/ir_builder.cpp
-    GLSLCompiler/mesa/src/glsl/ir_clone.cpp
-    GLSLCompiler/mesa/src/glsl/ir_constant_expression.cpp
-    GLSLCompiler/mesa/src/glsl/ir.cpp
-    GLSLCompiler/mesa/src/glsl/ir_equals.cpp
-    GLSLCompiler/mesa/src/glsl/ir_expression_flattening.cpp
-    GLSLCompiler/mesa/src/glsl/ir_function_can_inline.cpp
-    GLSLCompiler/mesa/src/glsl/ir_function.cpp
-    GLSLCompiler/mesa/src/glsl/ir_function_detect_recursion.cpp
-    GLSLCompiler/mesa/src/glsl/ir_hierarchical_visitor.cpp
-    GLSLCompiler/mesa/src/glsl/ir_hv_accept.cpp
-    GLSLCompiler/mesa/src/glsl/ir_import_prototypes.cpp
-    GLSLCompiler/mesa/src/glsl/ir_print_visitor.cpp
-    GLSLCompiler/mesa/src/glsl/ir_reader.cpp
-    GLSLCompiler/mesa/src/glsl/ir_rvalue_visitor.cpp
-    GLSLCompiler/mesa/src/glsl/ir_set_program_inouts.cpp
-    GLSLCompiler/mesa/src/glsl/ir_validate.cpp
-    GLSLCompiler/mesa/src/glsl/ir_variable_refcount.cpp
-    GLSLCompiler/mesa/src/glsl/link_atomics.cpp
-    GLSLCompiler/mesa/src/glsl/linker.cpp
-    GLSLCompiler/mesa/src/glsl/link_functions.cpp
-    GLSLCompiler/mesa/src/glsl/link_interface_blocks.cpp
-    GLSLCompiler/mesa/src/glsl/link_uniform_block_active_visitor.cpp
-    GLSLCompiler/mesa/src/glsl/link_uniform_blocks.cpp
-    GLSLCompiler/mesa/src/glsl/link_uniform_initializers.cpp
-    GLSLCompiler/mesa/src/glsl/link_uniforms.cpp
-    GLSLCompiler/mesa/src/glsl/link_varyings.cpp
-    GLSLCompiler/mesa/src/glsl/loop_analysis.cpp
-    GLSLCompiler/mesa/src/glsl/loop_controls.cpp
-    GLSLCompiler/mesa/src/glsl/loop_unroll.cpp
-    GLSLCompiler/mesa/src/glsl/lower_clip_distance.cpp
-    GLSLCompiler/mesa/src/glsl/lower_const_arrays_to_uniforms.cpp
-    GLSLCompiler/mesa/src/glsl/lower_discard.cpp
-    GLSLCompiler/mesa/src/glsl/lower_discard_flow.cpp
-    GLSLCompiler/mesa/src/glsl/lower_if_to_cond_assign.cpp
-    GLSLCompiler/mesa/src/glsl/lower_instructions.cpp
-    GLSLCompiler/mesa/src/glsl/lower_jumps.cpp
-    GLSLCompiler/mesa/src/glsl/lower_mat_op_to_vec.cpp
-    GLSLCompiler/mesa/src/glsl/lower_named_interface_blocks.cpp
-    GLSLCompiler/mesa/src/glsl/lower_noise.cpp
-    GLSLCompiler/mesa/src/glsl/lower_offset_array.cpp
-    GLSLCompiler/mesa/src/glsl/lower_output_reads.cpp
-    GLSLCompiler/mesa/src/glsl/lower_packed_varyings.cpp
-    GLSLCompiler/mesa/src/glsl/lower_packing_builtins.cpp
-    GLSLCompiler/mesa/src/glsl/lower_texture_projection.cpp
-    GLSLCompiler/mesa/src/glsl/lower_ubo_reference.cpp
-    GLSLCompiler/mesa/src/glsl/lower_variable_index_to_cond_assign.cpp
-    GLSLCompiler/mesa/src/glsl/lower_vec_index_to_cond_assign.cpp
-    GLSLCompiler/mesa/src/glsl/lower_vec_index_to_swizzle.cpp
-    GLSLCompiler/mesa/src/glsl/lower_vertex_id.cpp
-    GLSLCompiler/mesa/src/glsl/lower_vector.cpp
-    GLSLCompiler/mesa/src/glsl/lower_vector_insert.cpp
-    GLSLCompiler/mesa/src/glsl/opt_algebraic.cpp
-    GLSLCompiler/mesa/src/glsl/opt_array_splitting.cpp
-    GLSLCompiler/mesa/src/glsl/opt_conditional_discard.cpp
-    GLSLCompiler/mesa/src/glsl/opt_constant_folding.cpp
-    GLSLCompiler/mesa/src/glsl/opt_constant_propagation.cpp
-    GLSLCompiler/mesa/src/glsl/opt_constant_variable.cpp
-    GLSLCompiler/mesa/src/glsl/opt_copy_propagation.cpp
-    GLSLCompiler/mesa/src/glsl/opt_copy_propagation_elements.cpp
-    GLSLCompiler/mesa/src/glsl/opt_cse.cpp
-    GLSLCompiler/mesa/src/glsl/opt_dead_builtin_variables.cpp
-    GLSLCompiler/mesa/src/glsl/opt_dead_builtin_varyings.cpp
-    GLSLCompiler/mesa/src/glsl/opt_dead_code.cpp
-    GLSLCompiler/mesa/src/glsl/opt_dead_code_local.cpp
-    GLSLCompiler/mesa/src/glsl/opt_dead_functions.cpp
-    GLSLCompiler/mesa/src/glsl/opt_flatten_nested_if_blocks.cpp
-    GLSLCompiler/mesa/src/glsl/opt_flip_matrices.cpp
-    GLSLCompiler/mesa/src/glsl/opt_function_inlining.cpp
-    GLSLCompiler/mesa/src/glsl/opt_if_simplification.cpp
-    GLSLCompiler/mesa/src/glsl/opt_minmax.cpp
-    GLSLCompiler/mesa/src/glsl/opt_noop_swizzle.cpp
-    GLSLCompiler/mesa/src/glsl/opt_rebalance_tree.cpp
-    GLSLCompiler/mesa/src/glsl/opt_redundant_jumps.cpp
-    GLSLCompiler/mesa/src/glsl/opt_structure_splitting.cpp
-    GLSLCompiler/mesa/src/glsl/opt_swizzle_swizzle.cpp
-    GLSLCompiler/mesa/src/glsl/opt_tree_grafting.cpp
-    GLSLCompiler/mesa/src/glsl/opt_vectorize.cpp
-    GLSLCompiler/mesa/src/glsl/s_expression.cpp
-    GLSLCompiler/mesa/src/glsl/standalone_scaffolding.cpp
-    GLSLCompiler/mesa/src/mesa/main/imports.c
-    GLSLCompiler/mesa/src/mesa/program/prog_hash_table.c
-    GLSLCompiler/mesa/src/mesa/program/symbol_table.c
-    GLSLCompiler/mesa/src/util/hash_table.c
-    GLSLCompiler/mesa/src/util/ralloc.c
-    GLSLCompiler/mesa/src/util/strtod.c
-    GLSLCompiler/GLSLCompiler.cpp
-    GLSLCompiler/GLSLCompilerImpl.cpp
-    GLSLCompiler/GLSLCompilerImplHLSLPP.cpp
-    GLSLCompiler/ir_print_glsl_visitor.cpp
-#    GLSLCompiler/Test.cpp
-)
-
-if(HAVE_GLSLCOMPILER)   
-    add_library(libGLSLCompiler STATIC ${GLSLCompiler_HEADER_FILES} ${GLSLCompiler_SOURCE_FILES})
-    #add_executable(libGLSLCompiler ${GLSLCompiler_HEADER_FILES} ${GLSLCompiler_SOURCE_FILES})
-    target_include_directories(libGLSLCompiler PUBLIC $(CMAKE_CURRENT_LIST_DIR)/GLSLCompiler)
-    target_include_directories(libGLSLCompiler PRIVATE $(CMAKE_CURRENT_LIST_DIR) GLSLCompiler/mesa/include GLSLCompiler/mesa/src GLSLCompiler/mesa/src/mesa GLSLCompiler/mesa/src/mapi GLSLCompiler/mesa/src/glsl GLSLCompiler/mesa/src/gallium/auxiliary GLSLCompiler/mesa/src/gallium/include)
-
-    # fixup for threads compile
-    if(UNIX OR APPLE)
-        set_property(TARGET libGLSLCompiler APPEND PROPERTY COMPILE_DEFINITIONS "HAVE_PTHREAD=1")
-    endif()
-
-    set(GLSLValidator_HEADER_FILES 
-    )
-    
-    set(GLSLValidator_SOURCE_FILES
-        GLSLCompiler/GLSLValidator.cpp
-    )
-    
-    add_executable(GLSLValidator ${GLSLValidator_HEADER_FILES} ${GLSLValidator_SOURCE_FILES})
-    target_link_libraries(GLSLValidator libGLSLCompiler)
-endif()
-
-###################################################################################################
 # imgui Library
 ###################################################################################################
 set(IMGUI_HEADER_FILES
@@ -782,6 +599,186 @@ if(WITH_IMGUI)
     add_library(imgui STATIC ${IMGUI_HEADER_FILES} ${IMGUI_SOURCE_FILES})
     target_include_directories(imgui PUBLIC imgui)
     #set_property(TARGET imgui APPEND PROPERTY COMPILE_DEFINITIONS "imgui_USE_SSE=2")
+endif()
+
+
+
+###################################################################################################
+# HLSLTranslator Library
+###################################################################################################
+set(HLSLTRANSLATOR_HEADER_FILES
+    HLSLTranslator/include/HLSLTranslator_GLSL.h
+    HLSLTranslator/include/HLSLTranslator.h
+    HLSLTranslator/src/gallium/auxiliary/util/u_atomic.h
+    HLSLTranslator/src/gallium/auxiliary/util/u_cpu_detect.h
+    HLSLTranslator/src/gallium/auxiliary/util/u_debug.h
+    HLSLTranslator/src/gallium/auxiliary/util/u_math.h
+    HLSLTranslator/src/glsl/ast.h
+    HLSLTranslator/src/glsl/blob.h
+    HLSLTranslator/src/glsl/builtin_type_macros.h
+    HLSLTranslator/src/glsl/glsl_parser_extras.h
+    HLSLTranslator/src/glsl/glsl_symbol_table.h
+    HLSLTranslator/src/glsl/glsl_types.h
+    HLSLTranslator/src/glsl/hlsl_parser.h
+    HLSLTranslator/src/glsl/hlslpp/hlslpp.h
+    HLSLTranslator/src/glsl/hlslpp/hlslpp-parse.h
+    HLSLTranslator/src/glsl/ir_basic_block.h
+    HLSLTranslator/src/glsl/ir_builder.h
+    HLSLTranslator/src/glsl/ir_expression_flattening.h
+    HLSLTranslator/src/glsl/ir_function_inlining.h
+    HLSLTranslator/src/glsl/ir.h
+    HLSLTranslator/src/glsl/ir_hierarchical_visitor.h
+    HLSLTranslator/src/glsl/ir_optimization.h
+    HLSLTranslator/src/glsl/ir_print_visitor.h
+    HLSLTranslator/src/glsl/ir_reader.h
+    HLSLTranslator/src/glsl/ir_rvalue_visitor.h
+    HLSLTranslator/src/glsl/ir_uniform.h
+    HLSLTranslator/src/glsl/ir_variable_refcount.h
+    HLSLTranslator/src/glsl/ir_visitor.h
+    HLSLTranslator/src/glsl/linker.h
+    HLSLTranslator/src/glsl/link_uniform_block_active_visitor.h
+    HLSLTranslator/src/glsl/link_varyings.h
+    HLSLTranslator/src/glsl/list.h
+    HLSLTranslator/src/glsl/loop_analysis.h
+    HLSLTranslator/src/glsl/program.h
+    HLSLTranslator/src/glsl/s_expression.h
+    HLSLTranslator/src/glsl/shader_enums.h
+    HLSLTranslator/src/glsl/standalone_scaffolding.h
+    HLSLTranslator/src/ir_print_glsl_visitor.h
+    HLSLTranslator/src/mesa/program/hash_table.h
+    HLSLTranslator/src/mesa/program/ir_to_mesa.h
+    HLSLTranslator/src/mesa/program/prog_instruction.h
+    HLSLTranslator/src/mesa/program/prog_parameter.h
+    HLSLTranslator/src/mesa/program/prog_statevars.h
+    HLSLTranslator/src/mesa/program/symbol_table.h
+    HLSLTranslator/src/util/hash_table.h
+    HLSLTranslator/src/util/list.h
+    HLSLTranslator/src/util/macros.h
+    HLSLTranslator/src/util/ralloc.h
+    HLSLTranslator/src/util/rounding.h
+    HLSLTranslator/src/util/simple_list.h
+    HLSLTranslator/src/util/strtod.h
+)
+
+set(HLSLTRANSLATOR_SOURCE_FILES
+    HLSLTranslator/src/gallium/auxiliary/util/u_cpu_detect.c
+    HLSLTranslator/src/gallium/auxiliary/util/u_math.c
+    HLSLTranslator/src/glsl/ast_array_index.cpp
+    HLSLTranslator/src/glsl/ast_expr.cpp
+    HLSLTranslator/src/glsl/ast_function.cpp
+    HLSLTranslator/src/glsl/ast_to_hir.cpp
+    HLSLTranslator/src/glsl/ast_type.cpp
+    HLSLTranslator/src/glsl/blob.c
+    HLSLTranslator/src/glsl/builtin_functions.cpp
+    HLSLTranslator/src/glsl/builtin_types.cpp
+    HLSLTranslator/src/glsl/builtin_variables.cpp
+    HLSLTranslator/src/glsl/glsl_parser_extras.cpp
+    HLSLTranslator/src/glsl/glsl_symbol_table.cpp
+    HLSLTranslator/src/glsl/glsl_types.cpp
+    HLSLTranslator/src/glsl/hir_field_selection.cpp
+    HLSLTranslator/src/glsl/hlsl_conversion.cpp
+    HLSLTranslator/src/glsl/hlsl_lexer.cpp
+    HLSLTranslator/src/glsl/hlsl_parser.cpp
+    HLSLTranslator/src/glsl/hlslpp/hlslpp.c
+    HLSLTranslator/src/glsl/hlslpp/hlslpp-lex.c
+    HLSLTranslator/src/glsl/hlslpp/hlslpp-parse.c
+    HLSLTranslator/src/glsl/ir_basic_block.cpp
+    HLSLTranslator/src/glsl/ir_builder.cpp
+    HLSLTranslator/src/glsl/ir_clone.cpp
+    HLSLTranslator/src/glsl/ir_constant_expression.cpp
+    HLSLTranslator/src/glsl/ir.cpp
+    HLSLTranslator/src/glsl/ir_equals.cpp
+    HLSLTranslator/src/glsl/ir_expression_flattening.cpp
+    HLSLTranslator/src/glsl/ir_function_can_inline.cpp
+    HLSLTranslator/src/glsl/ir_function.cpp
+    HLSLTranslator/src/glsl/ir_function_detect_recursion.cpp
+    HLSLTranslator/src/glsl/ir_hierarchical_visitor.cpp
+    HLSLTranslator/src/glsl/ir_hv_accept.cpp
+    HLSLTranslator/src/glsl/ir_import_prototypes.cpp
+    HLSLTranslator/src/glsl/ir_print_visitor.cpp
+    HLSLTranslator/src/glsl/ir_reader.cpp
+    HLSLTranslator/src/glsl/ir_rvalue_visitor.cpp
+    HLSLTranslator/src/glsl/ir_set_program_inouts.cpp
+    HLSLTranslator/src/glsl/ir_validate.cpp
+    HLSLTranslator/src/glsl/ir_variable_refcount.cpp
+    HLSLTranslator/src/glsl/link_atomics.cpp
+    HLSLTranslator/src/glsl/linker.cpp
+    HLSLTranslator/src/glsl/link_functions.cpp
+    HLSLTranslator/src/glsl/link_interface_blocks.cpp
+    HLSLTranslator/src/glsl/link_uniform_block_active_visitor.cpp
+    HLSLTranslator/src/glsl/link_uniform_blocks.cpp
+    HLSLTranslator/src/glsl/link_uniform_initializers.cpp
+    HLSLTranslator/src/glsl/link_uniforms.cpp
+    HLSLTranslator/src/glsl/link_varyings.cpp
+    HLSLTranslator/src/glsl/loop_analysis.cpp
+    HLSLTranslator/src/glsl/loop_controls.cpp
+    HLSLTranslator/src/glsl/loop_unroll.cpp
+    HLSLTranslator/src/glsl/lower_clip_distance.cpp
+    HLSLTranslator/src/glsl/lower_const_arrays_to_uniforms.cpp
+    HLSLTranslator/src/glsl/lower_discard.cpp
+    HLSLTranslator/src/glsl/lower_discard_flow.cpp
+    HLSLTranslator/src/glsl/lower_if_to_cond_assign.cpp
+    HLSLTranslator/src/glsl/lower_instructions.cpp
+    HLSLTranslator/src/glsl/lower_jumps.cpp
+    HLSLTranslator/src/glsl/lower_mat_op_to_vec.cpp
+    HLSLTranslator/src/glsl/lower_named_interface_blocks.cpp
+    HLSLTranslator/src/glsl/lower_noise.cpp
+    HLSLTranslator/src/glsl/lower_offset_array.cpp
+    HLSLTranslator/src/glsl/lower_output_reads.cpp
+    HLSLTranslator/src/glsl/lower_packed_varyings.cpp
+    HLSLTranslator/src/glsl/lower_packing_builtins.cpp
+    HLSLTranslator/src/glsl/lower_texture_projection.cpp
+    HLSLTranslator/src/glsl/lower_ubo_reference.cpp
+    HLSLTranslator/src/glsl/lower_variable_index_to_cond_assign.cpp
+    HLSLTranslator/src/glsl/lower_vec_index_to_cond_assign.cpp
+    HLSLTranslator/src/glsl/lower_vec_index_to_swizzle.cpp
+    HLSLTranslator/src/glsl/lower_vector.cpp
+    HLSLTranslator/src/glsl/lower_vector_insert.cpp
+    HLSLTranslator/src/glsl/lower_vertex_id.cpp
+    HLSLTranslator/src/glsl/opt_algebraic.cpp
+    HLSLTranslator/src/glsl/opt_array_splitting.cpp
+    HLSLTranslator/src/glsl/opt_conditional_discard.cpp
+    HLSLTranslator/src/glsl/opt_constant_folding.cpp
+    HLSLTranslator/src/glsl/opt_constant_propagation.cpp
+    HLSLTranslator/src/glsl/opt_constant_variable.cpp
+    HLSLTranslator/src/glsl/opt_copy_propagation.cpp
+    HLSLTranslator/src/glsl/opt_copy_propagation_elements.cpp
+    HLSLTranslator/src/glsl/opt_cse.cpp
+    HLSLTranslator/src/glsl/opt_dead_builtin_variables.cpp
+    HLSLTranslator/src/glsl/opt_dead_builtin_varyings.cpp
+    HLSLTranslator/src/glsl/opt_dead_code.cpp
+    HLSLTranslator/src/glsl/opt_dead_code_local.cpp
+    HLSLTranslator/src/glsl/opt_dead_functions.cpp
+    HLSLTranslator/src/glsl/opt_flatten_nested_if_blocks.cpp
+    HLSLTranslator/src/glsl/opt_flip_matrices.cpp
+    HLSLTranslator/src/glsl/opt_function_inlining.cpp
+    HLSLTranslator/src/glsl/opt_if_simplification.cpp
+    HLSLTranslator/src/glsl/opt_minmax.cpp
+    HLSLTranslator/src/glsl/opt_noop_swizzle.cpp
+    HLSLTranslator/src/glsl/opt_rebalance_tree.cpp
+    HLSLTranslator/src/glsl/opt_redundant_jumps.cpp
+    HLSLTranslator/src/glsl/opt_structure_splitting.cpp
+    HLSLTranslator/src/glsl/opt_swizzle_swizzle.cpp
+    HLSLTranslator/src/glsl/opt_tree_grafting.cpp
+    HLSLTranslator/src/glsl/opt_vectorize.cpp
+    HLSLTranslator/src/glsl/s_expression.cpp
+    HLSLTranslator/src/glsl/standalone_scaffolding.cpp
+    HLSLTranslator/src/HLSLTranslator.cpp
+    HLSLTranslator/src/ir_print_glsl_visitor.cpp
+    HLSLTranslator/src/mesa/main/imports.c
+    HLSLTranslator/src/mesa/program/prog_hash_table.c
+    HLSLTranslator/src/mesa/program/symbol_table.c
+    HLSLTranslator/src/util/hash_table.c
+    HLSLTranslator/src/util/ralloc.c
+    HLSLTranslator/src/util/strtod.c
+)
+
+# TODO: Make shared instead
+if(HAVE_HLSLTRANSLATOR)
+    add_library(HLSLTranslator STATIC ${HLSLTRANSLATOR_HEADER_FILES} ${HLSLTRANSLATOR_SOURCE_FILES})
+    target_include_directories(HLSLTranslator PUBLIC HLSLTranslator/include)
+    target_include_directories(HLSLTranslator PRIVATE HLSLTranslator/include HLSLTranslator/src HLSLTranslator/src/glsl HLSLTranslator/src/mesa HLSLTranslator/src/mesa/main HLSLTranslator/src/gallium/auxiliary)
+    target_compile_definitions(HLSLTranslator PRIVATE "HAVE_PTHREAD")
 endif()
 
 ###################################################################################################

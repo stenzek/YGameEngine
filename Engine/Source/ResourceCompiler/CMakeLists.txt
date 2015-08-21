@@ -12,7 +12,7 @@ set(HEADER_FILES
     ParticleSystemGenerator.h
     ResourceCompilerCallbacks.h
     ResourceCompiler.h
-    ShaderCompilerD3D11.h
+    ShaderCompilerD3D.h
     ShaderCompiler.h
     ShaderCompilerOpenGL.h
     ShaderGraphBuiltinNodes.h
@@ -45,7 +45,7 @@ set(SOURCE_FILES
     ResourceCompilerInterfaceIntegrated.cpp
     ResourceCompilerInterfaceRemoteServer.cpp
     ShaderCompiler.cpp
-    ShaderCompilerD3D11.cpp
+    ShaderCompilerD3D.cpp
     ShaderCompilerOpenGL.cpp
     ShaderGraphBuiltinNodes.cpp
     ShaderGraphCompiler.cpp
@@ -65,8 +65,8 @@ set(SOURCE_FILES
 include_directories(${ENGINE_BASE_DIRECTORY})
 
 set(EXTRA_LIBRARIES "")
-if(HAVE_GLSLCOMPILER)
-    LIST(APPEND EXTRA_LIBRARIES libGLSLCompiler)
+if(HAVE_HLSLTRANSLATOR)
+    LIST(APPEND EXTRA_LIBRARIES HLSLTranslator)
 endif()
 
 add_library(EngineResourceCompiler STATIC ${HEADER_FILES} ${SOURCE_FILES})

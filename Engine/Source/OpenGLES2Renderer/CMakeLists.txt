@@ -9,7 +9,6 @@ set(HEADER_FILES
     OpenGLES2GPUTexture.h
     OpenGLES2Renderer.h
     OpenGLES2RendererOutputBuffer.h
-    OpenGLES2ShaderCacheEntry.h
 )
 
 set(SOURCE_FILES
@@ -25,7 +24,8 @@ set(SOURCE_FILES
 )
 
 include_directories(${ENGINE_BASE_DIRECTORY}
-                    ${OPENGL_INCLUDE_DIR})
+                    ${OPENGL_INCLUDE_DIR}
+                    ${SDL2_INCLUDE_DIR})
 
 add_library(EngineOpenGLES2Renderer STATIC ${HEADER_FILES} ${SOURCE_FILES})
 

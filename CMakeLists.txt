@@ -143,7 +143,7 @@ if(EMSCRIPTEN OR ANDROID)
     set(HAVE_ZLIB "1")
     set(HAVE_SFMT "1")
     unset(HAVE_FREEIMAGE)
-    unset(HAVE_GLSLCOMPILER)
+    unset(HAVE_HLSLTRANSLATOR)
     set(WITH_PROFILER "1" CACHE STRING "Foo")
     set(WITH_IMGUI "1" CACHE STRING "Foo")
     unset(WITH_RENDERER_D3D11)
@@ -166,7 +166,7 @@ else()
     set(HAVE_ZLIB "1")
     set(HAVE_SFMT "1")
     set(HAVE_FREEIMAGE "1")
-    set(HAVE_GLSLCOMPILER "1")
+    set(HAVE_HLSLTRANSLATOR "1")
     set(WITH_PROFILER "1" CACHE STRING "Foo")
     set(WITH_IMGUI "1" CACHE STRING "Foo")
     set(WITH_RENDERER_D3D11 "0" CACHE STRING "Foo")
@@ -223,16 +223,19 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.in ${CMAKE_BINARY_DIR}/config.h)
 add_definitions(-DHAVE_CONFIG_H)
 
 # engine
-add_subdirectory(Engine/Source)
+add_subdirectory(Engine)
+
+# editor
+add_subdirectory(Editor)
 
 # demogame
-add_subdirectory(DemoGame/Source)
+add_subdirectory(DemoGame)
 
 # TestGame
-add_subdirectory(TestGame/Source)
+add_subdirectory(TestGame)
 
 # BlockGame
 if(NOT EMSCRIPTEN AND NOT ANDROID)
-    add_subdirectory(BlockGame/Source)
+    add_subdirectory(BlockGame)
 endif()
 

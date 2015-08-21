@@ -41,10 +41,6 @@ if(WITH_BASEGAME)
 	add_subdirectory(Source/BaseGame)
 endif()
 
-if(WITH_EDITOR)
-    add_subdirectory(Source/Editor)
-endif()
-
 if(WITH_BLOCKENGINE)
 	add_subdirectory(Source/BlockEngine)
 endif()

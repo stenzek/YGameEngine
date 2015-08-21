@@ -1,22 +1,28 @@
 set(HEADER_FILES
-    DemoGame/BaseDemoGameState.h
-    DemoGame/DemoCamera.h
-    DemoGame/DemoGame.h
-    DemoGame/DemoUtilities.h
-    DemoGame/LaunchpadGameState.h
-    DemoGame/PrecompiledHeader.h
-    DemoGame/SkeletalAnimationDemo.h
+    Source/DemoGame/BaseDemoGameState.h
+    Source/DemoGame/BaseDemoWorldGameState.h
+    Source/DemoGame/DemoCamera.h
+    Source/DemoGame/DemoGame.h
+    Source/DemoGame/DemoUtilities.h
+    Source/DemoGame/DrawCallStressDemo.h
+    Source/DemoGame/ImGuiDemo.h
+    Source/DemoGame/LaunchpadGameState.h
+    Source/DemoGame/PrecompiledHeader.h
+    Source/DemoGame/SkeletalAnimationDemo.h
 )
 
 set(SOURCE_FILES
-    DemoGame/BaseDemoGameState.cpp
-    DemoGame/DemoCamera.cpp
-    DemoGame/DemoGame.cpp
-    DemoGame/DemoUtilities.cpp
-    DemoGame/LaunchpadGameState.cpp
-    DemoGame/Main.cpp
-    DemoGame/PrecompiledHeader.cpp
-    DemoGame/SkeletalAnimationDemo.cpp
+    Source/DemoGame/BaseDemoGameState.cpp
+    Source/DemoGame/BaseDemoWorldGameState.cpp
+    Source/DemoGame/DemoCamera.cpp
+    Source/DemoGame/DemoGame.cpp
+    Source/DemoGame/DemoUtilities.cpp
+    Source/DemoGame/DrawCallStressDemo.cpp
+    Source/DemoGame/ImGuiDemo.cpp
+    Source/DemoGame/LaunchpadGameState.cpp
+    Source/DemoGame/Main.cpp
+    Source/DemoGame/PrecompiledHeader.cpp
+    Source/DemoGame/SkeletalAnimationDemo.cpp
 )
 
 include_directories(${ENGINE_BASE_DIRECTORY} ${GameEngineDev_SOURCE_DIR}/DemoGame/Source ${SDL2_INCLUDE_DIR})

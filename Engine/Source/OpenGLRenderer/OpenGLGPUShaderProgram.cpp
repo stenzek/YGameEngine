@@ -249,7 +249,7 @@ bool OpenGLGPUShaderProgram::LoadBlob(OpenGLRenderer *pRenderer, const GPU_VERTE
                 uniformBuffer->pLocalGPUBuffer = static_cast<OpenGLGPUBuffer *>(pRenderer->CreateBuffer(&bufferDesc, uniformBuffer->pLocalBuffer));
                 if (uniformBuffer->pLocalGPUBuffer == nullptr)
                 {
-                    Log_ErrorPrintf("OpenGLGPUShaderProgram::Create: Failed to create local uniform buffer in GPU memory: %s (size: %u)", uniformBuffer->Name, uniformBuffer->Size);
+                    Log_ErrorPrintf("OpenGLGPUShaderProgram::Create: Failed to create local uniform buffer in GPU memory: %s (size: %u)", uniformBuffer->Name.GetCharArray(), uniformBuffer->Size);
                     return false;
                 }
             }
@@ -259,7 +259,7 @@ bool OpenGLGPUShaderProgram::LoadBlob(OpenGLRenderer *pRenderer, const GPU_VERTE
                 const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(uniformBuffer->Name, pRenderer->GetPlatform(), pRenderer->GetFeatureLevel());
                 if (pEngineConstantBuffer == nullptr)
                 {
-                    Log_ErrorPrintf("OpenGLGPUShaderProgram::Create: Shader is requesting unknown non-local constant buffer named '%s'.", uniformBuffer->Name);
+                    Log_ErrorPrintf("OpenGLGPUShaderProgram::Create: Shader is requesting unknown non-local constant buffer named '%s'.", uniformBuffer->Name.GetCharArray());
                     return false;
                 }
 

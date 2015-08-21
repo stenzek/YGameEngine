@@ -13,7 +13,7 @@ static uint32 s_indexBufferSize = 0;
 
 static void RenderDrawListsCallback(ImDrawData *pDrawData)
 {
-    GPUContext *pGPUContext = GPUContext::GetContextForCurrentThread();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
 
 #if 1
     // check buffer size
@@ -210,8 +210,8 @@ static void RenderDrawListsCallback(ImDrawData *pDrawData)
 
 bool ImGui::InitializeBridge()
 {
-    GPUContext *pGPUContext = GPUContext::GetContextForCurrentThread();
-    RendererOutputBuffer *pOutputBuffer = pGPUContext->GetOutputBuffer();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
+    GPUOutputBuffer *pOutputBuffer = pGPUContext->GetOutputBuffer();
 
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize.x = (float)pOutputBuffer->GetWidth();

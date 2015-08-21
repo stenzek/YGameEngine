@@ -1,3 +1,4 @@
+r_windowed_width
 #include "BaseGame/PrecompiledHeader.h"
 #include "BaseGame/BaseGame.h"
 #include "Engine/InputManager.h"
@@ -16,7 +17,7 @@ BaseGame::BaseGame()
     , m_restartRendererFlag(false)
     , m_relativeMouseMovement(false)
     , m_forcedAbsoluteMouseMovement(0)
-    , m_pMainGPUContext(nullptr)
+    , m_pGPUContext(nullptr)
     , m_pWorldRenderer(nullptr)
     , m_pOutputWindow(nullptr)
     , m_pRenderProfiler(nullptr)
@@ -44,7 +45,7 @@ BaseGame::~BaseGame()
     DebugAssert(m_pRenderProfiler == nullptr);
     DebugAssert(m_pWorldRenderer == nullptr);
     DebugAssert(m_pOutputWindow == nullptr);
-    DebugAssert(m_pMainGPUContext == nullptr);
+    DebugAssert(m_pGPUContext == nullptr);
 }
 
 void BaseGame::Quit()
@@ -84,6 +85,15 @@ void BaseGame::OnExit()
 void BaseGame::OnWindowResized(uint32 width, uint32 height)
 {
     Log_DevPrintf("Game window resized: %ux%u", width, height);
+
+    // check if we lost exclusive fullscreen
+    if (m_pOutputWindow->GetFullscreenState() == RENDERER_FULLSCREEN_STATE_FULLSCREEN && !m_pGPUContext->GetExclusiveFullScreen())
+    {
+        Log_WarningPrintf("BaseGame::OnWindowResized: Fullscreen state lost outside our control. Updating internal state.");
+        m_pOutputWindow->SetFullscreenState(RENDERER_FULLSCREEN_STATE_WINDOWED);
+        m_pGPUContext->ResizeOutputBuffer();
+        QueueRendererRestart();
+    }
 
     // pass to game state
     m_pGameState->OnWindowResized(width, height);
@@ -409,9 +419,6 @@ void BaseGame::RenderThreadCollectEvents(float deltaTime)
     // get new messages from the underlying subsystem
     SDL_PumpEvents();
 
-    // handle any events for the renderer
-    g_pRenderer->HandlePendingSDLEvents();
-
     // loop until we have everything
     for (;;)
     {
@@ -641,22 +648,22 @@ bool BaseGame::RendererStart()
         }
     }
 
-    // store variables
-    m_pMainGPUContext = g_pRenderer->GetMainContext();
-    m_pOutputWindow = g_pRenderer->GetImplicitRenderWindow();
-
     // initialize imgui
     bool renderThreadResult = false;
     QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([this, &renderThreadResult]()
     {
+        // store variables
+        m_pGPUContext = g_pRenderer->GetGPUContext();
+        m_pOutputWindow = g_pRenderer->GetImplicitOutputWindow();
+
         // get actual viewport dimensions
         uint32 bufferWidth = m_pOutputWindow->GetOutputBuffer()->GetWidth();
         uint32 bufferHeight = m_pOutputWindow->GetOutputBuffer()->GetHeight();
 
         // initialize remaining resources
-        m_guiContext.SetGPUContext(m_pMainGPUContext);
+        m_guiContext.SetGPUContext(m_pGPUContext);
         m_guiContext.SetViewportDimensions(bufferWidth, bufferHeight);
-        m_fpsCounter.SetGPUContext(m_pMainGPUContext);
+        m_fpsCounter.SetGPUContext(m_pGPUContext);
         m_fpsCounter.CreateGPUResources();
 
         // imgui
@@ -671,7 +678,7 @@ bool BaseGame::RendererStart()
         // add render profiler
         if (CVars::r_render_profiler.GetBool())
         {
-            m_pRenderProfiler = new RenderProfiler(m_pMainGPUContext);
+            m_pRenderProfiler = new RenderProfiler(m_pGPUContext);
             m_pRenderProfiler->CreateRendererResources();
         }
 
@@ -679,7 +686,7 @@ bool BaseGame::RendererStart()
         WorldRenderer::Options renderOptions;
         renderOptions.InitFromCVars();
         renderOptions.SetRenderResolution(bufferWidth, bufferHeight);
-        m_pWorldRenderer = WorldRenderer::Create(m_pMainGPUContext, &renderOptions);
+        m_pWorldRenderer = WorldRenderer::Create(m_pGPUContext, &renderOptions);
         if (m_pWorldRenderer == nullptr)
         {
             Log_ErrorPrintf("Failed to create world renderer instance.");
@@ -701,7 +708,7 @@ bool BaseGame::RendererStart()
     if (!renderThreadResult)
     {
         m_pOutputWindow = nullptr;
-        m_pMainGPUContext = nullptr;
+        m_pGPUContext = nullptr;
         g_pRenderer->Shutdown();
         return false;
     }
@@ -716,51 +723,20 @@ void BaseGame::RenderThreadRestartRenderer()
     delete m_pWorldRenderer;
     m_pWorldRenderer = nullptr;
 
-    // handle mode changes - store old values
-    RENDERER_FULLSCREEN_STATE oldFullscreenState = (RENDERER_FULLSCREEN_STATE)CVars::r_fullscreen.GetUInt();
-    uint32 oldFullscreenWidth = CVars::r_fullscreen_width.GetUInt();
-    uint32 oldFullscreenHeight = CVars::r_fullscreen_height.GetUInt();
-
     // apply pending cvars
     g_pConsole->ApplyPendingRenderCVars();
 
-    // change of fullscreen state?
-    RENDERER_FULLSCREEN_STATE newFullscreenState = (RENDERER_FULLSCREEN_STATE)CVars::r_fullscreen.GetUInt();
-    uint32 newFullscreenWidth = CVars::r_fullscreen_width.GetUInt();
-    uint32 newFullscreenHeight = CVars::r_fullscreen_height.GetUInt();
-    if (oldFullscreenState != newFullscreenState || (newFullscreenState == RENDERER_FULLSCREEN_STATE_FULLSCREEN && (oldFullscreenWidth != newFullscreenWidth || oldFullscreenHeight != newFullscreenHeight)))
-    {
-        static const char *stateStrings[RENDERER_FULLSCREEN_STATE_COUNT] = { "Windowed", "Windowed Fullscreen", "Exclusive Fullscreen" };
+    // get state @TODO remove the double cvars.. ick.
+    RENDERER_FULLSCREEN_STATE fullscreenState = (RENDERER_FULLSCREEN_STATE)CVars::r_fullscreen.GetUInt();
+    uint32 newWidth = (fullscreenState == RENDERER_FULLSCREEN_STATE_FULLSCREEN) ? CVars::r_fullscreen_width.GetUInt() : CVars::r_windowed_width.GetUInt();
+    uint32 newHeight = (fullscreenState == RENDERER_FULLSCREEN_STATE_FULLSCREEN) ? CVars::r_fullscreen_height.GetUInt() : CVars::r_windowed_height.GetUInt();
 
-        // determine w/h to use, windowed fullscreen uses desktop size, ie (0, 0)
-        uint32 switchWidth = 0;
-        uint32 switchHeight = 0;
-        if (newFullscreenState == RENDERER_FULLSCREEN_STATE_FULLSCREEN)
-        {
-            switchWidth = newFullscreenWidth;
-            switchHeight = newFullscreenHeight;
-        }
-        else if (newFullscreenState == RENDERER_FULLSCREEN_STATE_WINDOWED)
-        {
-            switchWidth = CVars::r_windowed_width.GetUInt();
-            switchHeight = CVars::r_windowed_height.GetUInt();
-        }
+    // switch modes
+    if (!g_pRenderer->ChangeResolution(fullscreenState, newWidth, newHeight, 60))
+        Log_ErrorPrintf("Failed to change resolutions.");
 
-        // switch fullscreen state
-        if (!m_pOutputWindow->SetFullScreen(newFullscreenState, switchWidth, switchHeight))
-        {
-            // switch failed
-            Log_WarningPrintf("Failed to switch to %s @ %ux%u, reverting to windowed", stateStrings[newFullscreenState], switchWidth, switchHeight);
-            if (!m_pOutputWindow->SetFullScreen(RENDERER_FULLSCREEN_STATE_WINDOWED, CVars::r_windowed_width.GetUInt(), CVars::r_windowed_height.GetUInt()))
-                Panic("Failed to switch to fallback windowed mode.");
-        }
-
-        // log it
-        Log_InfoPrintf("Switched to %s @ %ux%u", stateStrings[newFullscreenState], switchWidth, switchHeight);
-        
-        // process any pending events due to window changes
-        RenderThreadCollectEvents(0.0f);
-    }
+    // process any pending events due to window changes
+    RenderThreadCollectEvents(0.0f);
 
     // get actual viewport dimensions
     uint32 bufferWidth = m_pOutputWindow->GetOutputBuffer()->GetWidth();
@@ -772,7 +748,7 @@ void BaseGame::RenderThreadRestartRenderer()
     renderOptions.SetRenderResolution(bufferWidth, bufferHeight);
 
     // allocate new renderer
-    m_pWorldRenderer = WorldRenderer::Create(m_pMainGPUContext, &renderOptions);
+    m_pWorldRenderer = WorldRenderer::Create(m_pGPUContext, &renderOptions);
     if (m_pWorldRenderer == nullptr)
     {
         Panic("Failed to create world renderer instance.");
@@ -793,7 +769,7 @@ void BaseGame::RenderThreadRestartRenderer()
     {
         if (m_pRenderProfiler == nullptr)
         {
-            m_pRenderProfiler = new RenderProfiler(m_pMainGPUContext);
+            m_pRenderProfiler = new RenderProfiler(m_pGPUContext);
             m_pRenderProfiler->BeginFrame();
         }
 
@@ -811,7 +787,7 @@ void BaseGame::RenderThreadRestartRenderer()
     }
 
     // set a default viewport on the main context, most likely the game will override this but it's good for loading etc
-    m_pMainGPUContext->SetDefaultViewport();
+    m_pGPUContext->SetFullViewport();
 }
 
 void BaseGame::RenderThreadFrame(float deltaTime)
@@ -845,10 +821,10 @@ void BaseGame::RenderThreadFrame(float deltaTime)
         m_renderThreadEventsReadyEvent.Signal();
 
     // clear the backbuffer/depth buffer, this is mainly as a help to tilers
-    m_pMainGPUContext->SetRenderTargets(0, nullptr, nullptr);
-    m_pMainGPUContext->SetDefaultViewport();
-    m_pMainGPUContext->DiscardTargets(true, true, true);
-    m_pMainGPUContext->ClearTargets(true, true, true);
+    m_pGPUContext->SetRenderTargets(0, nullptr, nullptr);
+    m_pGPUContext->SetFullViewport();
+    m_pGPUContext->DiscardTargets(true, true, true);
+    m_pGPUContext->ClearTargets(true, true, true);
 
 #ifdef WITH_IMGUI
     // imgui stuff
@@ -876,8 +852,8 @@ void BaseGame::RenderThreadFrame(float deltaTime)
     {
         MICROPROFILE_SCOPEI("BaseGame", "SwapBuffers", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
 
-        m_pMainGPUContext->ClearState(true, true, true, true);
-        m_pOutputWindow->GetOutputBuffer()->SwapBuffers();
+        m_pGPUContext->ClearState(true, true, true, true);
+        m_pGPUContext->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE); /* @TODO */
     }
     RENDER_PROFILER_END_SECTION(m_pRenderProfiler);
 
@@ -906,8 +882,8 @@ void BaseGame::RenderThreadDrawOverlays(float deltaTime)
     m_guiContext.Flush();
 
     // engine overlays are always drawn over everything else, taking up the whole screen.
-    m_pMainGPUContext->SetRenderTargets(0, nullptr, nullptr);
-    m_pMainGPUContext->SetDefaultViewport();
+    m_pGPUContext->SetRenderTargets(0, nullptr, nullptr);
+    m_pGPUContext->SetFullViewport();
 
     // batch stuff
     m_guiContext.PushManualFlush();
@@ -986,7 +962,7 @@ void BaseGame::RendererShutdown()
     m_fpsCounter.ReleaseGPUResources();
 
     m_pOutputWindow = nullptr;
-    m_pMainGPUContext = nullptr;
+    m_pGPUContext = nullptr;
     g_pRenderer->Shutdown();
 }
 

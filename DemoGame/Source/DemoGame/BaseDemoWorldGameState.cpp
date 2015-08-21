@@ -220,10 +220,10 @@ void BaseDemoWorldGameState::OnRenderThreadDraw(float deltaTime)
     m_pDemoGame->GetWorldRenderer()->DrawWorld(m_pWorld->GetRenderWorld(), &m_viewParameters, nullptr, nullptr, m_pDemoGame->GetRenderProfiler());
 
     // setup overlay draws
-    m_pDemoGame->GetMainGPUContext()->SetRenderTargets(0, nullptr, nullptr);
-    m_pDemoGame->GetMainGPUContext()->SetDefaultViewport();
-    m_pDemoGame->GetMainGPUContext()->GetConstants()->SetFromCamera(m_viewParameters.ViewCamera, false);
-    m_pDemoGame->GetMainGPUContext()->GetConstants()->CommitChanges();
+    m_pDemoGame->GetGPUContext()->SetRenderTargets(0, nullptr, nullptr);
+    m_pDemoGame->GetGPUContext()->SetFullViewport();
+    m_pDemoGame->GetGPUContext()->GetConstants()->SetFromCamera(m_viewParameters.ViewCamera, false);
+    m_pDemoGame->GetGPUContext()->GetConstants()->CommitChanges();
 
     // draw overlays
     m_pDemoGame->GetGUIContext()->PushManualFlush();

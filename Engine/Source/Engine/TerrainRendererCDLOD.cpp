@@ -501,7 +501,7 @@ void TerrainSectionRenderProxyCDLOD::OnPointHeightModified(uint32 x, uint32 y)
     const byte *pSourcePointer = reinterpret_cast<const byte *>(pHeightMapValues) + (y * heightMapRowPitch) + (x * heightMapValueSize);
 
     // write to texture
-    g_pRenderer->GetMainContext()->WriteTexture(m_pHeightMapTexture, pSourcePointer, heightMapValueSize, heightMapValueSize, 0, x, y, 1, 1);
+    g_pRenderer->GetGPUContext()->WriteTexture(m_pHeightMapTexture, pSourcePointer, heightMapValueSize, heightMapValueSize, 0, x, y, 1, 1);
 
     // update bounding box
     if (GetBoundingBox() != m_pSection->GetBoundingBox())
@@ -553,7 +553,7 @@ void TerrainSectionRenderProxyCDLOD::OnPointLayersModified(uint32 x, uint32 y)
             const byte *pSourcePointer = reinterpret_cast<const byte *>(pSplatMapValues)+(y * splatMapRowPitch) + (x * splatMapValueSize);
 
             // write to the texture
-            g_pRenderer->GetMainContext()->WriteTexture(static_cast<GPUTexture2D *>(m_pAlphaMapTexture), pSourcePointer, splatMapValueSize, splatMapValueSize, 0, x, y, 1, 1);
+            g_pRenderer->GetGPUContext()->WriteTexture(static_cast<GPUTexture2D *>(m_pAlphaMapTexture), pSourcePointer, splatMapValueSize, splatMapValueSize, 0, x, y, 1, 1);
         }
     }
 }
@@ -1023,7 +1023,7 @@ void TerrainSectionRenderProxyCDLOD::QueueForRender(const Camera *pCamera, Rende
     });
 
     // find detail batches to draw
-    if (BuildDetailBatches(GPUContext::GetContextForCurrentThread(), pCamera->GetPosition()))
+    if (BuildDetailBatches(g_pRenderer->GetGPUContext(), pCamera->GetPosition()))
     {
         // get section center
         float3 sectionCenter(m_pSection->GetBoundingBox().GetCenter());

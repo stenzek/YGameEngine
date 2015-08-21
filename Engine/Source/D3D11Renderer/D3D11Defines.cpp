@@ -1,8 +1,8 @@
 #include "D3D11Renderer/PrecompiledHeader.h"
 #include "D3D11Renderer/D3D11Common.h"
-#include "D3D11Renderer/D3D11Renderer.h"
+#include "D3D11Renderer/D3D11GPUDevice.h"
 #include "D3D11Renderer/D3D11GPUTexture.h"
-Log_SetChannel(D3D11Renderer);
+Log_SetChannel(D3D11GPUDevice);
 
 Y_Define_NameTable(NameTables::D3DFeatureLevels)
     Y_NameTable_VEntry(D3D_FEATURE_LEVEL_9_1,    "D3D_FEATURE_LEVEL_9_1")
@@ -518,11 +518,6 @@ ID3D11SamplerState *D3D11Helpers::GetResourceSamplerState(GPUResource *pResource
     }
 
     return nullptr;
-}
-
-void D3D11Helpers::CorrectProjectionMatrix(float4x4 &projectionMatrix)
-{
-    projectionMatrix.SetRow(2, ((projectionMatrix.GetRow(2)) + (projectionMatrix.GetRow(3))) * 0.5f);
 }
 
 void D3D11Helpers::SetD3D11DeviceChildDebugName(ID3D11DeviceChild *pDeviceChild, const char *debugName)

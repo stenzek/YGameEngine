@@ -23,7 +23,7 @@ class GPUShaderPipeline;
 class GPURenderTargetView;
 class GPUDepthStencilBufferView;
 class GPUComputeView;
-class RendererOutputBuffer;
+class GPUOutputBuffer;
 class RendererOutputWindow;
 class GPUContextConstants;
 class GPUContext;
@@ -64,6 +64,13 @@ enum RENDERER_VSYNC_TYPE
     RENDERER_VSYNC_TYPE_ADAPTIVE_VSYNC,
     RENDERER_VSYNC_TYPE_TRIPLE_BUFFERING,
     RENDERER_VSYNC_TYPE_COUNT,
+};
+
+enum GPU_PRESENT_BEHAVIOUR
+{
+    GPU_PRESENT_BEHAVIOUR_IMMEDIATE,
+    GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK,
+    GPU_PRESENT_BEHAVIOUR_COUNT
 };
 
 enum GPU_INDEX_FORMAT

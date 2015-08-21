@@ -71,8 +71,8 @@ static bool RendererStart()
     }
 
     // store variables
-    g_pMainGPUContext = g_pRenderer->GetMainContext();
-    g_pOutputWindow = g_pRenderer->GetImplicitRenderWindow();
+    g_pMainGPUContext = g_pRenderer->GetGPUContext();
+    g_pOutputWindow = g_pRenderer->GetImplicitOutputWindow();
 
     // get actual viewport dimensions
     uint32 bufferWidth = g_pOutputWindow->GetOutputBuffer()->GetWidth();
@@ -218,9 +218,6 @@ static void CheckEvents()
     // get new messages from the underlying subsystem
     SDL_PumpEvents();
 
-    // handle any events for the renderer
-    g_pRenderer->HandlePendingSDLEvents();
-
     // loop until we have everything
     for (;;)
     {
@@ -301,7 +298,7 @@ static void Frame()
     // do stuff
     {
         g_pMainGPUContext->SetRenderTargets(0, nullptr, nullptr);
-        g_pMainGPUContext->SetDefaultViewport();
+        g_pMainGPUContext->SetFullViewport();
         g_pMainGPUContext->ClearTargets(true, true, true, Vector4f(0.5f, 0.2f, 0.8f, 0.0f));
 
         MINIGUI_RECT rect(40, 140, 40, 140);
@@ -321,7 +318,7 @@ static void Frame()
         ImGui::Render();
 
         g_fpsCounter.DrawDetails(g_pRenderer->GetFixedResources()->GetDebugFont(), &g_guiContext);
-        g_pOutputWindow->GetOutputBuffer()->SwapBuffers();
+        g_pMainGPUContext->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE);
     }
 
     // end

@@ -1,6 +1,6 @@
 #include "D3D11Renderer/PrecompiledHeader.h"
 #include "D3D11Renderer/D3D11GPUBuffer.h"
-#include "D3D11Renderer/D3D11Renderer.h"
+#include "D3D11Renderer/D3D11GPUDevice.h"
 #include "D3D11Renderer/D3D11GPUContext.h"
 Log_SetChannel(Renderer);
 
@@ -11,12 +11,12 @@ D3D11GPUBuffer::D3D11GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, ID3D11Buffer 
       m_pMappedContext(NULL),
       m_pMappedPointer(NULL)
 {
-    static_cast<D3D11Renderer *>(g_pRenderer)->OnResourceCreated(this);
+    //static_cast<D3D11GPUDevice *>(g_pRenderer)->OnResourceCreated(this);
 }
 
 D3D11GPUBuffer::~D3D11GPUBuffer()
 {
-    static_cast<D3D11Renderer *>(g_pRenderer)->OnResourceReleased(this);
+    //static_cast<D3D11GPUDevice *>(g_pRenderer)->OnResourceReleased(this);
 
     DebugAssert(m_pMappedContext == NULL);
     SAFE_RELEASE(m_pD3DBuffer);
@@ -36,7 +36,7 @@ void D3D11GPUBuffer::SetDebugName(const char *debugName)
     D3D11Helpers::SetD3D11DeviceChildDebugName(m_pD3DBuffer, debugName);
 }
 
-GPUBuffer *D3D11Renderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /* = NULL */)
+GPUBuffer *D3D11GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /* = NULL */)
 {
     D3D11_BUFFER_DESC D3DBufferDesc;
     D3DBufferDesc.ByteWidth = pDesc->Size;
@@ -80,7 +80,7 @@ GPUBuffer *D3D11Renderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void 
     hResult = m_pD3DDevice->CreateBuffer(&D3DBufferDesc, (pInitialData != NULL) ? &subResourceData : NULL, &pBuffer);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D11Renderer::CreateBuffer: Could not create buffer (%u bytes): %08X", pDesc->Size, hResult);
+        Log_ErrorPrintf("D3D11GPUDevice::CreateBuffer: Could not create buffer (%u bytes): %08X", pDesc->Size, hResult);
         return NULL;
     }
 
@@ -101,7 +101,7 @@ GPUBuffer *D3D11Renderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void 
         {
             pBuffer->Release();
 
-            Log_ErrorPrintf("D3D11Renderer::CreateBuffer: Could not create staging buffer (%u bytes): %08X", pDesc->Size, hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateBuffer: Could not create staging buffer (%u bytes): %08X", pDesc->Size, hResult);
             return NULL;
         }
     }

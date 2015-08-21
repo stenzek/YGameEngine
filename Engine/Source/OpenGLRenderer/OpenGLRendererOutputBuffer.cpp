@@ -2,7 +2,7 @@
 #include "OpenGLRenderer/OpenGLRendererOutputBuffer.h"
 #include "OpenGLRenderer/OpenGLRenderer.h"
 #include "Engine/SDLHeaders.h"
-Log_SetChannel(D3D11RendererOutputBuffer);
+Log_SetChannel(D3D11GPUOutputBuffer);
 
 // fix up a warning
 #ifdef SDL_VIDEO_DRIVER_WINDOWS
@@ -15,7 +15,7 @@ Log_SetChannel(D3D11RendererOutputBuffer);
 static const char *SDL_OPENGL_RENDERER_OUTPUT_WINDOW_POINTER_STRING = "OpenGLRendererOutputWindowPtr";
 
 OpenGLRendererOutputBuffer::OpenGLRendererOutputBuffer(SDL_Window *pSDLWindow, bool ownsWindow, uint32 width, uint32 height, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilBufferFormat, RENDERER_VSYNC_TYPE vsyncType)
-    : RendererOutputBuffer(vsyncType),
+    : GPUOutputBuffer(vsyncType),
       m_pSDLWindow(pSDLWindow),
       m_ownsWindow(ownsWindow),
       m_width(width),
@@ -52,7 +52,7 @@ OpenGLRendererOutputBuffer *OpenGLRendererOutputBuffer::Create(RenderSystemWindo
     return new OpenGLRendererOutputBuffer(pSDLWindow, true, windowWidth, windowHeight, backBufferFormat, depthStencilBufferFormat, vsyncType);
 }
 
-bool OpenGLRendererOutputBuffer::ResizeBuffers(uint32 width /* = 0 */, uint32 height /* = 0 */)
+void OpenGLRendererOutputBuffer::Resize(uint32 width, uint32 height)
 {
     if (width == 0 || height == 0)
     {
@@ -63,12 +63,8 @@ bool OpenGLRendererOutputBuffer::ResizeBuffers(uint32 width /* = 0 */, uint32 he
         height = windowHeight;
     }
 
-    if (width == m_width && height == m_height)
-        return true;
-
     m_width = width;
     m_height = height;
-    return true;
 }
 
 void OpenGLRendererOutputBuffer::SetVSyncType(RENDERER_VSYNC_TYPE vsyncType)
@@ -196,7 +192,7 @@ bool OpenGLRendererOutputWindow::SetFullScreen(RENDERER_FULLSCREEN_STATE state, 
         }
 
         // update the window size
-        m_pOpenGLOutputBuffer->ResizeBuffers(foundDisplayMode.w, foundDisplayMode.h);
+        m_pOpenGLOutputBuffer->Resize(foundDisplayMode.w, foundDisplayMode.h);
         m_width = m_pOpenGLOutputBuffer->GetWidth();
         m_height = m_pOpenGLOutputBuffer->GetHeight();
         return true;
@@ -216,7 +212,7 @@ bool OpenGLRendererOutputWindow::SetFullScreen(RENDERER_FULLSCREEN_STATE state, 
         }
 
         // update the window size
-        m_pOpenGLOutputBuffer->ResizeBuffers();
+        m_pOpenGLOutputBuffer->Resize();
         m_width = m_pOpenGLOutputBuffer->GetWidth();
         m_height = m_pOpenGLOutputBuffer->GetHeight();
         return true;
@@ -240,7 +236,7 @@ bool OpenGLRendererOutputWindow::SetFullScreen(RENDERER_FULLSCREEN_STATE state, 
             SDL_SetWindowSize(m_pSDLWindow, width, height);
 
         // update the size
-        m_pOpenGLOutputBuffer->ResizeBuffers();
+        m_pOpenGLOutputBuffer->Resize();
         m_width = m_pOpenGLOutputBuffer->GetWidth();
         m_height = m_pOpenGLOutputBuffer->GetHeight();
         return true;
@@ -307,7 +303,7 @@ void OpenGLRenderer::HandlePendingSDLEvents()
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-RendererOutputBuffer *OpenGLRenderer::CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType)
+GPUOutputBuffer *OpenGLRenderer::CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType)
 {
     return OpenGLRendererOutputBuffer::Create(hWnd, m_swapChainBackBufferFormat, m_swapChainDepthStencilBufferFormat, vsyncType);
 }

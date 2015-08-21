@@ -592,11 +592,11 @@ void SkeletalMeshRenderProxy::TransformVerticesOnCPU()
 
     // update the buffer
     void *pMappedBufferPointer;
-    if (g_pRenderer->GetMainContext()->MapBuffer(m_pCPUSkinningVertexBuffer, GPU_MAP_TYPE_WRITE_DISCARD, &pMappedBufferPointer))
+    if (g_pRenderer->GetGPUContext()->MapBuffer(m_pCPUSkinningVertexBuffer, GPU_MAP_TYPE_WRITE_DISCARD, &pMappedBufferPointer))
     {
         uint32 vertexSize = SkeletalMeshVertexFactory::GetVertexSize(g_pRenderer->GetPlatform(), g_pRenderer->GetFeatureLevel(), m_pSkeletalMesh->GetBaseVertexFactoryFlags());
         SkeletalMeshVertexFactory::FillVerticesBuffer(g_pRenderer->GetPlatform(), g_pRenderer->GetFeatureLevel(), m_pSkeletalMesh->GetBaseVertexFactoryFlags(), m_cpuSkinnedVertices.GetBasePointer(), m_cpuSkinnedVertices.GetSize(), pMappedBufferPointer, vertexSize * m_pSkeletalMesh->GetVertexCount());
-        g_pRenderer->GetMainContext()->Unmapbuffer(m_pCPUSkinningVertexBuffer, pMappedBufferPointer);
+        g_pRenderer->GetGPUContext()->Unmapbuffer(m_pCPUSkinningVertexBuffer, pMappedBufferPointer);
     }
 }
 

@@ -61,7 +61,8 @@ void RenderProfiler::Section::Begin(Section *pParentSection, const char *section
 {
     m_sectionName = sectionName;
     m_hasGPUStats = enableGPUStats;
-    m_startingDrawCallCount = pGPUContext->GetDrawCallCounter();
+    //m_startingDrawCallCount = pGPUContext->GetDrawCallCounter();
+    m_startingDrawCallCount = 0;
     m_timer.Reset();
     m_pParent = pParentSection;
 
@@ -79,7 +80,8 @@ void RenderProfiler::Section::End(GPUContext *pGPUContext)
     if (m_hasGPUStats)
     {
         // store draw calls
-        m_drawCallCount = pGPUContext->GetDrawCallCounter() - m_startingDrawCallCount;
+        //m_drawCallCount = pGPUContext->GetDrawCallCounter() - m_startingDrawCallCount;
+        m_drawCallCount = 0;
 
         // gpu time
         if (m_pGPUTimeQuery != NULL)

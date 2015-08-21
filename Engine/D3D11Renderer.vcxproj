@@ -41,9 +41,10 @@
     <ClCompile Include="Source\D3D11Renderer\D3D11GPUContext.cpp" />
     <ClCompile Include="Source\D3D11Renderer\D3D11GPUQuery.cpp" />
     <ClCompile Include="Source\D3D11Renderer\D3D11GPUShaderProgram.cpp" />
-    <ClCompile Include="Source\D3D11Renderer\D3D11RendererOutputBuffer.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11GPUOutputBuffer.cpp" />
     <ClCompile Include="Source\D3D11Renderer\D3D11GPUTexture.cpp" />
-    <ClCompile Include="Source\D3D11Renderer\D3D11Renderer.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11GPUDevice.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11RenderBackend.cpp" />
     <ClCompile Include="Source\D3D11Renderer\PrecompiledHeader.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -56,9 +57,10 @@
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUContext.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUQuery.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUShaderProgram.h" />
-    <ClInclude Include="Source\D3D11Renderer\D3D11RendererOutputBuffer.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11GPUOutputBuffer.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUTexture.h" />
-    <ClInclude Include="Source\D3D11Renderer\D3D11Renderer.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11GPUDevice.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11RenderBackend.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11ShaderCacheEntry.h" />
     <ClInclude Include="Source\D3D11Renderer\PrecompiledHeader.h" />
   </ItemGroup>

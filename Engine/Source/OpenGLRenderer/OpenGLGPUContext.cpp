@@ -485,7 +485,7 @@ void OpenGLGPUContext::SetViewport(const RENDERER_VIEWPORT *pNewViewport)
         glScissor(m_scissorRect.Left, m_currentViewport.Height - m_scissorRect.Bottom, m_scissorRect.Right - m_scissorRect.Left, m_scissorRect.Bottom - m_scissorRect.Top);
 }
 
-void OpenGLGPUContext::SetDefaultViewport(GPUTexture *pForRenderTarget /*= NULL*/)
+void OpenGLGPUContext::SetFullViewport(GPUTexture *pForRenderTarget /*= NULL*/)
 {
     RENDERER_VIEWPORT viewport;
     viewport.TopLeftX = 0;
@@ -639,7 +639,7 @@ void OpenGLGPUContext::DiscardTargets(bool discardColor /* = true */, bool disca
     }
 }
 
-void OpenGLGPUContext::SetOutputBuffer(RendererOutputBuffer *pSwapChain)
+void OpenGLGPUContext::SetOutputBuffer(GPUOutputBuffer *pSwapChain)
 {
     OpenGLRendererOutputBuffer *pOpenGLOutputBuffer = static_cast<OpenGLRendererOutputBuffer *>(pSwapChain);
     DebugAssert(pOpenGLOutputBuffer != nullptr);
@@ -663,6 +663,18 @@ void OpenGLGPUContext::SetOutputBuffer(RendererOutputBuffer *pSwapChain)
     m_pCurrentOutputBuffer->Release();
     m_pCurrentOutputBuffer = pOpenGLOutputBuffer;
     m_pCurrentOutputBuffer->AddRef();
+}
+
+bool OpenGLGPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /* = 0 */)
+{
+    // GL buffers are automatically resized
+    m_pCurrentOutputBuffer->Resize(width, height);
+}
+
+void OpenGLGPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour)
+{
+    // @TODO: Present Behaviour
+    SDL_GL_SwapWindow(m_pCurrentOutputBuffer->GetSDLWindow());
 }
 
 uint32 OpenGLGPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)

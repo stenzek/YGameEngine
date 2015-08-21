@@ -7,7 +7,7 @@ class OpenGLES2RendererOutputWindow;
 struct SDL_Window;
 union SDL_Event;
 
-class OpenGLES2RendererOutputBuffer : public RendererOutputBuffer
+class OpenGLES2RendererOutputBuffer : public GPUOutputBuffer
 {
     friend class OpenGLES2RendererOutputWindow;
 
@@ -17,9 +17,7 @@ public:
     // virtual methods
     virtual uint32 GetWidth() const override { return m_width; }
     virtual uint32 GetHeight() const override { return m_height; }
-    virtual bool ResizeBuffers(uint32 width = 0, uint32 height = 0) override;
     virtual void SetVSyncType(RENDERER_VSYNC_TYPE vsyncType) override;
-    virtual void SwapBuffers() override;
 
     // creation
     static OpenGLES2RendererOutputBuffer *Create(RenderSystemWindowHandle windowHandle, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilBufferFormat, RENDERER_VSYNC_TYPE vsyncType);
@@ -28,6 +26,7 @@ public:
     SDL_Window *GetSDLWindow() const { return m_pSDLWindow; }
     PIXEL_FORMAT GetBackBufferFormat() const { return m_backBufferFormat; }
     PIXEL_FORMAT GetDepthStencilBufferFormat() const { return m_depthStencilBufferFormat; }
+    void Resize(uint32 width, uint32 height);
 
 private:
     OpenGLES2RendererOutputBuffer(SDL_Window *pSDLWindow, bool ownsWindow, uint32 width, uint32 height, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilBufferFormat, RENDERER_VSYNC_TYPE vsyncType);

@@ -5,25 +5,27 @@
     <ClCompile Include="Source\D3D11Renderer\D3D11GPUQuery.cpp" />
     <ClCompile Include="Source\D3D11Renderer\D3D11GPUShaderProgram.cpp" />
     <ClCompile Include="Source\D3D11Renderer\D3D11GPUTexture.cpp" />
-    <ClCompile Include="Source\D3D11Renderer\D3D11Renderer.cpp" />
     <ClCompile Include="Source\D3D11Renderer\D3D11CVars.cpp" />
     <ClCompile Include="Source\D3D11Renderer\D3D11Defines.cpp" />
     <ClCompile Include="Source\D3D11Renderer\D3D11GPUBuffer.cpp" />
-    <ClCompile Include="Source\D3D11Renderer\D3D11RendererOutputBuffer.cpp" />
     <ClCompile Include="Source\D3D11Renderer\PrecompiledHeader.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11GPUDevice.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11GPUOutputBuffer.cpp" />
+    <ClCompile Include="Source\D3D11Renderer\D3D11RenderBackend.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUContext.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUQuery.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUShaderProgram.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUTexture.h" />
-    <ClInclude Include="Source\D3D11Renderer\D3D11Renderer.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11ShaderCacheEntry.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11Common.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11CVars.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11Defines.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUBuffer.h" />
-    <ClInclude Include="Source\D3D11Renderer\D3D11RendererOutputBuffer.h" />
     <ClInclude Include="Source\D3D11Renderer\PrecompiledHeader.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11GPUDevice.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11GPUOutputBuffer.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3D11RenderBackend.h" />
   </ItemGroup>
 </Project>

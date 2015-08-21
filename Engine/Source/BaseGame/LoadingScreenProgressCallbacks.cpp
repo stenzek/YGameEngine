@@ -117,9 +117,8 @@ void LoadingScreenProgressCallbacks::Redraw()
 
 void LoadingScreenProgressCallbacks::RedrawRenderThread()
 {
-    GPUContext *pGPUContext = g_pRenderer->GetMainContext();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
     MiniGUIContext *pGUIContext = g_pRenderer->GetGUIContext();
-    DebugAssert(pGPUContext == GPUContext::GetContextForCurrentThread());
 
     // assuming correct targets are already set
     MINIGUI_RECT rect;
@@ -132,7 +131,7 @@ void LoadingScreenProgressCallbacks::RedrawRenderThread()
 
     // clear screen
     pGPUContext->SetRenderTargets(0, nullptr, nullptr);
-    pGPUContext->SetDefaultViewport();
+    pGPUContext->SetFullViewport();
     pGPUContext->ClearTargets(true, true, true, float4(0.0f, 0.0f, 0.2f, 1.0f));
     pGUIContext->SetViewportDimensions(pGPUContext->GetViewport());
 
@@ -166,6 +165,6 @@ void LoadingScreenProgressCallbacks::RedrawRenderThread()
     pGUIContext->Flush();
 
     // swap buffers
-    pGPUContext->GetOutputBuffer()->SwapBuffers();
+    pGPUContext->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE);
 }
 

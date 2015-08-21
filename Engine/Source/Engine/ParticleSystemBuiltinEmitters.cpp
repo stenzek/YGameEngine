@@ -174,7 +174,7 @@ void ParticleSystemEmitter_Sprite::UpdateRenderData(const InstanceData *pEmitter
     }
     else if (pEmitterRenderData->VertexFactoryFlags & ParticleSystemSpriteVertexFactory::Flag_RenderInstancedQuads)
     {
-        GPUContext *pGPUContext = g_pRenderer->GetMainContext();
+        GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
         DebugAssert(pEmitterRenderData->pGPUBuffer != nullptr);
 
         // map the gpu buffer

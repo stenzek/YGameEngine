@@ -6,7 +6,7 @@ class D3D12RendererOutputBuffer;
 class D3D12RendererOutputWindow;
 union SDL_Event;
 
-class D3D12RendererOutputBuffer : public RendererOutputBuffer
+class D3D12RendererOutputBuffer : public GPUOutputBuffer
 {
     friend class D3D12RendererOutputWindow;
 
@@ -16,9 +16,7 @@ public:
     // virtual methods
     virtual uint32 GetWidth() const override { return m_width; }
     virtual uint32 GetHeight() const override { return m_height; }
-    virtual bool ResizeBuffers(uint32 width = 0, uint32 height = 0) override;
     virtual void SetVSyncType(RENDERER_VSYNC_TYPE vsyncType) override;
-    virtual void SwapBuffers() override;
 
     // creation
     static D3D12RendererOutputBuffer *Create(IDXGIFactory3 *pDXGIFactory, ID3D12Device *pD3DDevice, HWND hWnd, DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthStencilBufferFormat, RENDERER_VSYNC_TYPE vsyncType);

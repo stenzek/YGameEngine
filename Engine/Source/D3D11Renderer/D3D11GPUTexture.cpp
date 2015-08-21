@@ -1,7 +1,7 @@
 #include "D3D11Renderer/PrecompiledHeader.h"
 #include "D3D11Renderer/D3D11GPUTexture.h"
 #include "D3D11Renderer/D3D11GPUContext.h"
-#include "D3D11Renderer/D3D11Renderer.h"
+#include "D3D11Renderer/D3D11GPUDevice.h"
 Log_SetChannel(D3D11GPUContext);
 
 static DWORD MapTextureFlagsToD3DBindFlags(uint32 textureFlags)
@@ -119,7 +119,7 @@ void D3D11GPUTexture1D::SetDebugName(const char *name)
 }
 
 
-GPUTexture1D *D3D11Renderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
+GPUTexture1D *D3D11GPUDevice::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
                                              const void **ppInitialData /* = NULL */, const uint32 *pInitialDataPitch /* = NULL */)
 {
     HRESULT hResult;
@@ -181,7 +181,7 @@ GPUTexture1D *D3D11Renderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureD
     hResult = m_pD3DDevice->CreateTexture1D(&D3DTextureDesc, pD3DInitialData, &pD3DTexture);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D11Renderer::CreateTexture1D: CreateTexture1D failed with hResult %08X", hResult);
+        Log_ErrorPrintf("D3D11GPUDevice::CreateTexture1D: CreateTexture1D failed with hResult %08X", hResult);
         return false;
     }
 
@@ -202,7 +202,7 @@ GPUTexture1D *D3D11Renderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureD
         hResult = m_pD3DDevice->CreateTexture1D(&D3DStagingTextureDesc, nullptr, &pD3DStagingTexture);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture1D: CreateTexture1D failed for staging texture with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture1D: CreateTexture1D failed for staging texture with hResult %08X", hResult);
             pD3DTexture->Release();
             return false;
         }
@@ -223,7 +223,7 @@ GPUTexture1D *D3D11Renderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureD
         hResult = m_pD3DDevice->CreateShaderResourceView(pD3DTexture, &srvDesc, &pD3DSRV);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture1D: CreateShaderResourceView failed with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture1D: CreateShaderResourceView failed with hResult %08X", hResult);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
             return false;
@@ -238,7 +238,7 @@ GPUTexture1D *D3D11Renderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureD
 
         if ((pD3DSamplerState = D3D11Helpers::CreateD3D11SamplerState(m_pD3DDevice, pSamplerStateDesc)) == nullptr)
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture1D: Failed to create sampler state for texture.");
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture1D: Failed to create sampler state for texture.");
             SAFE_RELEASE(pD3DSRV);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
@@ -365,7 +365,7 @@ void D3D11GPUTexture1DArray::SetDebugName(const char *name)
     D3D11Helpers::SetD3D11DeviceChildDebugName(m_pD3DTexture, name);
 }
 
-GPUTexture1DArray *D3D11Renderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
+GPUTexture1DArray *D3D11GPUDevice::CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
                                                        const void **ppInitialData /* = NULL */, const uint32 *pInitialDataPitch /* = NULL */)
 {
     HRESULT hResult;
@@ -427,7 +427,7 @@ GPUTexture1DArray *D3D11Renderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY_
     hResult = m_pD3DDevice->CreateTexture1D(&D3DTextureDesc, pD3DInitialData, &pD3DTexture);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D11Renderer::CreateTexture1DArray: CreateTexture1D failed with hResult %08X", hResult);
+        Log_ErrorPrintf("D3D11GPUDevice::CreateTexture1DArray: CreateTexture1D failed with hResult %08X", hResult);
         return false;
     }
 
@@ -448,7 +448,7 @@ GPUTexture1DArray *D3D11Renderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY_
         hResult = m_pD3DDevice->CreateTexture1D(&D3DStagingTextureDesc, nullptr, &pD3DStagingTexture);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture1DArray: CreateTexture1D failed for staging texture with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture1DArray: CreateTexture1D failed for staging texture with hResult %08X", hResult);
             pD3DTexture->Release();
             return false;
         }
@@ -471,7 +471,7 @@ GPUTexture1DArray *D3D11Renderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY_
         hResult = m_pD3DDevice->CreateShaderResourceView(pD3DTexture, &srvDesc, &pD3DSRV);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture1DArray: CreateShaderResourceView failed with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture1DArray: CreateShaderResourceView failed with hResult %08X", hResult);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
             return false;
@@ -486,7 +486,7 @@ GPUTexture1DArray *D3D11Renderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY_
 
         if ((pD3DSamplerState = D3D11Helpers::CreateD3D11SamplerState(m_pD3DDevice, pSamplerStateDesc)) == nullptr)
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture1DArray: Failed to create sampler state for texture.");
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture1DArray: Failed to create sampler state for texture.");
             SAFE_RELEASE(pD3DSRV);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
@@ -614,7 +614,7 @@ void D3D11GPUTexture2D::SetDebugName(const char *name)
 }
 
 
-GPUTexture2D *D3D11Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
+GPUTexture2D *D3D11GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
                                              const void **ppInitialData /* = NULL */, const uint32 *pInitialDataPitch /* = NULL */)
 {
     HRESULT hResult;
@@ -679,7 +679,7 @@ GPUTexture2D *D3D11Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureD
     hResult = m_pD3DDevice->CreateTexture2D(&D3DTextureDesc, pD3DInitialData, &pD3DTexture);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D11Renderer::CreateTexture2D: CreateTexture2D failed with hResult %08X", hResult);
+        Log_ErrorPrintf("D3D11GPUDevice::CreateTexture2D: CreateTexture2D failed with hResult %08X", hResult);
         return false;
     }
 
@@ -703,7 +703,7 @@ GPUTexture2D *D3D11Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureD
         hResult = m_pD3DDevice->CreateTexture2D(&D3DStagingTextureDesc, nullptr, &pD3DStagingTexture);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture2D: CreateTexture2D failed for staging texture with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture2D: CreateTexture2D failed for staging texture with hResult %08X", hResult);
             pD3DTexture->Release();
             return false;
         }
@@ -724,7 +724,7 @@ GPUTexture2D *D3D11Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureD
         hResult = m_pD3DDevice->CreateShaderResourceView(pD3DTexture, &srvDesc, &pD3DSRV);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture2D: CreateShaderResourceView failed with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture2D: CreateShaderResourceView failed with hResult %08X", hResult);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
             return false;
@@ -739,7 +739,7 @@ GPUTexture2D *D3D11Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureD
 
         if ((pD3DSamplerState = D3D11Helpers::CreateD3D11SamplerState(m_pD3DDevice, pSamplerStateDesc)) == nullptr)
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture2D: Failed to create sampler state for texture.");
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture2D: Failed to create sampler state for texture.");
             SAFE_RELEASE(pD3DSRV);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
@@ -872,7 +872,7 @@ void D3D11GPUTexture2DArray::SetDebugName(const char *name)
     D3D11Helpers::SetD3D11DeviceChildDebugName(m_pD3DTexture, name);
 }
 
-GPUTexture2DArray *D3D11Renderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
+GPUTexture2DArray *D3D11GPUDevice::CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
                                                        const void **ppInitialData /* = NULL */, const uint32 *pInitialDataPitch /* = NULL */)
 {
     HRESULT hResult;
@@ -937,7 +937,7 @@ GPUTexture2DArray *D3D11Renderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY_
     hResult = m_pD3DDevice->CreateTexture2D(&D3DTextureDesc, pD3DInitialData, &pD3DTexture);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D11Renderer::CreateTexture2DArray: CreateTexture2D failed with hResult %08X", hResult);
+        Log_ErrorPrintf("D3D11GPUDevice::CreateTexture2DArray: CreateTexture2D failed with hResult %08X", hResult);
         return false;
     }
 
@@ -961,7 +961,7 @@ GPUTexture2DArray *D3D11Renderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY_
         hResult = m_pD3DDevice->CreateTexture2D(&D3DStagingTextureDesc, nullptr, &pD3DStagingTexture);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture2DArray: CreateTexture2D failed for staging texture with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture2DArray: CreateTexture2D failed for staging texture with hResult %08X", hResult);
             pD3DTexture->Release();
             return false;
         }
@@ -984,7 +984,7 @@ GPUTexture2DArray *D3D11Renderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY_
         hResult = m_pD3DDevice->CreateShaderResourceView(pD3DTexture, &srvDesc, &pD3DSRV);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture2DArray: CreateShaderResourceView failed with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture2DArray: CreateShaderResourceView failed with hResult %08X", hResult);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
             return false;
@@ -999,7 +999,7 @@ GPUTexture2DArray *D3D11Renderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY_
 
         if ((pD3DSamplerState = D3D11Helpers::CreateD3D11SamplerState(m_pD3DDevice, pSamplerStateDesc)) == nullptr)
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture2DArray: Failed to create sampler state for texture.");
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture2DArray: Failed to create sampler state for texture.");
             SAFE_RELEASE(pD3DSRV);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
@@ -1132,7 +1132,7 @@ void D3D11GPUTexture3D::SetDebugName(const char *name)
     D3D11Helpers::SetD3D11DeviceChildDebugName(m_pD3DTexture, name);
 }
 
-GPUTexture3D *D3D11Renderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
+GPUTexture3D *D3D11GPUDevice::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
                                              const void **ppInitialData /* = NULL */, const uint32 *pInitialDataPitch /* = NULL */, const uint32 *pInitialDataSlicePitch /* = NULL */)
 {
     HRESULT hResult;
@@ -1195,7 +1195,7 @@ GPUTexture3D *D3D11Renderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureD
     hResult = m_pD3DDevice->CreateTexture3D(&D3DTextureDesc, pD3DInitialData, &pD3DTexture);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D11Renderer::CreateTexture3D: CreateTexture3D failed with hResult %08X", hResult);
+        Log_ErrorPrintf("D3D11GPUDevice::CreateTexture3D: CreateTexture3D failed with hResult %08X", hResult);
         return false;
     }
 
@@ -1217,7 +1217,7 @@ GPUTexture3D *D3D11Renderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureD
         hResult = m_pD3DDevice->CreateTexture3D(&D3DStagingTextureDesc, nullptr, &pD3DStagingTexture);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture3D: CreateTexture3D failed for staging texture with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture3D: CreateTexture3D failed for staging texture with hResult %08X", hResult);
             pD3DTexture->Release();
             return false;
         }
@@ -1238,7 +1238,7 @@ GPUTexture3D *D3D11Renderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureD
         hResult = m_pD3DDevice->CreateShaderResourceView(pD3DTexture, &srvDesc, &pD3DSRV);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture3D: CreateShaderResourceView failed with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture3D: CreateShaderResourceView failed with hResult %08X", hResult);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
             return false;
@@ -1253,7 +1253,7 @@ GPUTexture3D *D3D11Renderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureD
 
         if ((pD3DSamplerState = D3D11Helpers::CreateD3D11SamplerState(m_pD3DDevice, pSamplerStateDesc)) == nullptr)
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTexture3D: Failed to create sampler state for texture.");
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTexture3D: Failed to create sampler state for texture.");
             SAFE_RELEASE(pD3DSRV);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
@@ -1402,7 +1402,7 @@ void D3D11GPUTextureCube::SetDebugName(const char *name)
     D3D11Helpers::SetD3D11DeviceChildDebugName(m_pD3DTexture, name);
 }
 
-GPUTextureCube *D3D11Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
+GPUTextureCube *D3D11GPUDevice::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
                                                  const void **ppInitialData /* = NULL */, const uint32 *pInitialDataPitch /* = NULL */)
 {
     HRESULT hResult;
@@ -1467,7 +1467,7 @@ GPUTextureCube *D3D11Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTe
     hResult = m_pD3DDevice->CreateTexture2D(&D3DTextureDesc, pD3DInitialData, &pD3DTexture);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D11Renderer::CreateTextureCube: CreateTexture2D failed with hResult %08X", hResult);
+        Log_ErrorPrintf("D3D11GPUDevice::CreateTextureCube: CreateTexture2D failed with hResult %08X", hResult);
         return false;
     }
 
@@ -1491,7 +1491,7 @@ GPUTextureCube *D3D11Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTe
         hResult = m_pD3DDevice->CreateTexture2D(&D3DStagingTextureDesc, nullptr, &pD3DStagingTexture);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTextureCube: CreateTexture2D failed for staging texture with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTextureCube: CreateTexture2D failed for staging texture with hResult %08X", hResult);
             pD3DTexture->Release();
             return false;
         }
@@ -1512,7 +1512,7 @@ GPUTextureCube *D3D11Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTe
         hResult = m_pD3DDevice->CreateShaderResourceView(pD3DTexture, &srvDesc, &pD3DSRV);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTextureCube: CreateShaderResourceView failed with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTextureCube: CreateShaderResourceView failed with hResult %08X", hResult);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
             return false;
@@ -1527,7 +1527,7 @@ GPUTextureCube *D3D11Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTe
 
         if ((pD3DSamplerState = D3D11Helpers::CreateD3D11SamplerState(m_pD3DDevice, pSamplerStateDesc)) == nullptr)
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTextureCube: Failed to create sampler state for texture.");
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTextureCube: Failed to create sampler state for texture.");
             SAFE_RELEASE(pD3DSRV);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
@@ -1660,7 +1660,7 @@ void D3D11GPUTextureCubeArray::SetDebugName(const char *name)
     D3D11Helpers::SetD3D11DeviceChildDebugName(m_pD3DTexture, name);
 }
 
-GPUTextureCubeArray *D3D11Renderer::CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
+GPUTextureCubeArray *D3D11GPUDevice::CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc,
                                                            const void **ppInitialData /* = NULL */, const uint32 *pInitialDataPitch /* = NULL */)
 {
     HRESULT hResult;
@@ -1725,7 +1725,7 @@ GPUTextureCubeArray *D3D11Renderer::CreateTextureCubeArray(const GPU_TEXTURECUBE
     hResult = m_pD3DDevice->CreateTexture2D(&D3DTextureDesc, pD3DInitialData, &pD3DTexture);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D11Renderer::CreateTextureCubeArray: CreateTexture2D failed with hResult %08X", hResult);
+        Log_ErrorPrintf("D3D11GPUDevice::CreateTextureCubeArray: CreateTexture2D failed with hResult %08X", hResult);
         return false;
     }
 
@@ -1749,7 +1749,7 @@ GPUTextureCubeArray *D3D11Renderer::CreateTextureCubeArray(const GPU_TEXTURECUBE
         hResult = m_pD3DDevice->CreateTexture2D(&D3DStagingTextureDesc, nullptr, &pD3DStagingTexture);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTextureCubeArray: CreateTexture2D failed for staging texture with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTextureCubeArray: CreateTexture2D failed for staging texture with hResult %08X", hResult);
             pD3DTexture->Release();
             return false;
         }
@@ -1772,7 +1772,7 @@ GPUTextureCubeArray *D3D11Renderer::CreateTextureCubeArray(const GPU_TEXTURECUBE
         hResult = m_pD3DDevice->CreateShaderResourceView(pD3DTexture, &srvDesc, &pD3DSRV);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTextureCubeArray: CreateShaderResourceView failed with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTextureCubeArray: CreateShaderResourceView failed with hResult %08X", hResult);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
             return false;
@@ -1787,7 +1787,7 @@ GPUTextureCubeArray *D3D11Renderer::CreateTextureCubeArray(const GPU_TEXTURECUBE
 
         if ((pD3DSamplerState = D3D11Helpers::CreateD3D11SamplerState(m_pD3DDevice, pSamplerStateDesc)) == nullptr)
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateTextureCubeArray: Failed to create sampler state for texture.");
+            Log_ErrorPrintf("D3D11GPUDevice::CreateTextureCubeArray: Failed to create sampler state for texture.");
             SAFE_RELEASE(pD3DSRV);
             SAFE_RELEASE(pD3DStagingTexture);
             pD3DTexture->Release();
@@ -1904,7 +1904,7 @@ void D3D11GPUDepthTexture::SetDebugName(const char *name)
     D3D11Helpers::SetD3D11DeviceChildDebugName(m_pD3DTexture, name);
 }
 
-GPUDepthTexture *D3D11Renderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc)
+GPUDepthTexture *D3D11GPUDevice::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc)
 {
     HRESULT hResult;
 
@@ -1936,7 +1936,7 @@ GPUDepthTexture *D3D11Renderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC 
     hResult = m_pD3DDevice->CreateTexture2D(&D3DTextureDesc, nullptr, &pD3DTexture);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D11Renderer::CreateDepthTexture: CreateTexture2D failed with hResult %08X", hResult);
+        Log_ErrorPrintf("D3D11GPUDevice::CreateDepthTexture: CreateTexture2D failed with hResult %08X", hResult);
         return false;
     }
 
@@ -1960,7 +1960,7 @@ GPUDepthTexture *D3D11Renderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC 
         hResult = m_pD3DDevice->CreateTexture2D(&D3DStagingTextureDesc, nullptr, &pD3DStagingTexture);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateDepthTexture: CreateTexture2D failed for staging texture with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateDepthTexture: CreateTexture2D failed for staging texture with hResult %08X", hResult);
             pD3DTexture->Release();
             return false;
         }
@@ -2059,7 +2059,7 @@ void D3D11GPURenderTargetView::SetDebugName(const char *name)
     D3D11Helpers::SetD3D11DeviceChildDebugName(m_pD3DRTV, name);
 }
 
-GPURenderTargetView *D3D11Renderer::CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc)
+GPURenderTargetView *D3D11GPUDevice::CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc)
 {
     DebugAssert(pTexture != nullptr);
 
@@ -2143,7 +2143,7 @@ GPURenderTargetView *D3D11Renderer::CreateRenderTargetView(GPUTexture *pTexture,
         break;
 
     default:
-        Log_ErrorPrintf("D3D11Renderer::CreateRenderTargetView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
+        Log_ErrorPrintf("D3D11GPUDevice::CreateRenderTargetView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
         return nullptr;
     }
 
@@ -2151,7 +2151,7 @@ GPURenderTargetView *D3D11Renderer::CreateRenderTargetView(GPUTexture *pTexture,
     HRESULT hResult = m_pD3DDevice->CreateRenderTargetView(pD3DResource, &rtvDesc, &pD3DRTV);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D11Renderer::CreateRenderTargetView: CreateRenderTargetView failed with hResult %08X", hResult);
+        Log_ErrorPrintf("D3D11GPUDevice::CreateRenderTargetView: CreateRenderTargetView failed with hResult %08X", hResult);
         return nullptr;
     }
 
@@ -2184,7 +2184,7 @@ void D3D11GPUDepthStencilBufferView::SetDebugName(const char *name)
     D3D11Helpers::SetD3D11DeviceChildDebugName(m_pD3DDSV, name);
 }
 
-GPUDepthStencilBufferView *D3D11Renderer::CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc)
+GPUDepthStencilBufferView *D3D11GPUDevice::CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc)
 {
     DebugAssert(pTexture != nullptr);
 
@@ -2275,7 +2275,7 @@ GPUDepthStencilBufferView *D3D11Renderer::CreateDepthStencilBufferView(GPUTextur
         break;
 
     default:
-        Log_ErrorPrintf("D3D11Renderer::CreateDepthBufferView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
+        Log_ErrorPrintf("D3D11GPUDevice::CreateDepthBufferView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
         return nullptr;
     }
 
@@ -2283,7 +2283,7 @@ GPUDepthStencilBufferView *D3D11Renderer::CreateDepthStencilBufferView(GPUTextur
     HRESULT hResult = m_pD3DDevice->CreateDepthStencilView(pD3DResource, &dsvDesc, &pD3DDSV);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D11Renderer::CreateDepthBufferView: CreateDepthStencilView failed with hResult %08X", hResult);
+        Log_ErrorPrintf("D3D11GPUDevice::CreateDepthBufferView: CreateDepthStencilView failed with hResult %08X", hResult);
         return nullptr;
     }
 
@@ -2316,7 +2316,7 @@ void D3D11GPUComputeView::SetDebugName(const char *name)
     D3D11Helpers::SetD3D11DeviceChildDebugName(m_pD3DUAV, name);
 }
 
-GPUComputeView *D3D11Renderer::CreateComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc)
+GPUComputeView *D3D11GPUDevice::CreateComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc)
 {
     Panic("Unimplemented");
     return nullptr;

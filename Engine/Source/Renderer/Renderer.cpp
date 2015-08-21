@@ -25,38 +25,39 @@ Log_SetChannel(Renderer);
 
 //----------------------------------------------------- RenderSystem Creation Functions -----------------------------------------------------------------------------------------------
 // renderer creation functions
-typedef Renderer *(*RendererFactoryFunction)(const RendererInitializationParameters *pCreateParameters);
+typedef bool(*RendererFactoryFunction)(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
 #if defined(WITH_RENDERER_D3D11)
-    extern Renderer *D3D11Renderer_CreateRenderer(const RendererInitializationParameters *pCreateParameters);
+    extern bool D3D11RenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
 #endif
 #if defined(WITH_RENDERER_D3D12)
-    extern Renderer *D3D12Renderer_CreateRenderer(const RendererInitializationParameters *pCreateParameters);
+    extern bool D3D12Renderer_CreateRenderer(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
 #endif
 #if defined(WITH_RENDERER_OPENGL)
-    extern Renderer *OpenGLRenderer_CreateRenderer(const RendererInitializationParameters *pCreateParameters);
+    extern bool OpenGLRenderer_CreateRenderer(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
 #endif
 #if defined(WITH_RENDERER_OPENGLES2)
-    extern Renderer *OpenGLESRenderer_CreateRenderer(const RendererInitializationParameters *pCreateParameters);
+    extern bool OpenGLESRenderer_CreateRenderer(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
 #endif
 struct RENDERER_PLATFORM_FACTORY_FUNCTION
 {
     RENDERER_PLATFORM Platform;
     RendererFactoryFunction Function;
+    bool RequiresImplicitSwapChain;
 };
 
 static const RENDERER_PLATFORM_FACTORY_FUNCTION s_renderSystemDeclarations[] =
 {
 #if defined(WITH_RENDERER_D3D11)
-    { RENDERER_PLATFORM_D3D11,      D3D11Renderer_CreateRenderer    },
+    { RENDERER_PLATFORM_D3D11,      D3D11RenderBackend_Create,       false   },
 #endif
 #if defined(WITH_RENDERER_D3D12)
-    { RENDERER_PLATFORM_D3D12,      D3D12Renderer_CreateRenderer    },
+    //{ RENDERER_PLATFORM_D3D12,      D3D12Renderer_CreateRenderer,       false   },
 #endif
 #if defined(WITH_RENDERER_OPENGL)
-    { RENDERER_PLATFORM_OPENGL,     OpenGLRenderer_CreateRenderer   },
+    //{ RENDERER_PLATFORM_OPENGL,     OpenGLRenderer_CreateRenderer,      true    },
 #endif
 #if defined(WITH_RENDERER_OPENGLES2)
-    { RENDERER_PLATFORM_OPENGLES2,  OpenGLESRenderer_CreateRenderer },
+    //{ RENDERER_PLATFORM_OPENGLES2,  OpenGLESRenderer_CreateRenderer,    true    },
 #endif
 };
 
@@ -69,7 +70,7 @@ CommandQueue Renderer::s_renderCommandQueue;
 
 //----------------------------------------------------- Output Window Class ----------------------------------------------------------------------------------------------------------
 
-RendererOutputWindow::RendererOutputWindow(SDL_Window *pSDLWindow, RendererOutputBuffer *pBuffer, RENDERER_FULLSCREEN_STATE fullscreenState)
+RendererOutputWindow::RendererOutputWindow(SDL_Window *pSDLWindow, GPUOutputBuffer *pBuffer, RENDERER_FULLSCREEN_STATE fullscreenState)
     : m_pSDLWindow(pSDLWindow),
       m_pOutputBuffer(pBuffer),
       m_fullscreenState(fullscreenState),
@@ -151,40 +152,9 @@ void RendererOutputWindow::SetMouseRelativeMovement(bool enabled)
 }
 
 // Thread-local pointer to current context
+Y_DECLARE_THREAD_LOCAL(GPUDevice *) s_pCurrentThreadGPUDevice = nullptr;
 Y_DECLARE_THREAD_LOCAL(GPUContext *) s_pCurrentThreadGPUContext = nullptr;
 
-GPUContext::GPUContext()
-{
-    m_ownerThreadID = 0;
-    m_drawCallCounter = 0;
-}
-
-GPUContext::~GPUContext()
-{
-    DebugAssert(m_ownerThreadID == 0);
-}
-
-GPUContext *GPUContext::GetContextForCurrentThread()
-{
-    return s_pCurrentThreadGPUContext;
-}
-
-void GPUContext::SetContextForCurrentThread(GPUContext *pContext)
-{
-    Thread::ThreadIdType currentThreadID = Thread::GetCurrentThreadId();
-
-    if (s_pCurrentThreadGPUContext != nullptr)
-    {
-        DebugAssert(s_pCurrentThreadGPUContext->GetOwnerThread() == currentThreadID);
-        s_pCurrentThreadGPUContext->m_ownerThreadID = 0;
-    }
-
-    if ((s_pCurrentThreadGPUContext = pContext) != nullptr)
-    {
-        DebugAssert(s_pCurrentThreadGPUContext->GetOwnerThread() == 0);
-        s_pCurrentThreadGPUContext->m_ownerThreadID = currentThreadID;
-    }
-}
 
 //----------------------------------------------------- Init/Startup/Shutdown -----------------------------------------------------------------------------------------------------
 
@@ -233,7 +203,8 @@ void Renderer::StopRenderThread()
 
 bool Renderer::Create(const RendererInitializationParameters *pCreateParameters)
 {
-    DebugAssert(pCreateParameters != nullptr);
+    Assert(g_pRenderer == nullptr);
+    Assert(pCreateParameters != nullptr);
 
     // apply cvar changes
     Log_DevPrintf("Applying pending renderer cvar changes...");
@@ -273,59 +244,115 @@ bool Renderer::Create(const RendererInitializationParameters *pCreateParameters)
             sdlVideoSubSystemInitialized = true;
         }
 
+        // output window flags
+        uint32 windowFlags = SDL_WINDOW_RESIZABLE;
+        if (pCreateParameters->HideImplicitSwapChain)
+            windowFlags |= SDL_WINDOW_HIDDEN;
+        else
+            windowFlags |= SDL_WINDOW_SHOWN;
+        if (pCreateParameters->ImplicitSwapChainFullScreen == RENDERER_FULLSCREEN_STATE_WINDOWED_FULLSCREEN)
+            windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+
+        // create output window
+        SDL_Window *pSDLWindow = nullptr;
+        if (!pCreateParameters->HideImplicitSwapChain)
+        {
+            Log_DevPrintf(" Creating implicit output window...");
+            pSDLWindow = SDL_CreateWindow(pCreateParameters->ImplicitSwapChainCaption, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, pCreateParameters->ImplicitSwapChainWidth, pCreateParameters->ImplicitSwapChainHeight, windowFlags);
+            if (pSDLWindow == nullptr)
+            {
+                Log_ErrorPrintf(" Failed to create implicit output window.");
+                return;
+            }
+        }
+
         // Try the preferred renderer first
+        bool backendInitialized = false;
+        RenderBackend *pBackendInterface = nullptr;
+        GPUDevice *pGPUDevice = nullptr;
+        GPUContext *pGPUContext = nullptr;
+        GPUOutputBuffer *pOutputBuffer = nullptr;
         Log_InfoPrintf("  Requested renderer: %s", NameTable_GetNameString(NameTables::RendererPlatform, pCreateParameters->Platform));
         for (uint32 i = 0; i < countof(s_renderSystemDeclarations); i++)
         {
             if (s_renderSystemDeclarations[i].Platform == pCreateParameters->Platform)
             {
                 Log_InfoPrintf(" Creating \"%s\" renderer...", NameTable_GetNameString(NameTables::RendererPlatform, s_renderSystemDeclarations[i].Platform));
-                Renderer *pRenderer = s_renderSystemDeclarations[i].Function(pCreateParameters);
-                if (pRenderer != NULL)
-                {
-                    g_pRenderer = pRenderer;
-
-                    if (!pRenderer->BaseOnStart())
-                    {
-                        Log_ErrorPrintf(" Renderer creation succeeded, but base startup failed.");
-                        pRenderer->BaseOnShutdown();
-                        g_pRenderer = NULL;
-                        delete pRenderer;
-                    }
-                }
+                backendInitialized = s_renderSystemDeclarations[i].Function(pCreateParameters, pSDLWindow, &pBackendInterface, &pGPUDevice, &pGPUContext, &pOutputBuffer);
                 break;
             }
         }
 
-        if (g_pRenderer == NULL)
+        if (!backendInitialized)
         {
             Log_ErrorPrintf(" Unknown renderer or failed to create: %s", NameTable_GetNameString(NameTables::RendererPlatform, pCreateParameters->Platform));
             for (uint32 i = 0; i < countof(s_renderSystemDeclarations); i++)
             {
-                Log_InfoPrintf(" Creating \"%s\" renderer...", NameTable_GetNameString(NameTables::RendererPlatform, s_renderSystemDeclarations[i].Platform));
-                Renderer *pRenderer = s_renderSystemDeclarations[i].Function(pCreateParameters);
-                if (pRenderer != NULL)
+                // no point creating the same thing again
+                if (s_renderSystemDeclarations[i].Platform != pCreateParameters->Platform)
                 {
-                    g_pRenderer = pRenderer;
-
-                    if (!pRenderer->BaseOnStart())
-                    {
-                        Log_ErrorPrintf(" Renderer creation succeeded, but base startup failed.");
-                        pRenderer->BaseOnShutdown();
-                        g_pRenderer = NULL;
-                        delete pRenderer;
-                    }
-                    else
-                    {
+                    Log_InfoPrintf(" Creating \"%s\" renderer...", NameTable_GetNameString(NameTables::RendererPlatform, s_renderSystemDeclarations[i].Platform));
+                    backendInitialized = s_renderSystemDeclarations[i].Function(pCreateParameters, pSDLWindow, &pBackendInterface, &pGPUDevice, &pGPUContext, &pOutputBuffer);
+                    if (backendInitialized)
                         break;
-                    }
                 }
             }
+        }
+
+        if (!backendInitialized)
+        {
+            Log_ErrorPrintf(" No renderer backend was created.");
+            SDL_DestroyWindow(pSDLWindow);
+            return;
+        }
+
+        // create window wrapper class
+        RendererOutputWindow *pOutputWindow = nullptr;
+        if (pOutputBuffer != nullptr)
+            pOutputWindow = new RendererOutputWindow(pSDLWindow, pOutputBuffer, RENDERER_FULLSCREEN_STATE_WINDOWED);
+
+        // create renderer object
+        g_pRenderer = new Renderer(pBackendInterface, pOutputWindow);
+
+        // set thread-local variables for the render thread
+        s_pCurrentThreadGPUDevice = pGPUDevice;
+        s_pCurrentThreadGPUContext = pGPUContext;
+
+        // do base startup
+        if (!g_pRenderer->BaseOnStart())
+        {
+            // hold a reference to the output window to prevent it getting deleted until after shutdown
+            if (pOutputWindow != nullptr)
+                pOutputWindow->AddRef();
+
+            // cleanup renderer
+            Log_ErrorPrintf(" Renderer backend creation succeeded, but renderer startup failed.");
+            g_pRenderer->BaseOnShutdown();
+            delete g_pRenderer;
+            g_pRenderer = nullptr;
+            s_pCurrentThreadGPUContext = nullptr;
+            s_pCurrentThreadGPUDevice = nullptr;
+
+            // cleanup backend
+            pGPUContext->Release();
+            pGPUDevice->Release();
+            pBackendInterface->Shutdown();
+            if (pOutputWindow != nullptr)
+                pOutputWindow->Release();
+
+            return;
+        }
+
+        // attempt to switch to exclusive fullscreen if possible
+        if (pCreateParameters->ImplicitSwapChainFullScreen != RENDERER_FULLSCREEN_STATE_WINDOWED)
+        {
+            Log_DevPrintf(" Attempting to switch to fullscreen...");
+            g_pRenderer->ChangeResolution(RENDERER_FULLSCREEN_STATE_FULLSCREEN, pCreateParameters->ImplicitSwapChainWidth, pCreateParameters->ImplicitSwapChainHeight, 60);
         }
     });
 
     // fail?
-    if (g_pRenderer == NULL)
+    if (g_pRenderer == nullptr)
     {
         Log_ErrorPrintf(" No renderer could be created.");
         StopRenderThread();
@@ -338,43 +365,55 @@ bool Renderer::Create(const RendererInitializationParameters *pCreateParameters)
 
 void Renderer::Shutdown()
 {
-    DebugAssert(g_pRenderer != NULL);
+    DebugAssert(g_pRenderer != nullptr);
 
     Log_InfoPrint("------ Renderer::Shutdown() -------");
 
     // has to be executed on the render thread
     s_renderCommandQueue.QueueBlockingLambdaCommand([]()
     {
-        g_pRenderer->BaseOnShutdown();
+        // save backend interface pointer
+        RenderBackend *pBackendInterface = g_pRenderer->m_pBackendInterface;
+        RendererOutputWindow *pImplicitWindow = g_pRenderer->m_pImplicitOutputWindow;
+        if (pImplicitWindow != nullptr)
+            pImplicitWindow->AddRef();
 
+        // shutdown renderer part
+        g_pRenderer->BaseOnShutdown();
         delete g_pRenderer;
-        g_pRenderer = NULL;
+        g_pRenderer = nullptr;
+
+        // free up backend
+        s_pCurrentThreadGPUContext->Release();
+        s_pCurrentThreadGPUContext = nullptr;
+        s_pCurrentThreadGPUDevice->Release();
+        s_pCurrentThreadGPUDevice = nullptr;
+        pBackendInterface->Shutdown();
+        if (pImplicitWindow != nullptr)
+            pImplicitWindow->Release();
     });
 
     Log_InfoPrint("-----------------------------------");   
 }
 
-Renderer::Renderer()
+Renderer::Renderer(RenderBackend *pBackendInterface, RendererOutputWindow *pOutputWindow)
     : m_fixedResources(this)
+    , m_pBackendInterface(pBackendInterface)
+    , m_pImplicitOutputWindow(pOutputWindow)
 {
-    m_eRendererPlatform = RENDERER_PLATFORM_COUNT;
-    m_eRendererFeatureLevel = RENDERER_FEATURE_LEVEL_COUNT;
-    m_eTexturePlatform = NUM_TEXTURE_PLATFORMS;
+    m_eRendererPlatform = pBackendInterface->GetPlatform();
+    m_eRendererFeatureLevel = pBackendInterface->GetFeatureLevel();
+    m_eTexturePlatform = pBackendInterface->GetTexturePlatform();
     
     // default caps, supports nothing
     Y_memzero(&m_RendererCapabilities, sizeof(m_RendererCapabilities));
-    m_RendererCapabilities.SupportsTextureArrays = false;
-    m_RendererCapabilities.SupportsCubeMapTextureArrays = false;
-    m_RendererCapabilities.SupportsGeometryShaders = false;
-    m_RendererCapabilities.SupportsSinglePassCubeMaps = false;
-    m_RendererCapabilities.SupportsInstancing = false;
-
+    pBackendInterface->GetCapabilities(&m_RendererCapabilities);
     m_fTexelOffset = 0.0f;
 }
 
 Renderer::~Renderer()
 {
-
+    m_pImplicitOutputWindow->Release();
 }
 
 bool Renderer::BaseOnStart()
@@ -393,8 +432,8 @@ bool Renderer::BaseOnStart()
     g_pResourceManager->CreateDeviceResources();
 
     // init gui context
-    m_guiContext.SetGPUContext(GetMainContext());
-    m_guiContext.SetViewportDimensions(GetMainContext()->GetViewport());
+    m_guiContext.SetGPUContext(GetGPUContext());
+    m_guiContext.SetViewportDimensions(GetGPUContext()->GetViewport());
 
     // ok
     return true;
@@ -403,7 +442,7 @@ bool Renderer::BaseOnStart()
 void Renderer::BaseOnShutdown()
 {
     // clear all state
-    GetMainContext()->ClearState(true, true, true, true);
+    GetGPUContext()->ClearState(true, true, true, true);
 
     // release resources
     m_fixedResources.ReleaseResources();
@@ -413,6 +452,289 @@ void Renderer::BaseOnShutdown()
 
     // release all non-material shaders
     m_nullMaterialShaderMap.ReleaseGPUResources();
+}
+
+void Renderer::CorrectProjectionMatrix(float4x4 &projectionMatrix)
+{
+    switch (m_eRendererPlatform)
+    {
+    case RENDERER_PLATFORM_D3D11:
+        projectionMatrix.SetRow(2, ((projectionMatrix.GetRow(2)) + (projectionMatrix.GetRow(3))) * 0.5f);
+        break;
+    }
+}
+
+GPUDevice *Renderer::GetGPUDevice() const
+{
+    DebugAssert(s_pCurrentThreadGPUDevice != nullptr);
+    return s_pCurrentThreadGPUDevice;
+}
+
+GPUContext *Renderer::GetGPUContext() const
+{
+    DebugAssert(s_pCurrentThreadGPUContext != nullptr);
+    return s_pCurrentThreadGPUContext;
+}
+
+bool Renderer::EnableResourceCreationForCurrentThread()
+{
+    if (s_pCurrentThreadGPUDevice != nullptr)
+    {
+        s_pCurrentThreadGPUDevice->AddRef();
+        return true;
+    }
+
+    s_pCurrentThreadGPUDevice = m_pBackendInterface->CreateDeviceInterface();
+    if (s_pCurrentThreadGPUDevice == nullptr)
+        return false;
+
+    Log_DevPrintf("Renderer resource creation enabled for thread %u", (uint32)Thread::GetCurrentThreadId());
+    return true;
+}
+
+void Renderer::DisableResourceCreationForCurrentThread()
+{
+    DebugAssert(s_pCurrentThreadGPUDevice != nullptr);
+    if (s_pCurrentThreadGPUDevice->Release() == 0)
+        s_pCurrentThreadGPUDevice = nullptr;
+}
+
+bool Renderer::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat /*= NULL*/) const
+{
+    return m_pBackendInterface->CheckTexturePixelFormatCompatibility(PixelFormat, CompatibleFormat);
+}
+
+GPUOutputBuffer *Renderer::CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateOutputBuffer(hWnd, vsyncType);
+}
+
+RendererOutputWindow *Renderer::CreateOutputWindow(const char *windowTitle, uint32 windowWidth, uint32 windowHeight, RENDERER_VSYNC_TYPE vsyncType)
+{
+    Panic("Not implemented");
+    return nullptr;
+}
+
+GPUDepthStencilState *Renderer::CreateDepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateDepthStencilState(pDepthStencilStateDesc);
+}
+
+GPURasterizerState *Renderer::CreateRasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateRasterizerState(pRasterizerStateDesc);
+}
+
+GPUBlendState *Renderer::CreateBlendState(const RENDERER_BLEND_STATE_DESC *pBlendStateDesc)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateBlendState(pBlendStateDesc);
+}
+
+GPUQuery *Renderer::CreateQuery(GPU_QUERY_TYPE type)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateQuery(type);
+}
+
+GPUBuffer *Renderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /*= NULL*/)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateBuffer(pDesc, pInitialData);
+}
+
+GPUTexture1D *Renderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateTexture1D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+}
+
+GPUTexture1DArray *Renderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateTexture1DArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+}
+
+GPUTexture2D *Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateTexture2D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+}
+
+GPUTexture2DArray *Renderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateTexture2DArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+}
+
+GPUTexture3D *Renderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/, const uint32 *pInitialDataSlicePitch /*= NULL*/)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateTexture3D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+}
+
+GPUTextureCube *Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateTextureCube(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+}
+
+GPUTextureCubeArray *Renderer::CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateTextureCubeArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+}
+
+GPUDepthTexture *Renderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateDepthTexture(pTextureDesc);
+}
+
+GPUSamplerState *Renderer::CreateSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateSamplerState(pSamplerStateDesc);
+}
+
+GPURenderTargetView *Renderer::CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateRenderTargetView(pTexture, pDesc);
+}
+
+GPUDepthStencilBufferView *Renderer::CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateDepthStencilBufferView(pTexture, pDesc);
+}
+
+GPUComputeView *Renderer::CreateComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateComputeView(pResource, pDesc);
+}
+
+GPUShaderProgram *Renderer::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateGraphicsProgram(pVertexElements, nVertexElements, pByteCodeStream);
+}
+
+GPUShaderProgram *Renderer::CreateComputeProgram(ByteStream *pByteCodeStream)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateComputeProgram(pByteCodeStream);
+}
+
+bool Renderer::HandleSDLEvent(const union SDL_Event *pEvent)
+{
+    // @TODO: handle implicit swap chain messages
+    return false;
+}
+
+bool Renderer::ChangeResolution(RENDERER_FULLSCREEN_STATE state, uint32 width /*= 0*/, uint32 height /*= 0*/, uint32 refreshRate /*= 0*/)
+{
+    // no change
+    if (state == m_pImplicitOutputWindow->GetFullscreenState() && width == m_pImplicitOutputWindow->GetWidth() && height == m_pImplicitOutputWindow->GetHeight())
+        return true;
+
+    // get context
+    GPUContext *pGPUContext = GetGPUContext();
+    DebugAssert(pGPUContext != nullptr && pGPUContext->GetOutputBuffer() == m_pImplicitOutputWindow->GetOutputBuffer());
+
+    // fullscreen mode change?
+    if (state == RENDERER_FULLSCREEN_STATE_FULLSCREEN)
+    {
+        // lose windowed fullscreen
+        bool wasWindowedFullscreen = (m_pImplicitOutputWindow->GetFullscreenState() == RENDERER_FULLSCREEN_STATE_WINDOWED_FULLSCREEN);
+        if (wasWindowedFullscreen)
+            SDL_SetWindowFullscreen(m_pImplicitOutputWindow->GetSDLWindow(), 0);
+
+        // switch modes
+        if (!pGPUContext->SetExclusiveFullScreen(true, width, height, refreshRate))
+        {
+            // switch failed
+            Log_WarningPrintf("Failed to switch fullscreen resolution %ux%u@%uhz", width, height, refreshRate);
+
+            // restore windowed fullscreen
+            if (wasWindowedFullscreen)
+                SDL_SetWindowFullscreen(m_pImplicitOutputWindow->GetSDLWindow(), SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+            // can't do much else
+            return false;
+        }
+
+        // alter window dimensions
+        m_pImplicitOutputWindow->SetDimensions(width, height);
+    }
+    else
+    {
+        if (m_pImplicitOutputWindow->GetFullscreenState() == RENDERER_FULLSCREEN_STATE_FULLSCREEN)
+        {
+            // leaving fullscreen
+            pGPUContext->SetExclusiveFullScreen(false, 0, 0, 0);
+        }
+
+        // windows fullscreen
+        if (state == RENDERER_FULLSCREEN_STATE_WINDOWED_FULLSCREEN)
+        {
+            if (m_pImplicitOutputWindow->GetFullscreenState() != RENDERER_FULLSCREEN_STATE_WINDOWED_FULLSCREEN)
+                SDL_SetWindowFullscreen(m_pImplicitOutputWindow->GetSDLWindow(), SDL_WINDOW_FULLSCREEN_DESKTOP);
+        }
+        else
+        {
+            // remove windowed fullscreen flag
+            if (m_pImplicitOutputWindow->GetFullscreenState() == RENDERER_FULLSCREEN_STATE_WINDOWED_FULLSCREEN)
+                SDL_SetWindowFullscreen(m_pImplicitOutputWindow->GetSDLWindow(), 0);
+
+            // resize the window
+            SDL_SetWindowSize(m_pImplicitOutputWindow->GetSDLWindow(), width, height);
+        }
+
+        // fix up the window dimensions
+        int windowWidth, windowHeight;
+        SDL_GetWindowSize(m_pImplicitOutputWindow->GetSDLWindow(), &windowWidth, &windowHeight);
+        m_pImplicitOutputWindow->SetDimensions(width, height);
+    }
+
+    // alter state
+    m_pImplicitOutputWindow->SetFullscreenState(state);
+
+    // adjust the buffers
+    if (!pGPUContext->ResizeOutputBuffer())
+    {
+        Log_WarningPrintf("Failed to resize output buffer.");
+        return false;
+    }
+
+    // done
+    static const char *stateStrings[RENDERER_FULLSCREEN_STATE_COUNT] = { "Windowed", "Windowed Fullscreen", "Exclusive Fullscreen" };
+    Log_InfoPrintf("Renderer::ChangeResolution: Switched to %s @ %ux%u@%uhz", stateStrings[state], width, height, refreshRate);
+    return true;
 }
 
 bool Renderer::InternalDrawPlain(GPUContext *pGPUDevice, const PlainVertexFactory::Vertex *pVertices, uint32 nVertices, uint32 flags)
@@ -619,214 +941,6 @@ uint3 Renderer::GetTextureDimensions(const GPUTexture *pTexture)
 
     return uint3::Zero;
 }
-// 
-// bool Renderer::DrawDirectionalShadowMap(const RenderWorld *pRenderWorld, const Camera *pCamera, RENDER_QUEUE_LIGHT_ENTRY *pLight)
-// {
-//     uint32 i;
-// 
-//     // find a free directional shadow map
-//     GPUTexture *pShadowMapTexture = NULL;
-//     for (i = 0; i < m_DirectionalShadowMapTextures.GetSize(); i++)
-//     {
-//         ShadowMapTextureUsedPair &sm = m_DirectionalShadowMapTextures[i];
-//         if (!sm.Right)
-//         {
-//             pShadowMapTexture = sm.Left;
-//             sm.Right = true;
-//             break;
-//         }
-//     }
-// 
-//     // none found?
-//     if (i == m_DirectionalShadowMapTextures.GetSize())
-//     {
-//         Log_PerfPrintf("Allocating new directional shadowmap...");
-//         if ((pShadowMapTexture = CreateTexture2D(&m_DirectionalShadowMapTextureDesc, &m_DirectionalShadowMapSamplerStateDesc)) == NULL)
-//         {
-//             Log_ErrorPrintf("Renderer::DrawDirectionalShadowMap: Failed to create shadow map texture.");
-//             return false;
-//         }
-// 
-//         m_DirectionalShadowMapTextures.Add(ShadowMapTextureUsedPair(pShadowMapTexture, true));
-//     }
-// 
-//     // get light paramters
-//     Vector3 lightDirection = pLight->TypeSpecificParameters.Direction;
-// 
-//     // get view camera parameters
-//     Vector3 viewCameraPosition = pCamera->GetEyePosition();
-//     Vector3 viewCameraDirection = pCamera->GetViewDirection();
-//     float viewCameraNearPlaneDistance = pCamera->GetNearPlaneDistance();
-//     float viewCameraFarPlaneDistance = pCamera->GetFarPlaneDistance();
-//     //float extrusionDistance = 100.0f;
-//     float extrusionDistance = (viewCameraFarPlaneDistance - viewCameraNearPlaneDistance) * 0.5f;
-//     float viewMoveDistance = 1.0f;
-// 
-//     // calculate the light camera parameters
-//     //PerspectiveCamera lightCamera;
-//     //lightCamera.SetFieldOfView(90.0f);
-//     OrthographicCamera lightCamera;
-//     lightCamera.SetViewportDimensions(m_DirectionalShadowMapTextureDesc.Width, m_DirectionalShadowMapTextureDesc.Height);
-//     lightCamera.SetNearPlaneDistance(1.0f);
-//     lightCamera.SetFarPlaneDistance(10000.0f);
-//     
-//     // setup light camera position
-//     //Vector3 lightCameraPosition = (viewCameraPosition + (viewCameraDirection * viewMoveDistance)) - (lightDirection * extrusionDistance);
-//     
-//     Vector3 lightCameraPosition;
-//     lightCameraPosition = viewCameraPosition;
-//     //lightCameraPosition -= (lightDirection * extrusionDistance);    
-//     //lightCameraPosition.Set(-258.553f, -56.204f, 189.980f);
-//     //lightCameraPosition.Set(-258.553f, -56.204f, 530.0f);
-//     //lightCameraPosition.Set(-258.553f, 256.204f, 530.0f);
-//     //lightCameraPosition.SetZero();
-//     
-//     // get camera up vector
-//     Vector3 lightCameraUpVector = Vector3::UnitZ;
-//     if (Math::Abs(lightCameraUpVector.Dot(lightDirection)) >= 1.0f)
-//         lightCameraUpVector = Vector3::UnitY;
-// 
-//     lightCamera.SetPosition(lightCameraPosition);
-//     //lightCamera.LookDirection(lightDirection, lightCameraUpVector);
-//     //lightCamera.LookAt(lightCameraPosition + lightDirection, lightCameraUpVector);
-//     //lightCamera.SetRotation(Quaternion::FromRotationYXZ(Math::DegreesToRadians(0.0f), Math::DegreesToRadians(0.0f), Math::DegreesToRadians(0.0f)));
-//     lightCamera.LookDirection(lightDirection, lightCameraUpVector);
-// 
-//     Vector3 temp = lightCamera.GetViewDirection();
-// 
-//     // setup device
-//     GPUDevice *pGPUDevice = GetGPUDevice();
-//     pGPUDevice->SetRenderTargets(1, &pShadowMapTexture, NULL, m_pDirectionalShadowMapDepthStencilBuffer);
-//     pGPUDevice->SetDefaultViewport(pShadowMapTexture);
-//     
-//     // clear the targets
-//     pGPUDevice->ClearTargets(true, true, true);
-// 
-//     // get shadow map render context
-//     RenderContext *pRenderContext = GetSecondaryRenderContext();
-//     DebugAssert(pRenderContext->GetDevice() == NULL);
-// 
-//     // init render context common fields
-//     pRenderContext->SetDevice(pGPUDevice);
-//     pRenderContext->SetRenderWorld(pRenderWorld);
-//     pRenderContext->SetCamera(&lightCamera);
-//     pRenderContext->SetRenderFlags(0);
-// 
-//     // draw it
-//     pRenderContext->DrawDirectionalShadowMap();
-// 
-//     // clear context
-//     pRenderContext->ClearState();
-// 
-//     // set shadow map pointer
-//     pLight->pShadowMapTexture = pShadowMapTexture;
-// 
-//     // generate projection matrix
-//     Matrix4 correctedProjectionMatrix = lightCamera.GetProjectionMatrix();
-//     CorrectProjectionMatrix(correctedProjectionMatrix);
-//     pLight->LightViewProjectionMatrix = correctedProjectionMatrix * Matrix4(lightCamera.GetViewMatrix());
-// 
-//     // ok
-//     return true;
-// }
-// 
-// bool Renderer::DrawPointShadowMap(const RenderWorld *pRenderWorld, RENDER_QUEUE_LIGHT_ENTRY *pLight)
-// {
-//     return false;
-// 
-// //     uint32 i;
-// // 
-// //     // find a free directional shadow map
-// //     GPUTexture *pShadowMapTexture = NULL;
-// //     for (i = 0; i < m_OmnidirectionalShadowMapTextures.GetSize(); i++)
-// //     {
-// //         ShadowMapTextureUsedPair &sm = m_OmnidirectionalShadowMapTextures[i];
-// //         if (!sm.Right)
-// //         {
-// //             pShadowMapTexture = sm.Left;
-// //             sm.Right = true;
-// //             break;
-// //         }
-// //     }
-// // 
-// //     // none found?
-// //     if (i == m_OmnidirectionalShadowMapTextures.GetSize())
-// //     {
-// //         Log_PerfPrintf("Allocating new point shadowmap...");
-// //         if ((pShadowMapTexture = CreateTextureCube(&m_OmnidirectionalShadowMapTextureDesc, &m_OmnidrectionalShadowMapSamplerStateDesc)) == NULL)
-// //         {
-// //             Log_ErrorPrintf("Renderer::DrawPointShadowMap: Failed to create shadow map texture.");
-// //             return false;
-// //         }
-// // 
-// //         m_OmnidirectionalShadowMapTextures.Add(ShadowMapTextureUsedPair(pShadowMapTexture, true));
-// //     }
-// // 
-// //     // calculate light projection matrix
-// //     Matrix4 lightProjectionMatrix = Make4x4OrthographicProjectionMatrix(0.0f, (float)m_DirectionalShadowMapTextureDesc.Width, 0.0f, (float)m_DirectionalShadowMapTextureDesc.Height,
-// //                                                                         0.1f, pLight->Range);
-// // 
-// //     // store the shadow map texture
-// //     pLight->pShadowMapTexture = pShadowMapTexture;
-// // 
-// //     // get shadow map render context
-// //     RenderContext *pRenderContext = GetSecondaryRenderContext();
-// // 
-// //     // state should be cleared
-// //     DebugAssert(pRenderContext->GetDevice() == NULL);
-// // 
-// //     // init render context common fields
-// //     pRenderContext->SetDevice(GetGPUDevice());
-// //     pRenderContext->SetRenderWorld(pRenderWorld);
-// //     pRenderContext->SetRenderFlags(0);
-// //     //pRenderContext->SetProjectionMatrix(lightProjectionMatrix);
-// // 
-// //     // draw it
-// //     pRenderContext->DrawPointShadowMap();
-// // 
-// //     // clear context
-// //     pRenderContext->ClearState();
-// //     return true;
-// }
-// 
-// void Renderer::ReleaseShadowMap(GPUTexture *pShadowMapTexture)
-// {
-//     DebugAssert(pShadowMapTexture != NULL);
-// 
-//     uint32 i;
-//     if (pShadowMapTexture->GetType() == TEXTURE_TYPE_2D)
-//     {
-//         for (i = 0; i < m_DirectionalShadowMapTextures.GetSize(); i++)
-//         {
-//             ShadowMapTextureUsedPair &sm = m_DirectionalShadowMapTextures[i];
-//             if (sm.Left == pShadowMapTexture)
-//             {
-//                 DebugAssert(sm.Right);
-//                 sm.Right = false;
-//                 return;
-//             }
-//         }
-//     }
-//     else if (pShadowMapTexture->GetType() == TEXTURE_TYPE_CUBE)
-//     {
-//         for (i = 0; i < m_OmnidirectionalShadowMapTextures.GetSize(); i++)
-//         {
-//             ShadowMapTextureUsedPair &sm = m_OmnidirectionalShadowMapTextures[i];
-//             if (sm.Left == pShadowMapTexture)
-//             {
-//                 DebugAssert(sm.Right);
-//                 sm.Right = false;
-//                 return;
-//             }
-//         }
-//     }
-//     else
-//     {
-//         UnreachableCode();
-//     }
-// 
-//     Panic("Attempting to release an untracked shadow map texture.");
-// }
 
 void Renderer::FillDefaultRasterizerState(RENDERER_RASTERIZER_STATE_DESC *pRasterizerState)
 {
@@ -1150,9 +1264,9 @@ bool Renderer::CalculatePointLightScissorRect(RENDERER_SCISSOR_RECT *pScissorRec
 bool Renderer::CalculateAABoxScissorRect(RENDERER_SCISSOR_RECT *pScissorRect, const AABox &Bounds)
 {
     GPURenderTargetView *pRenderTargetView;
-    g_pRenderer->GetMainContext()->GetRenderTargets(1, &pRenderTargetView, nullptr);
+    g_pRenderer->GetGPUContext()->GetRenderTargets(1, &pRenderTargetView, nullptr);
 
-    const float4x4 &viewMatrix = g_pRenderer->GetMainContext()->GetConstants()->GetCameraViewMatrix();
+    const float4x4 &viewMatrix = g_pRenderer->GetGPUContext()->GetConstants()->GetCameraViewMatrix();
     uint3 renderTargetDimensions = (pRenderTargetView != NULL) ? GetTextureDimensions(pRenderTargetView->GetTargetTexture()) : uint3::One;
 
     return CalculateAABoxScissorRect(pScissorRect, Bounds, viewMatrix, renderTargetDimensions.x, renderTargetDimensions.y);
@@ -1161,9 +1275,9 @@ bool Renderer::CalculateAABoxScissorRect(RENDERER_SCISSOR_RECT *pScissorRect, co
 bool Renderer::CalculatePointLightScissorRect(RENDERER_SCISSOR_RECT *pScissorRect, const float3 &LightPosition, const float &LightRange)
 {
     GPURenderTargetView *pRenderTargetView;
-    g_pRenderer->GetMainContext()->GetRenderTargets(1, &pRenderTargetView, nullptr);
+    g_pRenderer->GetGPUContext()->GetRenderTargets(1, &pRenderTargetView, nullptr);
 
-    const float4x4 &viewMatrix = g_pRenderer->GetMainContext()->GetConstants()->GetCameraViewMatrix();
+    const float4x4 &viewMatrix = g_pRenderer->GetGPUContext()->GetConstants()->GetCameraViewMatrix();
     uint3 renderTargetDimensions = (pRenderTargetView != NULL) ? GetTextureDimensions(pRenderTargetView->GetTargetTexture()) : uint3::One;
 
     return CalculatePointLightScissorRect(pScissorRect, LightPosition, LightRange, viewMatrix, renderTargetDimensions.x, renderTargetDimensions.y);

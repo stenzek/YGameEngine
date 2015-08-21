@@ -400,7 +400,7 @@ void OpenGLES2GPUContext::SetViewport(const RENDERER_VIEWPORT *pNewViewport)
     m_pConstants->CommitChanges();
 }
 
-void OpenGLES2GPUContext::SetDefaultViewport(GPUTexture *pForRenderTarget /*= NULL*/)
+void OpenGLES2GPUContext::SetFullViewport(GPUTexture *pForRenderTarget /*= NULL*/)
 {
     RENDERER_VIEWPORT viewport;
     viewport.TopLeftX = 0;
@@ -533,7 +533,7 @@ void OpenGLES2GPUContext::DiscardTargets(bool discardColor /* = true */, bool di
 #endif
 }
 
-void OpenGLES2GPUContext::SetOutputBuffer(RendererOutputBuffer *pSwapChain)
+void OpenGLES2GPUContext::SetOutputBuffer(GPUOutputBuffer *pSwapChain)
 {
     OpenGLES2RendererOutputBuffer *pOpenGLOutputBuffer = static_cast<OpenGLES2RendererOutputBuffer *>(pSwapChain);
     DebugAssert(pOpenGLOutputBuffer != nullptr);
@@ -557,6 +557,17 @@ void OpenGLES2GPUContext::SetOutputBuffer(RendererOutputBuffer *pSwapChain)
     m_pCurrentOutputBuffer->Release();
     m_pCurrentOutputBuffer = pOpenGLOutputBuffer;
     m_pCurrentOutputBuffer->AddRef();
+}
+
+bool OpenGLES2GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /* = 0 */)
+{
+    // GL buffers are automatically resized
+    m_pCurrentOutputBuffer->Resize(width, height);
+}
+
+void OpenGLES2GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour)
+{
+    SDL_GL_SwapWindow(m_pCurrentOutputBuffer->GetSDLWindow());
 }
 
 uint32 OpenGLES2GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)

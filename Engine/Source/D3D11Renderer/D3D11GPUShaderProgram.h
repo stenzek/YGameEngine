@@ -40,7 +40,7 @@ public:
     virtual void SetDebugName(const char *name) override;
 
     // create
-    bool Create(D3D11Renderer *pRenderer, const GPU_VERTEX_ELEMENT_DESC *pVertexAttributes, uint32 nVertexAttributes, ByteStream *pByteCodeStream);
+    bool Create(D3D11GPUDevice *pDevice, const GPU_VERTEX_ELEMENT_DESC *pVertexAttributes, uint32 nVertexAttributes, ByteStream *pByteCodeStream);
 
     // bind to a context that has no current shader
     void Bind(D3D11GPUContext *pContext);

@@ -1,7 +1,7 @@
 #include "D3D11Renderer/PrecompiledHeader.h"
 #include "D3D11Renderer/D3D11GPUQuery.h"
 #include "D3D11Renderer/D3D11GPUContext.h"
-#include "D3D11Renderer/D3D11Renderer.h"
+#include "D3D11Renderer/D3D11GPUDevice.h"
 Log_SetChannel(D3D11GPUContext);
 
 D3D11GPUQuery::D3D11GPUQuery(GPU_QUERY_TYPE type, ID3D11Query *pQuery, ID3D11Predicate *pPredicate)
@@ -146,7 +146,7 @@ GPU_QUERY_GETDATA_RESULT D3D11GPUContext::GetQueryData(GPUQuery *pQuery, void *p
 }
 
 
-GPUQuery *D3D11Renderer::CreateQuery(GPU_QUERY_TYPE type)
+GPUQuery *D3D11GPUDevice::CreateQuery(GPU_QUERY_TYPE type)
 {
     ID3D11Query *pD3DQuery = nullptr;
     ID3D11Predicate *pD3DPredicate = nullptr;
@@ -161,7 +161,7 @@ GPUQuery *D3D11Renderer::CreateQuery(GPU_QUERY_TYPE type)
         HRESULT hResult = m_pD3DDevice->CreatePredicate(&D3DQueryDesc, &pD3DPredicate);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateQuery: CreatePredicate failed with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateQuery: CreatePredicate failed with hResult %08X", hResult);
             return false;
         }
 
@@ -202,7 +202,7 @@ GPUQuery *D3D11Renderer::CreateQuery(GPU_QUERY_TYPE type)
         HRESULT hResult = m_pD3DDevice->CreateQuery(&D3DQueryDesc, &pD3DQuery);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D11Renderer::CreateQuery: CreateQuery failed with hResult %08X", hResult);
+            Log_ErrorPrintf("D3D11GPUDevice::CreateQuery: CreateQuery failed with hResult %08X", hResult);
             return false;
         }
     }

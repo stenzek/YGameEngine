@@ -2,7 +2,8 @@
 #include "D3D11Renderer/D3D11GPUShaderProgram.h"
 #include "D3D11Renderer/D3D11GPUContext.h"
 #include "D3D11Renderer/D3D11GPUBuffer.h"
-#include "D3D11Renderer/D3D11Renderer.h"
+#include "D3D11Renderer/D3D11GPUDevice.h"
+#include "D3D11Renderer/D3D11RenderBackend.h"
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(Renderer);
 
@@ -69,10 +70,10 @@ void D3D11GPUShaderProgram::SetDebugName(const char *name)
         D3D11Helpers::SetD3D11DeviceChildDebugName(m_pD3DComputeShader, name);
 }
 
-bool D3D11GPUShaderProgram::Create(D3D11Renderer *pRenderer, const GPU_VERTEX_ELEMENT_DESC *pVertexAttributes, uint32 nVertexAttributes, ByteStream *pByteCodeStream)
+bool D3D11GPUShaderProgram::Create(D3D11GPUDevice *pDevice, const GPU_VERTEX_ELEMENT_DESC *pVertexAttributes, uint32 nVertexAttributes, ByteStream *pByteCodeStream)
 {
     HRESULT hResult;
-    ID3D11Device *pD3DDevice = pRenderer->GetD3DDevice();
+    ID3D11Device *pD3DDevice = pDevice->GetD3DDevice();
     BinaryReader binaryReader(pByteCodeStream);
 
     // get the header of the shader cache entry
@@ -306,7 +307,7 @@ bool D3D11GPUShaderProgram::Create(D3D11Renderer *pRenderer, const GPU_VERTEX_EL
 
                 // create buffer
                 GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_WRITABLE, pDstConstantBuffer->Size);
-                if ((pDstConstantBuffer->pLocalGPUBuffer = static_cast<D3D11GPUBuffer *>(pRenderer->CreateBuffer(&bufferDesc, pDstConstantBuffer->pLocalBuffer))) == nullptr)
+                if ((pDstConstantBuffer->pLocalGPUBuffer = static_cast<D3D11GPUBuffer *>(pDevice->CreateBuffer(&bufferDesc, pDstConstantBuffer->pLocalBuffer))) == nullptr)
                 {
                     Log_ErrorPrintf("D3D11ShaderProgram::Create: Attempting to allocate local constant buffer '%s' (size %u) failed.", pDstConstantBuffer->Name, pDstConstantBuffer->Size);
                     return false;
@@ -315,7 +316,7 @@ bool D3D11GPUShaderProgram::Create(D3D11Renderer *pRenderer, const GPU_VERTEX_EL
             else
             {
                 // lookup engine constant buffer
-                const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(pDstConstantBuffer->Name, pRenderer->GetPlatform(), pRenderer->GetFeatureLevel());
+                const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(pDstConstantBuffer->Name, RENDERER_PLATFORM_D3D11, D3D11RenderBackend::GetInstance()->GetFeatureLevel());
                 if (pEngineConstantBuffer == nullptr)
                 {
                     Log_ErrorPrintf("D3D11ShaderProgram::Create: Shader is requesting unknown non-local constant buffer named '%s'.", pDstConstantBuffer->Name);
@@ -867,7 +868,7 @@ void D3D11GPUShaderProgram::SetParameterTexture(GPUContext *pContext, uint32 ind
     InternalSetParameterResource(static_cast<D3D11GPUContext *>(pContext), index, pTexture, pSamplerState);
 }
 
-GPUShaderProgram *D3D11Renderer::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
+GPUShaderProgram *D3D11GPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
 {
     D3D11GPUShaderProgram *pProgram = new D3D11GPUShaderProgram();
     if (!pProgram->Create(this, pVertexElements, nVertexElements, pByteCodeStream))
@@ -879,7 +880,7 @@ GPUShaderProgram *D3D11Renderer::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_
     return pProgram;
 }
 
-GPUShaderProgram *D3D11Renderer::CreateComputeProgram(ByteStream *pByteCodeStream)
+GPUShaderProgram *D3D11GPUDevice::CreateComputeProgram(ByteStream *pByteCodeStream)
 {
     D3D11GPUShaderProgram *pProgram = new D3D11GPUShaderProgram();
     if (!pProgram->Create(this, nullptr, 0, pByteCodeStream))

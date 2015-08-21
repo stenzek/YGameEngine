@@ -1,7 +1,7 @@
 #pragma once
 #include "D3D11Renderer/D3D11Common.h"
 #include "D3D11Renderer/D3D11GPUContext.h"
-#include "D3D11Renderer/D3D11RendererOutputBuffer.h"
+#include "D3D11Renderer/D3D11GPUOutputBuffer.h"
 
 class D3D11SamplerState : public GPUSamplerState
 {
@@ -63,36 +63,22 @@ private:
     ID3D11BlendState *m_pD3DBlendState;
 };
 
-class D3D11Renderer : public Renderer
+class D3D11GPUDevice : public GPUDevice
 {
 public:
-    D3D11Renderer();
-    virtual ~D3D11Renderer();
+    D3D11GPUDevice(IDXGIFactory *pDXGIFactory, IDXGIAdapter *pDXGIAdapter, ID3D11Device *pD3DDevice, ID3D11Device1 *pD3DDevice1, DXGI_FORMAT windowBackBufferFormat, DXGI_FORMAT windowDepthStencilFormat);
+    virtual ~D3D11GPUDevice();
 
-    // --- our methods ---
+    // private methods
     IDXGIFactory *GetDXGIFactory() const { return m_pDXGIFactory; }
     IDXGIAdapter *GetDXGIAdapter() const { return m_pDXGIAdapter; }
     ID3D11Device *GetD3DDevice() const { return m_pD3DDevice; }
     ID3D11Device1 *GetD3DDevice1() const { return m_pD3DDevice1; }
-    D3D11GPUContext *GetD3D11MainContext() const { return m_pMainContext; }
-    void OnResourceCreated(GPUResource *pResource);
-    void OnResourceReleased(GPUResource *pResource);
-
-    // creation
-    bool Create(const RendererInitializationParameters *pInitializationParameters);
-
-    // --- virtual methods ---
-    virtual void CorrectProjectionMatrix(float4x4 &projectionMatrix) const override;
-    virtual bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = NULL) const override;
-
-    // Creates a context capable of uploading resources owned by the calling thread.
-    virtual GPUContext *CreateUploadContext() override;
+    DXGI_FORMAT GetSwapChainBackBufferFormat() const { return m_swapChainBackBufferFormat; }
+    DXGI_FORMAT GetSwapChainDepthStencilBufferFormat() const { return m_swapChainDepthStencilBufferFormat; }
 
     // Creates a swap chain on an existing window.
-    virtual RendererOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) override;
-
-    // Creates a swap chain on a new window.
-    virtual RendererOutputWindow *CreateOutputWindow(const char *windowTitle, uint32 windowWidth, uint32 windowHeight, RENDERER_VSYNC_TYPE vsyncType) override;
+    virtual GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) override;
 
     // Resource creation
     virtual GPUQuery *CreateQuery(GPU_QUERY_TYPE type) override;
@@ -115,28 +101,12 @@ public:
     virtual GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream) override;
     virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) override;
 
-    virtual RendererOutputWindow *GetImplicitRenderWindow() override { return static_cast<RendererOutputWindow *>(m_pImplicitRenderWindow); }
-
-    virtual GPUContext *GetMainContext() const override { return static_cast<GPUContext *>(m_pMainContext); }
-
-    virtual void HandlePendingSDLEvents() override;
-
-    virtual void GetGPUMemoryUsage(GPUMemoryUsage *pMemoryUsage) const override;
-
 private:
     IDXGIFactory *m_pDXGIFactory;
     IDXGIAdapter *m_pDXGIAdapter;
-
     ID3D11Device *m_pD3DDevice;
     ID3D11Device1 *m_pD3DDevice1;
-    D3D_FEATURE_LEVEL m_eD3DFeatureLevel;
 
     DXGI_FORMAT m_swapChainBackBufferFormat;
     DXGI_FORMAT m_swapChainDepthStencilBufferFormat;
-
-    D3D11GPUContext *m_pMainContext;
-
-    D3D11RendererOutputWindow *m_pImplicitRenderWindow;
-
-    GPUMemoryUsage m_gpuMemoryUsage;
 };

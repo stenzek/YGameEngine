@@ -136,7 +136,7 @@ public:
     virtual GPUContext *CreateUploadContext() override;
 
     // Creates a swap chain on an existing window.
-    virtual RendererOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) override;
+    virtual GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) override;
 
     // Creates a swap chain on a new window.
     virtual RendererOutputWindow *CreateOutputWindow(const char *windowTitle, uint32 windowWidth, uint32 windowHeight, RENDERER_VSYNC_TYPE vsyncType) override;
@@ -162,9 +162,9 @@ public:
     virtual GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream) override;
     virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) override;
 
-    virtual RendererOutputWindow *GetImplicitRenderWindow() override { return static_cast<RendererOutputWindow *>(m_pImplicitRenderWindow); }
+    virtual RendererOutputWindow *GetImplicitOutputWindow() override { return static_cast<RendererOutputWindow *>(m_pImplicitRenderWindow); }
 
-    virtual GPUContext *GetMainContext() const override { return static_cast<GPUContext *>(m_pMainContext); }
+    virtual GPUContext *GetGPUContext() const override { return static_cast<GPUContext *>(m_pMainContext); }
 
     virtual void HandlePendingSDLEvents() override;
 

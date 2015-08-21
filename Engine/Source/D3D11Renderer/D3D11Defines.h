@@ -24,7 +24,6 @@ namespace D3D11Helpers
     ID3D11SamplerState *CreateD3D11SamplerState(ID3D11Device *pD3DDevice, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc);
     ID3D11ShaderResourceView *GetResourceShaderResourceView(GPUResource *pResource);
     ID3D11SamplerState *GetResourceSamplerState(GPUResource *pResource);
-    void CorrectProjectionMatrix(float4x4 &projectionMatrix);
     void SetD3D11DeviceChildDebugName(ID3D11DeviceChild *pDeviceChild, const char *debugName);
 }
 

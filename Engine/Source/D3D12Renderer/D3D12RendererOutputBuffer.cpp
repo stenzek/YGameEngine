@@ -20,7 +20,7 @@ static uint32 CalculateDXGISwapChainBufferCount(bool exclusiveFullscreen, RENDER
 }
 
 D3D12RendererOutputBuffer::D3D12RendererOutputBuffer(ID3D12Device *pD3DDevice, IDXGISwapChain3 *pDXGISwapChain, HWND hWnd, uint32 width, uint32 height, DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthStencilBufferFormat, RENDERER_VSYNC_TYPE vsyncType)
-    : RendererOutputBuffer(vsyncType)
+    : GPUOutputBuffer(vsyncType)
     , m_pD3DDevice(pD3DDevice)
     , m_pDXGISwapChain(pDXGISwapChain)
     , m_hWnd(hWnd)
@@ -652,7 +652,7 @@ void D3D12Renderer::HandlePendingSDLEvents()
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-RendererOutputBuffer *D3D12Renderer::CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType)
+GPUOutputBuffer *D3D12Renderer::CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType)
 {
     return D3D12RendererOutputBuffer::Create(m_pDXGIFactory, m_pD3DDevice, hWnd, m_swapChainBackBufferFormat, m_swapChainDepthStencilBufferFormat, vsyncType);
 }

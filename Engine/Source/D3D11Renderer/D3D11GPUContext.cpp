@@ -1,24 +1,22 @@
 #include "D3D11Renderer/PrecompiledHeader.h"
 #include "D3D11Renderer/D3D11Common.h"
-#include "D3D11Renderer/D3D11Renderer.h"
+#include "D3D11Renderer/D3D11GPUDevice.h"
 #include "D3D11Renderer/D3D11GPUContext.h"
 #include "D3D11Renderer/D3D11GPUBuffer.h"
 #include "D3D11Renderer/D3D11GPUTexture.h"
 #include "D3D11Renderer/D3D11GPUShaderProgram.h"
+#include "D3D11Renderer/D3D11RenderBackend.h"
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(D3D11GPUContext);
 
-D3D11GPUContext::D3D11GPUContext(D3D11Renderer *pRenderer)
+D3D11GPUContext::D3D11GPUContext(D3D11GPUDevice *pDevice, ID3D11Device *pD3DDevice, ID3D11Device1 *pD3DDevice1, ID3D11DeviceContext *pImmediateContext)
+    : m_pDevice(pDevice)
+    , m_pD3DDevice(pD3DDevice)
+    , m_pD3DDevice1(pD3DDevice1)
+    , m_pD3DContext(pImmediateContext)
+    , m_pD3DContext1(nullptr)
+    , m_pConstants(nullptr)
 {
-    m_drawCallCounter = 0;
-
-    m_pRenderer = pRenderer;
-
-    m_pD3DContext = nullptr;
-    m_pD3DContext1 = nullptr;
-
-    m_pConstants = nullptr;
-
     // null memory
     Y_memzero(&m_currentViewport, sizeof(m_currentViewport));
     Y_memzero(&m_scissorRect, sizeof(m_scissorRect));
@@ -141,41 +139,21 @@ D3D11GPUContext::~D3D11GPUContext()
 
     SAFE_RELEASE(m_pD3DContext1);
     SAFE_RELEASE(m_pD3DContext);
-    
-    // we should be released from the same thread that created us
-    DebugAssert(GetContextForCurrentThread() == this);
-    GPUContext::SetContextForCurrentThread(nullptr);
 }
 
-void D3D11GPUContext::BindToCurrentThread()
-{
-    GPUContext::SetContextForCurrentThread(this);
-}
-
-void D3D11GPUContext::UnbindFromCurrentThread()
-{
-    GPUContext::SetContextForCurrentThread(nullptr);
-}
-
-bool D3D11GPUContext::Create(ID3D11DeviceContext *pImmediateContext)
+bool D3D11GPUContext::Create()
 {
     HRESULT hResult;
 
-    // steal the reference
-    m_pD3DContext = pImmediateContext;
-
     // get the 11.1 context, if there was a 11.1 device successfully retrieved
-    if (m_pRenderer->GetD3DDevice1() != nullptr)
+    if (m_pD3DDevice1 != nullptr)
     {
-        if (FAILED(hResult = pImmediateContext->QueryInterface(&m_pD3DContext1)))
+        if (FAILED(hResult = m_pD3DContext->QueryInterface(__uuidof(ID3D11DeviceContext1), (void **)&m_pD3DContext1)))
         {
             Log_ErrorPrintf("D3D11GPUContext::Create: Failed to retrieve ID3D11DeviceContext1 interface with hResult %08X", hResult);
             return false;
         }
     }
-
-    // bind us to the current thread
-    GPUContext::SetContextForCurrentThread(this);
 
     // allocate constants
     m_pConstants = new GPUContextConstants(this);
@@ -195,7 +173,7 @@ bool D3D11GPUContext::Create(ID3D11DeviceContext *pImmediateContext)
         // vertex buffer
         bufferDesc.ByteWidth = m_userVertexBufferSize;
         bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        if (FAILED(hResult = m_pRenderer->GetD3DDevice()->CreateBuffer(&bufferDesc, NULL, &m_pUserVertexBuffer)))
+        if (FAILED(hResult = m_pD3DDevice->CreateBuffer(&bufferDesc, NULL, &m_pUserVertexBuffer)))
         {
             Log_ErrorPrintf("Failed to create user vertex buffer %08X", hResult);
             return false;
@@ -204,7 +182,7 @@ bool D3D11GPUContext::Create(ID3D11DeviceContext *pImmediateContext)
         // index buffer
         bufferDesc.ByteWidth = m_userIndexBufferSize;
         bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        if (FAILED(hResult = m_pRenderer->GetD3DDevice()->CreateBuffer(&bufferDesc, NULL, &m_pUserIndexBuffer)))
+        if (FAILED(hResult = m_pD3DDevice->CreateBuffer(&bufferDesc, NULL, &m_pUserIndexBuffer)))
         {
             Log_ErrorPrintf("Failed to create user index buffer %08X", hResult);
             return false;
@@ -418,7 +396,7 @@ void D3D11GPUContext::SetViewport(const RENDERER_VIEWPORT *pNewViewport)
     m_pConstants->CommitChanges();
 }
 
-void D3D11GPUContext::SetDefaultViewport(GPUTexture *pForRenderTarget /* = NULL */)
+void D3D11GPUContext::SetFullViewport(GPUTexture *pForRenderTarget /* = NULL */)
 {
     RENDERER_VIEWPORT viewport;
     viewport.TopLeftX = 0;
@@ -545,28 +523,28 @@ void D3D11GPUContext::DiscardTargets(bool discardColor /* = true */, bool discar
     }
 }
 
-RendererOutputBuffer *D3D11GPUContext::GetOutputBuffer()
+GPUOutputBuffer *D3D11GPUContext::GetOutputBuffer()
 {
     return m_pCurrentSwapChain;
 }
 
-void D3D11GPUContext::SetOutputBuffer(RendererOutputBuffer *pSwapChain)
+void D3D11GPUContext::SetOutputBuffer(GPUOutputBuffer *pSwapChain)
 {
     DebugAssert(pSwapChain != nullptr);
     if (m_pCurrentSwapChain == pSwapChain)
         return;
 
     // copy out old swap chain
-    D3D11RendererOutputBuffer *pOldSwapChain = m_pCurrentSwapChain;
+    D3D11GPUOutputBuffer *pOldSwapChain = m_pCurrentSwapChain;
 
     // copy in new swap chain
-    if ((m_pCurrentSwapChain = static_cast<D3D11RendererOutputBuffer *>(pSwapChain)) != nullptr)
+    if ((m_pCurrentSwapChain = static_cast<D3D11GPUOutputBuffer *>(pSwapChain)) != nullptr)
     {
 //         DebugAssert(m_pCurrentSwapChain->GetOwnerContext() == nullptr);
 //         if (m_pCurrentSwapChain->IsManaged())
 //             static_cast<D3D11RendererOutputWindow *>(m_pCurrentSwapChain)->SetOwnerContext(this);
 //         else
-//             static_cast<D3D11RendererOutputBuffer *>(m_pCurrentSwapChain)->SetOwnerContext(this);
+//             static_cast<D3D11GPUOutputBuffer *>(m_pCurrentSwapChain)->SetOwnerContext(this);
 
         m_pCurrentSwapChain->AddRef();
     }
@@ -582,10 +560,147 @@ void D3D11GPUContext::SetOutputBuffer(RendererOutputBuffer *pSwapChain)
 //         if (pOldSwapChain->IsManaged())
 //             static_cast<D3D11RendererOutputWindow *>(pOldSwapChain)->SetOwnerContext(nullptr);
 //         else
-//             static_cast<D3D11RendererOutputBuffer *>(pOldSwapChain)->SetOwnerContext(nullptr);
+//             static_cast<D3D11GPUOutputBuffer *>(pOldSwapChain)->SetOwnerContext(nullptr);
 
         pOldSwapChain->Release();
     }
+}
+
+bool D3D11GPUContext::GetExclusiveFullScreen()
+{
+    BOOL currentState;
+    HRESULT hResult = m_pCurrentSwapChain->GetDXGISwapChain()->GetFullscreenState(&currentState, nullptr);
+    if (FAILED(hResult))
+        return false;
+
+    return (currentState == TRUE);
+}
+
+bool D3D11GPUContext::SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate)
+{
+    HRESULT hResult;
+
+    // bound to pipeline? have to clear before switching modes
+    if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
+        m_pD3DContext->OMSetRenderTargets(0, nullptr, nullptr);
+
+    // switch successful? ie have to resize buffers
+    bool switchResult = true;
+    uint32 newWidth = width;
+    uint32 newHeight = height;
+
+    // get output
+    IDXGIOutput *pOutput;
+    hResult = m_pDevice->GetDXGIAdapter()->EnumOutputs(0, &pOutput);
+    if (SUCCEEDED(hResult))
+    {
+        // fill in mode details with requested width/height
+        DXGI_MODE_DESC modeDesc;
+        Y_memzero(&modeDesc, sizeof(modeDesc));
+        modeDesc.Width = width;
+        modeDesc.Height = height;
+        modeDesc.RefreshRate.Numerator = refreshRate;
+        modeDesc.RefreshRate.Denominator = 1;
+        modeDesc.Format = m_pDevice->GetSwapChainBackBufferFormat();
+
+        // find the best mode match
+        DXGI_MODE_DESC closestMatch;
+        hResult = pOutput->FindClosestMatchingMode(&modeDesc, &closestMatch, m_pD3DDevice);
+        if (SUCCEEDED(hResult))
+        {
+            // update dimensions with closest match
+            Log_InfoPrintf("D3D11GPUContext::SetExclusiveFullScreen: Switching to closest mode match %ux%u RefreshRate %u/%u", closestMatch.Width, closestMatch.Height, closestMatch.RefreshRate.Numerator, closestMatch.RefreshRate.Denominator);
+            newWidth = closestMatch.Width;
+            newHeight = closestMatch.Height;
+
+            // switch to fullscreen state
+            BOOL fullScreenState;
+            if (SUCCEEDED(m_pCurrentSwapChain->GetDXGISwapChain()->GetFullscreenState(&fullScreenState, nullptr)) && !fullScreenState)
+            {
+                hResult = m_pCurrentSwapChain->GetDXGISwapChain()->SetFullscreenState(TRUE, pOutput);
+                if (FAILED(hResult))
+                {
+                    Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGISwapChain::SetFullscreenState failed with hResult %08X.", hResult);
+                    switchResult = false;
+                }
+            }
+
+            // resize the target
+            if (switchResult)
+            {
+                // call ResizeTarget to fix up the window size
+                hResult = m_pCurrentSwapChain->GetDXGISwapChain()->ResizeTarget(&closestMatch);
+                if (FAILED(hResult))
+                {
+                    Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGISwapChain::ResizeTarget failed with hResult %08X.", hResult);
+                    switchResult = false;
+                }
+            }
+        }
+        else
+        {
+            Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGIOutput::FindClosestMatchingMode failed with hResult %08X.", hResult);
+            switchResult = false;
+        }
+
+        pOutput->Release();
+    }
+    else
+    {
+        Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGIAdapter::EnumOutputs failed with hResult %08X.", hResult);
+        switchResult = false;
+    }
+
+    // switch successful?
+    if (switchResult)
+    {
+        // resize buffers
+        m_pCurrentSwapChain->InternalResizeBuffers(newWidth, newHeight, m_pCurrentSwapChain->GetVSyncType());
+    }
+
+    // synchronize render targets if we were bound
+    if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
+        SynchronizeRenderTargetsAndUAVs();
+
+    // done
+    return true;
+}
+
+bool D3D11GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /* = 0 */)
+{
+    if (width == 0 || height == 0)
+    {
+        // get the new size of the window
+        RECT clientRect;
+        GetClientRect(m_pCurrentSwapChain->GetHWND(), &clientRect);
+
+        // changed?
+        width = Max(clientRect.right - clientRect.left, (LONG)1);
+        height = Max(clientRect.bottom - clientRect.top, (LONG)1);
+    }
+
+    // changed?
+    if (m_pCurrentSwapChain->GetWidth() == width && m_pCurrentSwapChain->GetHeight() == height)
+        return true;
+
+    // unbind if we're currently bound to the pipeline
+    if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
+        m_pD3DContext->OMSetRenderTargets(0, nullptr, nullptr);
+
+    // invoke the resize
+    m_pCurrentSwapChain->InternalResizeBuffers(width, height, m_pCurrentSwapChain->GetVSyncType());
+
+    // synchronize render targets if we were bound
+    if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
+        SynchronizeRenderTargetsAndUAVs();
+
+    // done
+    return true;
+}
+
+void D3D11GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour)
+{
+    m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
 }
 
 uint32 D3D11GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)
@@ -905,7 +1020,7 @@ bool D3D11GPUContext::CreateConstantBuffers()
             continue;
         if (declaration->GetPlatformRequirement() != RENDERER_PLATFORM_COUNT && declaration->GetPlatformRequirement() != RENDERER_PLATFORM_D3D11)
             continue;
-        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > m_pRenderer->GetFeatureLevel())
+        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > D3D11RenderBackend::GetInstance()->GetFeatureLevel())
             continue;
 
         // set size so we know to allocate it later or on demand
@@ -930,7 +1045,7 @@ bool D3D11GPUContext::CreateConstantBuffers()
 
         // create the gpu buffer
         GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_WRITABLE, constantBuffer->Size);
-        constantBuffer->pGPUBuffer = static_cast<D3D11GPUBuffer *>(m_pRenderer->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
+        constantBuffer->pGPUBuffer = static_cast<D3D11GPUBuffer *>(m_pDevice->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
         if (constantBuffer->pGPUBuffer == nullptr)
         {
             const ShaderConstantBuffer *declaration = ShaderConstantBuffer::GetRegistry()->GetTypeInfoByIndex(i);
@@ -956,7 +1071,7 @@ D3D11GPUBuffer *D3D11GPUContext::GetConstantBuffer(uint32 index)
 
         // create the gpu buffer
         GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_WRITABLE, constantBuffer->Size);
-        constantBuffer->pGPUBuffer = static_cast<D3D11GPUBuffer *>(m_pRenderer->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
+        constantBuffer->pGPUBuffer = static_cast<D3D11GPUBuffer *>(m_pDevice->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
         if (constantBuffer->pGPUBuffer == nullptr)
         {
             const ShaderConstantBuffer *declaration = ShaderConstantBuffer::GetRegistry()->GetTypeInfoByIndex(index);
@@ -1342,7 +1457,7 @@ void D3D11GPUContext::Draw(uint32 firstVertex, uint32 nVertices)
     SynchronizeShaderStates();
 
     m_pD3DContext->Draw(nVertices, firstVertex);
-    m_drawCallCounter++;
+    //m_drawCallCounter++;
 }
 
 void D3D11GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32 nInstances)
@@ -1354,7 +1469,7 @@ void D3D11GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32
     SynchronizeShaderStates();
 
     m_pD3DContext->DrawInstanced(nVertices, nInstances, firstVertex, 0);
-    m_drawCallCounter++;
+    //m_drawCallCounter++;
 }
 
 void D3D11GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 baseVertex)
@@ -1366,7 +1481,7 @@ void D3D11GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 bas
     SynchronizeShaderStates();
 
     m_pD3DContext->DrawIndexed(nIndices, startIndex, baseVertex);
-    m_drawCallCounter++;
+    //m_drawCallCounter++;
 }
 
 void D3D11GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, uint32 baseVertex, uint32 nInstances)
@@ -1378,7 +1493,7 @@ void D3D11GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, u
     SynchronizeShaderStates();
 
     m_pD3DContext->DrawIndexedInstanced(nIndices, nInstances, startIndex, baseVertex, 0);
-    m_drawCallCounter++;
+    //m_drawCallCounter++;
 }
 
 void D3D11GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ)
@@ -1387,7 +1502,7 @@ void D3D11GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCount
     SynchronizeShaderStates();
 
     m_pD3DContext->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
-    m_drawCallCounter++;
+    //m_drawCallCounter++;
 }
 
 bool D3D11GPUContext::GetTempVertexBufferPointer(uint32 VertexSize, uint32 nVertices, void **ppBufferPointer, uint32 *pBufferOffset, uint32 *pMaxVertices)
@@ -1496,7 +1611,7 @@ void D3D11GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
 
         // draw it
         m_pD3DContext->Draw(mappedVertices, 0);
-        m_drawCallCounter++;
+        //m_drawCallCounter++;
 
         // reduce vertices
         pVerticesPtr += mappedVertices * vertexSize;
@@ -1590,7 +1705,7 @@ void D3D11GPUContext::DrawIndexedUserPointer(const void *pVertices, uint32 verte
 
     // draw it
     m_pD3DContext->DrawIndexed(mappedIndices, 0, 0);
-    m_drawCallCounter++;
+    //m_drawCallCounter++;
 
     // restore state
     if (m_currentVertexBufferBindCount > 0)
@@ -1674,10 +1789,10 @@ void D3D11GPUContext::BlitFrameBuffer(GPUTexture2D *pTexture, uint32 sourceX, ui
     uint32 destinationTextureWidth = 0, destinationTextureHeight = 0;
     if (m_nCurrentRenderTargets == 0)
     {
-        destinationTextureFormat = static_cast<D3D11RendererOutputBuffer *>(m_pCurrentSwapChain)->GetBackBufferFormat();
-        pDestinationResource = static_cast<D3D11RendererOutputBuffer *>(m_pCurrentSwapChain)->GetBackBufferTexture();
-        destinationTextureWidth = static_cast<D3D11RendererOutputBuffer *>(m_pCurrentSwapChain)->GetWidth();
-        destinationTextureHeight = static_cast<D3D11RendererOutputBuffer *>(m_pCurrentSwapChain)->GetHeight();
+        destinationTextureFormat = static_cast<D3D11GPUOutputBuffer *>(m_pCurrentSwapChain)->GetBackBufferFormat();
+        pDestinationResource = static_cast<D3D11GPUOutputBuffer *>(m_pCurrentSwapChain)->GetBackBufferTexture();
+        destinationTextureWidth = static_cast<D3D11GPUOutputBuffer *>(m_pCurrentSwapChain)->GetWidth();
+        destinationTextureHeight = static_cast<D3D11GPUOutputBuffer *>(m_pCurrentSwapChain)->GetHeight();
     }
     else
     {
@@ -1716,7 +1831,7 @@ void D3D11GPUContext::BlitFrameBuffer(GPUTexture2D *pTexture, uint32 sourceX, ui
     }
 
     // use shader
-    m_pRenderer->BlitTextureUsingShader(this, pTexture, sourceX, sourceY, sourceWidth, sourceHeight, 0, destX, destY, destWidth, destHeight, resizeFilter, RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE_NONE);
+    g_pRenderer->BlitTextureUsingShader(this, pTexture, sourceX, sourceY, sourceWidth, sourceHeight, 0, destX, destY, destWidth, destHeight, resizeFilter, RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE_NONE);
 }
 
 void D3D11GPUContext::GenerateMips(GPUTexture *pTexture)

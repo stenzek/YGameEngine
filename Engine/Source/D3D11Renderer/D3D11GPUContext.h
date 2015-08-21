@@ -14,12 +14,8 @@ class D3D11GPUShaderProgram;
 class D3D11GPUContext : public GPUContext
 {
 public:
-    D3D11GPUContext(D3D11Renderer *pRenderer);
+    D3D11GPUContext(D3D11GPUDevice *pDevice, ID3D11Device *pD3DDevice, ID3D11Device1 *pD3DDevice1, ID3D11DeviceContext *pImmediateContext);
     ~D3D11GPUContext();
-
-    // Owner thread
-    virtual void BindToCurrentThread() override final;
-    virtual void UnbindFromCurrentThread() override final;
 
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) override final;
@@ -40,7 +36,7 @@ public:
     // Viewport Management (D3D11RenderSystem.cpp)
     virtual const RENDERER_VIEWPORT *GetViewport() override final;
     virtual void SetViewport(const RENDERER_VIEWPORT *pNewViewport) override final;
-    virtual void SetDefaultViewport(GPUTexture *pForRenderTarget = NULL) override final;
+    virtual void SetFullViewport(GPUTexture *pForRenderTarget = NULL) override final;
 
     // Scissor Rect Management (D3D11RenderSystem.cpp)
     virtual const RENDERER_SCISSOR_RECT *GetScissorRect() override final;
@@ -93,8 +89,12 @@ public:
     virtual void DiscardTargets(bool discardColor = true, bool discardDepth = true, bool discardStencil = true) override final;
 
     // Swap chain
-    virtual RendererOutputBuffer *GetOutputBuffer() override final;
-    virtual void SetOutputBuffer(RendererOutputBuffer *pSwapChain) override final;
+    virtual GPUOutputBuffer *GetOutputBuffer() override final;
+    virtual void SetOutputBuffer(GPUOutputBuffer *pSwapChain) override final;
+    virtual bool GetExclusiveFullScreen() override final;
+    virtual bool SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate) override final;
+    virtual bool ResizeOutputBuffer(uint32 width = 0, uint32 height = 0) override final;
+    virtual void PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour) override final;
 
     // RT Changing
     virtual uint32 GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView) override final;
@@ -135,13 +135,12 @@ public:
     // --- our methods ---
 
     // accessors
-    D3D11Renderer *GetRenderer() const { return m_pRenderer; }
     ID3D11DeviceContext *GetD3DContext() const { return m_pD3DContext; }
     ID3D11DeviceContext1 *GetD3DContext1() const { return m_pD3DContext1; }
     D3D11GPUShaderProgram *GetD3D11ShaderProgram() const { return m_pCurrentShaderProgram; }
 
     // create device
-    bool Create(ID3D11DeviceContext *pImmediateContext);
+    bool Create();
 
     // constant resource management
     D3D11GPUBuffer *GetConstantBuffer(uint32 index);
@@ -166,8 +165,9 @@ private:
     bool GetTempVertexBufferPointer(uint32 VertexSize, uint32 nVertices, void **ppBufferPointer, uint32 *pBufferOffset, uint32 *pMaxVertices);
     bool GetTempIndexBufferPointer(uint32 indexSize, uint32 nIndices, void **ppBufferPointer, uint32 *pBufferOffset, uint32 *pMaxIndices);
 
-    D3D11Renderer *m_pRenderer;
-
+    D3D11GPUDevice *m_pDevice;
+    ID3D11Device *m_pD3DDevice;
+    ID3D11Device1 *m_pD3DDevice1;
     ID3D11DeviceContext *m_pD3DContext;
     ID3D11DeviceContext1 *m_pD3DContext1;
 
@@ -234,7 +234,7 @@ private:
     D3D11BlendState *m_pCurrentBlendState;
     float4 m_currentBlendStateBlendFactors;
 
-    D3D11RendererOutputBuffer *m_pCurrentSwapChain;
+    D3D11GPUOutputBuffer *m_pCurrentSwapChain;
 
     D3D11GPURenderTargetView *m_pCurrentRenderTargetViews[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT];
     D3D11GPUDepthStencilBufferView *m_pCurrentDepthBufferView;

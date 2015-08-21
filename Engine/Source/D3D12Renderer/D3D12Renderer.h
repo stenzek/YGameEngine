@@ -101,12 +101,14 @@ public:
     virtual ~D3D12Renderer();
 
     // --- our methods ---
+    static inline D3D12Renderer *Get() { return static_cast<D3D12Renderer *>(g_pRenderer); }
     IDXGIFactory3 *GetDXGIFactory() const { return m_pDXGIFactory; }
     IDXGIAdapter3 *GetDXGIAdapter() const { return m_pDXGIAdapter; }
     ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
     D3D12GPUContext *GetD3D11MainContext() const { return m_pMainContext; }
     void OnResourceCreated(GPUResource *pResource);
     void OnResourceReleased(GPUResource *pResource);
+    D3D12DescriptorHeap *GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) { return m_pDescriptorHeaps[type]; }
 
     // creation
     bool Create(const RendererInitializationParameters *pInitializationParameters);
@@ -119,7 +121,7 @@ public:
     virtual GPUContext *CreateUploadContext() override;
 
     // Creates a swap chain on an existing window.
-    virtual RendererOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) override;
+    virtual GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) override;
 
     // Creates a swap chain on a new window.
     virtual RendererOutputWindow *CreateOutputWindow(const char *windowTitle, uint32 windowWidth, uint32 windowHeight, RENDERER_VSYNC_TYPE vsyncType) override;
@@ -145,9 +147,9 @@ public:
     virtual GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream) override;
     virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) override;
 
-    virtual RendererOutputWindow *GetImplicitRenderWindow() override { return static_cast<RendererOutputWindow *>(m_pImplicitRenderWindow); }
+    virtual RendererOutputWindow *GetImplicitOutputWindow() override { return static_cast<RendererOutputWindow *>(m_pImplicitRenderWindow); }
 
-    virtual GPUContext *GetMainContext() const override { /*return static_cast<GPUContext *>(m_pMainContext);*/return nullptr; }
+    virtual GPUContext *GetGPUContext() const override { /*return static_cast<GPUContext *>(m_pMainContext);*/return nullptr; }
 
     virtual void HandlePendingSDLEvents() override;
 

@@ -15,7 +15,7 @@ Log_SetChannel(OpenGLES2RendererOutputBuffer);
 static const char *SDL_OPENGL_RENDERER_OUTPUT_WINDOW_POINTER_STRING = "OpenGLESRendererOutputWindowPtr";
 
 OpenGLES2RendererOutputBuffer::OpenGLES2RendererOutputBuffer(SDL_Window *pSDLWindow, bool ownsWindow, uint32 width, uint32 height, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilBufferFormat, RENDERER_VSYNC_TYPE vsyncType)
-    : RendererOutputBuffer(vsyncType),
+    : GPUOutputBuffer(vsyncType),
       m_pSDLWindow(pSDLWindow),
       m_ownsWindow(ownsWindow),
       m_width(width),
@@ -52,7 +52,7 @@ OpenGLES2RendererOutputBuffer *OpenGLES2RendererOutputBuffer::Create(RenderSyste
     return new OpenGLES2RendererOutputBuffer(pSDLWindow, true, windowWidth, windowHeight, backBufferFormat, depthStencilBufferFormat, vsyncType);
 }
 
-bool OpenGLES2RendererOutputBuffer::ResizeBuffers(uint32 width /* = 0 */, uint32 height /* = 0 */)
+void OpenGLES2RendererOutputBuffer::Resize(uint32 width, uint32 height)
 {
     if (width == 0 || height == 0)
     {
@@ -62,13 +62,9 @@ bool OpenGLES2RendererOutputBuffer::ResizeBuffers(uint32 width /* = 0 */, uint32
         width = windowWidth;
         height = windowHeight;
     }
-
-    if (width == m_width && height == m_height)
-        return true;
-
+    
     m_width = width;
     m_height = height;
-    return true;
 }
 
 void OpenGLES2RendererOutputBuffer::SetVSyncType(RENDERER_VSYNC_TYPE vsyncType)
@@ -78,11 +74,6 @@ void OpenGLES2RendererOutputBuffer::SetVSyncType(RENDERER_VSYNC_TYPE vsyncType)
 
     // fixme!
     m_vsyncType = vsyncType;
-}
-
-void OpenGLES2RendererOutputBuffer::SwapBuffers()
-{
-    SDL_GL_SwapWindow(m_pSDLWindow);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -196,7 +187,7 @@ bool OpenGLES2RendererOutputWindow::SetFullScreen(RENDERER_FULLSCREEN_STATE stat
         }
 
         // update the window size
-        m_pOpenGLOutputBuffer->ResizeBuffers(foundDisplayMode.w, foundDisplayMode.h);
+        m_pOpenGLOutputBuffer->Resize(foundDisplayMode.w, foundDisplayMode.h);
         m_width = m_pOpenGLOutputBuffer->GetWidth();
         m_height = m_pOpenGLOutputBuffer->GetHeight();
         return true;
@@ -216,7 +207,7 @@ bool OpenGLES2RendererOutputWindow::SetFullScreen(RENDERER_FULLSCREEN_STATE stat
         }
 
         // update the window size
-        m_pOpenGLOutputBuffer->ResizeBuffers();
+        m_pOpenGLOutputBuffer->Resize();
         m_width = m_pOpenGLOutputBuffer->GetWidth();
         m_height = m_pOpenGLOutputBuffer->GetHeight();
         return true;
@@ -240,7 +231,7 @@ bool OpenGLES2RendererOutputWindow::SetFullScreen(RENDERER_FULLSCREEN_STATE stat
             SDL_SetWindowSize(m_pSDLWindow, width, height);
 
         // update the size
-        m_pOpenGLOutputBuffer->ResizeBuffers();
+        m_pOpenGLOutputBuffer->Resize();
         m_width = m_pOpenGLOutputBuffer->GetWidth();
         m_height = m_pOpenGLOutputBuffer->GetHeight();
         return true;
@@ -307,7 +298,7 @@ void OpenGLES2Renderer::HandlePendingSDLEvents()
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-RendererOutputBuffer *OpenGLES2Renderer::CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType)
+GPUOutputBuffer *OpenGLES2Renderer::CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType)
 {
     return OpenGLES2RendererOutputBuffer::Create(hWnd, m_swapChainBackBufferFormat, m_swapChainDepthStencilBufferFormat, vsyncType);
 }

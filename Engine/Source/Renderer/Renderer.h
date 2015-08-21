@@ -346,28 +346,21 @@ public:
     // TODO: Accessors for states....
 };
 
-class RendererOutputBuffer : public ReferenceCounted
+class GPUOutputBuffer : public ReferenceCounted
 {
-    DeclareNonCopyable(RendererOutputBuffer);
+    DeclareNonCopyable(GPUOutputBuffer);
 
 public:
-    RendererOutputBuffer(RENDERER_VSYNC_TYPE vsyncType) : m_vsyncType(vsyncType) {}
-    virtual ~RendererOutputBuffer() {}
+    GPUOutputBuffer(RENDERER_VSYNC_TYPE vsyncType) : m_vsyncType(vsyncType) {}
+    virtual ~GPUOutputBuffer() {}
 
     // Get the dimensions of this swap chain.
     virtual uint32 GetWidth() const = 0;
     virtual uint32 GetHeight() const = 0;
 
-    // Resize the buffers associated with this swap chain.
-    // Setting width and height to 0 will use the current size of the window.
-    virtual bool ResizeBuffers(uint32 width = 0, uint32 height = 0) = 0;
-
     // Change the vsync type associated with this swap chain.
     RENDERER_VSYNC_TYPE GetVSyncType() const { return m_vsyncType; }
     virtual void SetVSyncType(RENDERER_VSYNC_TYPE vsyncType) = 0;
-
-    // Swaps the buffers, i.e. presenting the texture to the associated window.
-    virtual void SwapBuffers() = 0;
 
 protected:
     RENDERER_VSYNC_TYPE m_vsyncType;
@@ -378,13 +371,15 @@ class RendererOutputWindow : public ReferenceCounted
     DeclareNonCopyable(RendererOutputWindow);
 
 public:
-    RendererOutputWindow(SDL_Window *pSDLWindow, RendererOutputBuffer *pBuffer, RENDERER_FULLSCREEN_STATE fullscreenState);
+    RendererOutputWindow(SDL_Window *pSDLWindow, GPUOutputBuffer *pBuffer, RENDERER_FULLSCREEN_STATE fullscreenState);
     virtual ~RendererOutputWindow();
 
     // window accessors
     SDL_Window *GetSDLWindow() const { return m_pSDLWindow; }
-    RendererOutputBuffer *GetOutputBuffer() const { return m_pOutputBuffer; }
+    GPUOutputBuffer *GetOutputBuffer() const { return m_pOutputBuffer; }
     RENDERER_FULLSCREEN_STATE GetFullscreenState() const { return m_fullscreenState; }
+    void SetFullscreenState(RENDERER_FULLSCREEN_STATE state) { m_fullscreenState = state; }
+    void SetDimensions(uint32 width, uint32 height) { m_width = width; m_height = height; }
     int32 GetPositionX() const { return m_positionX; }
     int32 GetPositionY() const { return m_positionY; }
     uint32 GetWidth() const { return m_width; }
@@ -413,12 +408,9 @@ public:
     // Enable relative mouse movement, when enabled the mouse cursor will be locked to the window and the cursor will be hidden
     void SetMouseRelativeMovement(bool enabled);
 
-    // Transition to/from fullscreen, platform dependant
-    virtual bool SetFullScreen(RENDERER_FULLSCREEN_STATE state, uint32 width = 0, uint32 height = 0) = 0;
-
 protected:
     SDL_Window *m_pSDLWindow;
-    RendererOutputBuffer *m_pOutputBuffer;
+    GPUOutputBuffer *m_pOutputBuffer;
     RENDERER_FULLSCREEN_STATE m_fullscreenState;
     int32 m_positionX;
     int32 m_positionY;
@@ -491,31 +483,54 @@ private:
     bool m_recalculateViewportFractions;
 };
 
+class GPUDevice : public ReferenceCounted
+{
+    DeclareNonCopyable(GPUDevice);
+
+public:
+    GPUDevice() {}
+    virtual ~GPUDevice() {}
+
+    // Creates a swap chain on an existing window.
+    virtual GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) = 0;
+
+    // Resource creation
+    virtual GPUDepthStencilState *CreateDepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc) = 0;
+    virtual GPURasterizerState *CreateRasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc) = 0;
+    virtual GPUBlendState *CreateBlendState(const RENDERER_BLEND_STATE_DESC *pBlendStateDesc) = 0;
+    virtual GPUQuery *CreateQuery(GPU_QUERY_TYPE type) = 0;
+    virtual GPUBuffer *CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData = NULL) = 0;
+    virtual GPUTexture1D *CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
+    virtual GPUTexture1DArray *CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
+    virtual GPUTexture2D *CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
+    virtual GPUTexture2DArray *CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
+    virtual GPUTexture3D *CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL, const uint32 *pInitialDataSlicePitch = NULL) = 0;
+    virtual GPUTextureCube *CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
+    virtual GPUTextureCubeArray *CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
+    virtual GPUDepthTexture *CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc) = 0;
+    virtual GPUSamplerState *CreateSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc) = 0;
+    virtual GPURenderTargetView *CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc) = 0;
+    virtual GPUDepthStencilBufferView *CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc) = 0;
+    virtual GPUComputeView *CreateComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc) = 0;
+    virtual GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream) = 0;
+    virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) = 0;
+    // CreateGraphicsPipeline
+    // CreateComputePipeline
+};
+
+class GPUCommandList
+{
+public:
+    virtual ~GPUCommandList() {}
+};
+
 class GPUContext : public ReferenceCounted
 {
     DeclareNonCopyable(GPUContext);
 
 public:
-    GPUContext();
-    virtual ~GPUContext();
-
-    // Gets the owner thread of this context
-    Thread::ThreadIdType GetOwnerThread() const { return m_ownerThreadID; }
-
-    // draw call counter
-    const uint32 GetDrawCallCounter() const { return m_drawCallCounter; }
-    void ResetDrawCallCounter() { m_drawCallCounter = 0; }
-
-    // Gets the context currently bound to this thread
-    static GPUContext *GetContextForCurrentThread();
-
-    //////////////////////////////////////////////////////////////////////////
-    // Begin Virtual Methods
-    //////////////////////////////////////////////////////////////////////////
-
-    // Bind/unbind this context to the current thread.
-    virtual void BindToCurrentThread() = 0;
-    virtual void UnbindFromCurrentThread() = 0;
+    GPUContext() {}
+    virtual ~GPUContext() {}
 
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) = 0;
@@ -536,7 +551,7 @@ public:
     // Viewport Management
     virtual const RENDERER_VIEWPORT *GetViewport() = 0;
     virtual void SetViewport(const RENDERER_VIEWPORT *pNewViewport) = 0;
-    virtual void SetDefaultViewport(GPUTexture *pForRenderTarget = NULL) = 0;
+    virtual void SetFullViewport(GPUTexture *pForRenderTarget = nullptr) = 0;
 
     // Scissor Rect Management
     virtual const RENDERER_SCISSOR_RECT *GetScissorRect() = 0;
@@ -589,8 +604,12 @@ public:
     virtual void DiscardTargets(bool discardColor = true, bool discardDepth = true, bool discardStencil = true) = 0;
 
     // Swap chain changing
-    virtual RendererOutputBuffer *GetOutputBuffer() = 0;
-    virtual void SetOutputBuffer(RendererOutputBuffer *pOutputBuffer) = 0;
+    virtual GPUOutputBuffer *GetOutputBuffer() = 0;
+    virtual void SetOutputBuffer(GPUOutputBuffer *pOutputBuffer) = 0;
+    virtual bool GetExclusiveFullScreen() = 0;
+    virtual bool SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate) = 0;
+    virtual bool ResizeOutputBuffer(uint32 width = 0, uint32 height = 0) = 0;
+    virtual void PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour) = 0;
 
     // Render target changing
     virtual uint32 GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView) = 0;
@@ -634,23 +653,47 @@ public:
 
     // Compute shaders
     virtual void Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ) = 0;
-
-protected:
-    // set the current context for this thread
-    static void SetContextForCurrentThread(GPUContext *pContext);
-
-    // owning thread id
-    Thread::ThreadIdType m_ownerThreadID;
-
-    // draw call counter
-    uint32 m_drawCallCounter;
 };
 
-class GPUCommandList
+struct RendererCapabilities
+{
+    uint32 MaxTextureAnisotropy;
+    uint32 MaximumVertexBuffers;
+    uint32 MaximumConstantBuffers;
+    uint32 MaximumTextureUnits;
+    uint32 MaximumSamplers;
+    uint32 MaximumRenderTargets;
+    struct
+    {
+        bool SupportsMultithreadedResourceCreation : 1;
+        bool SupportsDrawBaseVertex : 1;
+        bool SupportsDepthTextures : 1;
+        bool SupportsTextureArrays : 1;
+        bool SupportsCubeMapTextureArrays : 1;
+        bool SupportsGeometryShaders : 1;
+        bool SupportsSinglePassCubeMaps : 1;
+        bool SupportsInstancing : 1;
+    uint32: 1;
+    };
+};
+
+class RenderBackend
 {
 public:
-    virtual ~GPUCommandList() {}
+    // Device queries.
+    virtual RENDERER_PLATFORM GetPlatform() const = 0;
+    virtual RENDERER_FEATURE_LEVEL GetFeatureLevel() const = 0;
+    virtual TEXTURE_PLATFORM GetTexturePlatform() const = 0;
+    virtual void GetCapabilities(RendererCapabilities *pCapabilities) const = 0;
+    virtual bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = nullptr) const = 0;
+
+    // Create a device interface. Must be called by the thread which the interface will be used on.
+    virtual GPUDevice *CreateDeviceInterface() = 0;
+
+    // Shuts down the renderer backend.
+    virtual void Shutdown() = 0;
 };
+
 
 struct RendererInitializationParameters
 {
@@ -691,26 +734,11 @@ struct RendererInitializationParameters
     RENDERER_VSYNC_TYPE ImplicitSwapChainVSyncType;
 };
 
-struct RendererCapabilities
+struct RendererStats
 {
-    uint32 MaxTextureAnisotropy;
-    uint32 MaximumVertexBuffers;
-    uint32 MaximumConstantBuffers;
-    uint32 MaximumTextureUnits;
-    uint32 MaximumSamplers;
-    uint32 MaximumRenderTargets;
-    struct
-    {
-        bool SupportsMultithreadedResourceCreation : 1;
-        bool SupportsDrawBaseVertex : 1;
-        bool SupportsDepthTextures : 1;
-        bool SupportsTextureArrays : 1;
-        bool SupportsCubeMapTextureArrays : 1;
-        bool SupportsGeometryShaders : 1;
-        bool SupportsSinglePassCubeMaps : 1;
-        bool SupportsInstancing : 1;
-        uint32: 1;
-    };
+    uint32 DrawCalls;
+    uint32 StateChanges;
+    uint32 ResourceMemoryUsage[1];      // FIXME
 };
 
 class Renderer
@@ -827,7 +855,7 @@ public:
     };
 
 public:
-    Renderer();
+    Renderer(RenderBackend *pBackendInterface, RendererOutputWindow *pOutputWindow);
     virtual ~Renderer();
 
     // Find the default renderer platform for this running platform
@@ -858,6 +886,23 @@ public:
     const RendererCapabilities &GetCapabilities() const { return m_RendererCapabilities; }
     const float GetTexelOffset() const { return m_fTexelOffset; }
 
+    // Accesses the implicit swap chain.
+    RendererOutputWindow *GetImplicitOutputWindow() { return m_pImplicitOutputWindow; }
+    bool ChangeResolution(RENDERER_FULLSCREEN_STATE state, uint32 width = 0, uint32 height = 0, uint32 refreshRate = 0);
+
+    // raw backend access, should not be needed in most cases.
+    RenderBackend *GetBackendInterface() const { return m_pBackendInterface; }
+
+    // creates a device object for the thread calling.
+    bool EnableResourceCreationForCurrentThread();
+    void DisableResourceCreationForCurrentThread();
+
+    // device/context access. these will return the value for the current thread, and thus attempting to
+    // call GetGPUDevice() on a thread that has not registered for uploads, or GetGPUContext() on a thread
+    // other than the render thread will cause the process to crash.
+    GPUDevice *GetGPUDevice() const;
+    GPUContext *GetGPUContext() const;
+
     // render thread
     static const Thread::ThreadIdType GetRenderThreadId() { return s_renderThreadId; }
     static const bool IsOnRenderThread() { return (Thread::GetCurrentThreadId() == s_renderThreadId); }
@@ -885,6 +930,9 @@ public:
     // gui context
     MiniGUIContext *GetGUIContext() { DebugAssert(Renderer::IsOnRenderThread()); return &m_guiContext; }
 
+    // handle any pending events applicable to this renderer from SDL. must be invoked by render thread
+    bool HandleSDLEvent(const union SDL_Event *pEvent);
+
     // scissor rect calculators
     static bool CalculateAABoxScissorRect(RENDERER_SCISSOR_RECT *pScissorRect, const AABox &Bounds, const float4x4 &ViewMatrix, int32 RTWidth, int32 RTHeight);
     static bool CalculatePointLightScissorRect(RENDERER_SCISSOR_RECT *pScissorRect, const float3 &LightPosition, const float &LightRange, const float4x4 &ViewMatrix, int32 RTWidth, int32 RTHeight);
@@ -905,60 +953,40 @@ public:
     // determine global shader flags for current environment
     static uint32 GetGlobalShaderFlagsForCurrentEnvironment();
 
-    // --- virtual methods ---
-
     // Convert a projection matrix into the depth range expected by the renderer.
-    virtual void CorrectProjectionMatrix(float4x4 &projectionMatrix) const = 0;
+    void CorrectProjectionMatrix(float4x4 &projectionMatrix);
 
     // Device queries.
-    virtual bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = NULL) const = 0;
-
-    // Creates a context capable of uploading resources owned by the calling thread. Required if SupportsMultithreadedResourceCreation is false. Must be executed on the render thread.
-    virtual GPUContext *CreateUploadContext() = 0;
-
-    // Creates a context capable of deferred commands owned by the calling thread.
-    //virtual GPUContext *CreateDeferredContext() = 0;
+    bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = NULL) const;
 
     // Creates a swap chain on an existing window.
-    virtual RendererOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) = 0;
+    GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType);
 
     // Creates a swap chain on a new window.
-    virtual RendererOutputWindow *CreateOutputWindow(const char *windowTitle, uint32 windowWidth, uint32 windowHeight, RENDERER_VSYNC_TYPE vsyncType) = 0;
+    RendererOutputWindow *CreateOutputWindow(const char *windowTitle, uint32 windowWidth, uint32 windowHeight, RENDERER_VSYNC_TYPE vsyncType);
 
     // Resource creation
-    virtual GPUDepthStencilState *CreateDepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc) = 0;
-    virtual GPURasterizerState *CreateRasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc) = 0;
-    virtual GPUBlendState *CreateBlendState(const RENDERER_BLEND_STATE_DESC *pBlendStateDesc) = 0;
-    virtual GPUQuery *CreateQuery(GPU_QUERY_TYPE type) = 0;
-    virtual GPUBuffer *CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData = NULL) = 0;
-    virtual GPUTexture1D *CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
-    virtual GPUTexture1DArray *CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
-    virtual GPUTexture2D *CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
-    virtual GPUTexture2DArray *CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
-    virtual GPUTexture3D *CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL, const uint32 *pInitialDataSlicePitch = NULL) = 0;
-    virtual GPUTextureCube *CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
-    virtual GPUTextureCubeArray *CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL) = 0;
-    virtual GPUDepthTexture *CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc) = 0;
-    virtual GPUSamplerState *CreateSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc) = 0;
-    virtual GPURenderTargetView *CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc) = 0;
-    virtual GPUDepthStencilBufferView *CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc) = 0;
-    virtual GPUComputeView *CreateComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc) = 0;
-    virtual GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream) = 0;
-    virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) = 0;
+    GPUDepthStencilState *CreateDepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc);
+    GPURasterizerState *CreateRasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc);
+    GPUBlendState *CreateBlendState(const RENDERER_BLEND_STATE_DESC *pBlendStateDesc);
+    GPUQuery *CreateQuery(GPU_QUERY_TYPE type);
+    GPUBuffer *CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData = NULL);
+    GPUTexture1D *CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUTexture1DArray *CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUTexture2D *CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUTexture2DArray *CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUTexture3D *CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL, const uint32 *pInitialDataSlicePitch = NULL);
+    GPUTextureCube *CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUTextureCubeArray *CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUDepthTexture *CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc);
+    GPUSamplerState *CreateSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc);
+    GPURenderTargetView *CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc);
+    GPUDepthStencilBufferView *CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc);
+    GPUComputeView *CreateComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc);
+    GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream);
+    GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream);
     // CreateGraphicsPipeline
     // CreateComputePipeline
-
-    // Accesses the implicit swap chain.
-    virtual RendererOutputWindow *GetImplicitRenderWindow() = 0;
-
-    // device
-    virtual GPUContext *GetMainContext() const = 0;
-
-    // handle any pending events applicable to this renderer from SDL. must be invoked by render thread
-    virtual void HandlePendingSDLEvents() = 0;
-
-    // Access memory usage
-    virtual void GetGPUMemoryUsage(GPUMemoryUsage *pMemoryUsage) const = 0;
 
 protected:
     // allowed to be called by upper classes
@@ -977,6 +1005,12 @@ protected:
     TEXTURE_PLATFORM m_eTexturePlatform;
     RendererCapabilities m_RendererCapabilities;
     float m_fTexelOffset;
+
+    // backend
+    RenderBackend *m_pBackendInterface;
+
+    // output window
+    RendererOutputWindow *m_pImplicitOutputWindow;
 
     // non-material shader map
     ShaderMap m_nullMaterialShaderMap;

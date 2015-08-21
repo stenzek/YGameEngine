@@ -288,7 +288,7 @@ void CompositingWorldRenderer::BlurTexture(GPUTexture2D *pBlurTexture, GPURender
     m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
     m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
     m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
-    m_pGPUContext->SetDefaultViewport(pBlurTexture);
+    m_pGPUContext->SetFullViewport(pBlurTexture);
     m_pGPUContext->SetShaderProgram(m_pGaussianBlurProgram->GetGPUProgram());
 
     // horizontal blur
@@ -330,7 +330,7 @@ void CompositingWorldRenderer::ApplyFinalCompositePostProcess(const ViewParamete
     if (!pViewParameters->EnableManualExposure)
     {
         m_pGPUContext->SetRenderTargets(1, &pLuminanceBuffer->pRTV, nullptr);
-        m_pGPUContext->SetDefaultViewport(pLuminanceBuffer->pTexture);
+        m_pGPUContext->SetFullViewport(pLuminanceBuffer->pTexture);
         m_pGPUContext->SetShaderProgram(m_pExtractLuminanceProgram->GetGPUProgram());
         ExtractLuminanceShader::SetProgramParameters(m_pGPUContext, m_pExtractLuminanceProgram, pSceneColorTexture);
         g_pRenderer->DrawFullScreenQuad(m_pGPUContext);
@@ -348,7 +348,7 @@ void CompositingWorldRenderer::ApplyFinalCompositePostProcess(const ViewParamete
     {
         // generate bloom texture
         m_pGPUContext->SetRenderTargets(1, &pBloomBuffer->pRTV, nullptr);
-        m_pGPUContext->SetDefaultViewport(pBloomBuffer->pTexture);
+        m_pGPUContext->SetFullViewport(pBloomBuffer->pTexture);
         m_pGPUContext->SetShaderProgram(m_pBloomProgram->GetGPUProgram());
         BloomShader::SetProgramParameters(m_pGPUContext, m_pBloomProgram, pSceneColorTexture, pViewParameters->BloomThreshold);
         g_pRenderer->DrawFullScreenQuad(m_pGPUContext);

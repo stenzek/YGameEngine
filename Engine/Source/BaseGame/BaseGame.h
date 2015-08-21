@@ -41,7 +41,7 @@ public:
     //=================================================================================================================================================================================================
     // Render functions, all these pointers are owned by the render thread
     //=================================================================================================================================================================================================
-    GPUContext *GetMainGPUContext() { return m_pMainGPUContext; }
+    GPUContext *GetGPUContext() { return m_pGPUContext; }
     RendererOutputWindow *GetOutputWindow() { return m_pOutputWindow; }
     WorldRenderer *GetWorldRenderer() { return m_pWorldRenderer; }
     RenderProfiler *GetRenderProfiler() { return m_pRenderProfiler; }
@@ -86,7 +86,7 @@ protected:
     //=================================================================================================================================================================================================
     // Renderer Subsystem
     //=================================================================================================================================================================================================
-    GPUContext *m_pMainGPUContext;
+    GPUContext *m_pGPUContext;
     RendererOutputWindow *m_pOutputWindow;
     WorldRenderer *m_pWorldRenderer;
     RenderProfiler *m_pRenderProfiler;

@@ -74,7 +74,7 @@ public:
     // Viewport Management (D3D11RenderSystem.cpp)
     virtual const RENDERER_VIEWPORT *GetViewport() override final;
     virtual void SetViewport(const RENDERER_VIEWPORT *pNewViewport) override final;
-    virtual void SetDefaultViewport(GPUTexture *pForRenderTarget = NULL) override final;
+    virtual void SetFullViewport(GPUTexture *pForRenderTarget = NULL) override final;
 
     // Scissor Rect Management (D3D11RenderSystem.cpp)
     virtual const RENDERER_SCISSOR_RECT *GetScissorRect() override final;
@@ -127,8 +127,10 @@ public:
     virtual void DiscardTargets(bool discardColor = true, bool discardDepth = true, bool discardStencil = true) override final;
 
     // Swap chain
-    virtual RendererOutputBuffer *GetOutputBuffer() override { return m_pCurrentOutputBuffer; }
-    virtual void SetOutputBuffer(RendererOutputBuffer *pSwapChain) override final;
+    virtual GPUOutputBuffer *GetOutputBuffer() override { return m_pCurrentOutputBuffer; }
+    virtual void SetOutputBuffer(GPUOutputBuffer *pSwapChain) override final;
+    virtual bool ResizeOutputBuffer(uint32 width = 0, uint32 height = 0) override final;
+    virtual void PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour) override final;
 
     // RT Changing
     virtual uint32 GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView) override final;

@@ -82,7 +82,7 @@ static void InitializeGPUTiming()
         s_GPUTimingAvailable = true;
 
         // kick off frequency query
-        GPUContext::GetContextForCurrentThread()->BeginQuery(s_pGPUFrequencyQuery);
+        g_pRenderer->GetGPUContext()->BeginQuery(s_pGPUFrequencyQuery);
     }
 }
 
@@ -94,9 +94,11 @@ void Profiling::Initialize()
     MicroProfileSetDisplayMode(MP_DRAW_OFF);
     MicroProfileTogglePause();
 
-    s_profilerGUIContext.SetGPUContext(g_pRenderer->GetMainContext());
-    s_profilerGUIContext.SetAlphaBlendingEnabled(true);
-    s_profilerGUIContext.SetAlphaBlendingMode(MiniGUIContext::ALPHABLENDING_MODE_STRAIGHT);
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([]() {
+        s_profilerGUIContext.SetGPUContext(g_pRenderer->GetGPUContext());
+        s_profilerGUIContext.SetAlphaBlendingEnabled(true);
+        s_profilerGUIContext.SetAlphaBlendingMode(MiniGUIContext::ALPHABLENDING_MODE_STRAIGHT);
+    });
 }
 
 void Profiling::StartFrame()
@@ -184,12 +186,12 @@ void Profiling::HideProfilerDisplay()
 void Profiling::DrawDisplay()
 {
     DebugAssert(Renderer::IsOnRenderThread());
-    GPUContext *pGPUContext = g_pRenderer->GetMainContext();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
 
     if (g_MicroProfile.nDisplay)
     {
         pGPUContext->SetRenderTargets(0, nullptr, nullptr);
-        pGPUContext->SetDefaultViewport();
+        pGPUContext->SetFullViewport();
 
         const RENDERER_VIEWPORT *pViewport = pGPUContext->GetViewport();
         s_profilerGUIContext.SetViewportDimensions(pViewport->Width, pViewport->Height);
@@ -278,7 +280,7 @@ uint32_t MicroProfileGpuInsertTimeStamp()
         return (uint32_t)-1;
 
     // get context
-    GPUContext *pGPUContext = GPUContext::GetContextForCurrentThread();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
     DebugAssert(Renderer::IsOnRenderThread());
 
     // get query
@@ -297,7 +299,7 @@ uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
     if (!s_GPUTimingAvailable || nKey == (uint32_t)-1)
         return 0;
 
-    GPUContext *pGPUContext = GPUContext::GetContextForCurrentThread();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
     DebugAssert(Renderer::IsOnRenderThread());
 
     // get query

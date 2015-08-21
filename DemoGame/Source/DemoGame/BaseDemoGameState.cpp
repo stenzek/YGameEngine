@@ -130,7 +130,7 @@ void BaseDemoGameState::OnWindowFocusLost()
 
 void BaseDemoGameState::ToggleUI()
 {
-    DebugAssert(!Renderer::IsOnRenderThread());
+    //DebugAssert(!Renderer::IsOnRenderThread()); @TODO IsOnMainThread
     if (m_uiActive)
     {
         m_pDemoGame->DeactivateImGui();

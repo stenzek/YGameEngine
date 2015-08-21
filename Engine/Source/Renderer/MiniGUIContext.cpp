@@ -1365,8 +1365,8 @@ void MiniGUIContext::Draw3DLineWidth(const float3 &p0, const uint32 color1, cons
 {
     // OPTIMIZE ME!
     // http://www.flipcode.com/archives/Textured_Lines_In_D3D.shtml
-    const float4x4 &viewMatrix = g_pRenderer->GetMainContext()->GetConstants()->GetCameraViewMatrix();
-    const float4x4 &projectionMatrix = g_pRenderer->GetMainContext()->GetConstants()->GetCameraProjectionMatrix();
+    const float4x4 &viewMatrix = g_pRenderer->GetGPUContext()->GetConstants()->GetCameraViewMatrix();
+    const float4x4 &projectionMatrix = g_pRenderer->GetGPUContext()->GetConstants()->GetCameraProjectionMatrix();
     float4x4 inverseViewMatrix(viewMatrix.Transpose());
 
     // transform the delta by the view matrix rotation component

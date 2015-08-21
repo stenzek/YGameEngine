@@ -18,6 +18,13 @@
 #include "Engine/SDLHeaders.h"
 Log_SetChannel(Renderer);
 
+// fix up a warning
+#ifdef SDL_VIDEO_DRIVER_WINDOWS
+    #undef WIN32_LEAN_AND_MEAN
+#endif
+#include <SDL/SDL_syswm.h>
+
+
 // Calculates the scissor rectangle for a given point light.
 // If this returns false, it means the light is not present on the screen at all.
 // bool CalculatePointLightScissor(const Vector3 &LightPosition, float LightRadius, const Matrix4 &ViewMatrix, const Matrix4 &ProjectionMatrix, float NearDistance, RENDERER_SCISSOR_RECT *pScissorRect);
@@ -511,10 +518,41 @@ GPUOutputBuffer *Renderer::CreateOutputBuffer(RenderSystemWindowHandle hWnd, REN
     return pGPUDevice->CreateOutputBuffer(hWnd, vsyncType);
 }
 
+GPUOutputBuffer *Renderer::CreateOutputBuffer(SDL_Window *pSDLWindow, RENDERER_VSYNC_TYPE vsyncType)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+    return pGPUDevice->CreateOutputBuffer(pSDLWindow, vsyncType);
+}
+
 RendererOutputWindow *Renderer::CreateOutputWindow(const char *windowTitle, uint32 windowWidth, uint32 windowHeight, RENDERER_VSYNC_TYPE vsyncType)
 {
-    Panic("Not implemented");
-    return nullptr;
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    DebugAssert(pGPUDevice != nullptr);
+
+    // Determine SDL window flags
+    uint32 sdlWindowFlags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN;
+
+    // Create the SDL window
+    SDL_Window *pSDLWindow = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, sdlWindowFlags);
+
+    // Created?
+    if (pSDLWindow == nullptr)
+    {
+        Log_ErrorPrintf("Renderer::CreateOutputWindow: SDL_CreateWindow failed: %s", SDL_GetError());
+        return nullptr;
+    }
+
+    // create output buffer
+    GPUOutputBuffer *pOutputBuffer = pGPUDevice->CreateOutputBuffer(pSDLWindow, vsyncType);
+    if (pOutputBuffer == nullptr)
+    {
+        Log_ErrorPrintf("Renderer::CreateOutputWindow: GPUDevice::CreateOutputBuffer failed.");
+        SDL_DestroyWindow(pSDLWindow);
+        return nullptr;
+    }
+
+    return new RendererOutputWindow(pSDLWindow, pOutputBuffer, RENDERER_FULLSCREEN_STATE_WINDOWED);
 }
 
 GPUDepthStencilState *Renderer::CreateDepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc)

@@ -4,7 +4,11 @@
 #include "Engine/SDLHeaders.h"
 Log_SetChannel(D3D11GPUOutputBuffer);
 
-static const char *SDL_D3D11_RENDERER_OUTPUT_WINDOW_POINTER_STRING = "D3D11RendererOutputBufferPtr";
+// fix up a warning
+#ifdef SDL_VIDEO_DRIVER_WINDOWS
+    #undef WIN32_LEAN_AND_MEAN
+#endif
+#include <SDL/SDL_syswm.h>
 
 static uint32 CalculateDXGISwapChainBufferCount(bool exclusiveFullscreen, RENDERER_VSYNC_TYPE vsyncType)
 {
@@ -22,26 +26,26 @@ D3D11GPUOutputBuffer::D3D11GPUOutputBuffer(ID3D11Device *pD3DDevice, IDXGISwapCh
       m_height(height),
       m_backBufferFormat(backBufferFormat),
       m_depthStencilBufferFormat(depthStencilBufferFormat),
-      m_pBackBufferTexture(NULL),
-      m_pRenderTargetView(NULL),
-      m_pDepthStencilBuffer(NULL),
-      m_pDepthStencilView(NULL)
+      m_pBackBufferTexture(nullptr),
+      m_pRenderTargetView(nullptr),
+      m_pDepthStencilBuffer(nullptr),
+      m_pDepthStencilView(nullptr)
 {
 
 }
 
 D3D11GPUOutputBuffer::~D3D11GPUOutputBuffer()
 {
-    if (m_pDepthStencilView != NULL)
+    if (m_pDepthStencilView != nullptr)
         m_pDepthStencilView->Release();
 
-    if (m_pDepthStencilBuffer != NULL)
+    if (m_pDepthStencilBuffer != nullptr)
         m_pDepthStencilBuffer->Release();
 
-    if (m_pRenderTargetView != NULL)
+    if (m_pRenderTargetView != nullptr)
         m_pRenderTargetView->Release();
 
-    if (m_pBackBufferTexture != NULL)
+    if (m_pBackBufferTexture != nullptr)
         m_pBackBufferTexture->Release();
 
     m_pDXGISwapChain->Release();
@@ -242,4 +246,18 @@ void D3D11GPUOutputBuffer::SetVSyncType(RENDERER_VSYNC_TYPE vsyncType)
 GPUOutputBuffer *D3D11GPUDevice::CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType)
 {
     return D3D11GPUOutputBuffer::Create(m_pDXGIFactory, m_pD3DDevice, hWnd, m_swapChainBackBufferFormat, m_swapChainDepthStencilBufferFormat, vsyncType);
+}
+
+GPUOutputBuffer *D3D11GPUDevice::CreateOutputBuffer(SDL_Window *pSDLWindow, RENDERER_VSYNC_TYPE vsyncType)
+{
+    // retreive the hwnd from the sdl window
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (!SDL_GetWindowWMInfo(pSDLWindow, &info))
+    {
+        Log_ErrorPrintf("D3D11RenderBackend::Create: SDL_GetWindowWMInfo failed: %s", SDL_GetError());
+        return false;
+    }
+
+    return D3D11GPUOutputBuffer::Create(m_pDXGIFactory, m_pD3DDevice, info.info.win.window, m_swapChainBackBufferFormat, m_swapChainDepthStencilBufferFormat, vsyncType);
 }

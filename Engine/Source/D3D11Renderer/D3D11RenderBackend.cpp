@@ -8,12 +8,6 @@
 #include "Engine/SDLHeaders.h"
 Log_SetChannel(D3D11Renderer);
 
-// fix up a warning
-#ifdef SDL_VIDEO_DRIVER_WINDOWS
-    #undef WIN32_LEAN_AND_MEAN
-#endif
-#include <SDL/SDL_syswm.h>
-
 // d3d11 libraries
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -206,17 +200,8 @@ bool D3D11RenderBackend::Create(const RendererInitializationParameters *pCreateP
     GPUOutputBuffer *pOutputBuffer = nullptr;
     if (pSDLWindow != nullptr)
     {
-        // retreive the hwnd from the sdl window
-        SDL_SysWMinfo info;
-        SDL_VERSION(&info.version);
-        if (!SDL_GetWindowWMInfo(pSDLWindow, &info))
-        {
-            Log_ErrorPrintf("D3D11RenderBackend::Create: SDL_GetWindowWMInfo failed: %s", SDL_GetError());
-            return false;
-        }
-
         // pass through to normal method
-        pOutputBuffer = m_pGPUDevice->CreateOutputBuffer(info.info.win.window, pCreateParameters->ImplicitSwapChainVSyncType);
+        pOutputBuffer = m_pGPUDevice->CreateOutputBuffer(pSDLWindow, pCreateParameters->ImplicitSwapChainVSyncType);
         if (pOutputBuffer == nullptr)
             return false;
 

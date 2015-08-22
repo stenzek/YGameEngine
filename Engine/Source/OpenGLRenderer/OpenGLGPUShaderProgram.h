@@ -43,7 +43,7 @@ public:
     virtual void SetDebugName(const char *name) override;
 
     // creation
-    bool LoadBlob(OpenGLRenderer *pRenderer, const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream);
+    bool LoadBlob(OpenGLGPUDevice *pRenderer, const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream);
 
     // bind to a context that has no current shader
     void Bind(OpenGLGPUContext *pContext);

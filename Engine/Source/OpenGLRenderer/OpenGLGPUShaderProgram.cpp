@@ -1,7 +1,8 @@
 #include "OpenGLRenderer/PrecompiledHeader.h"
 #include "OpenGLRenderer/OpenGLGPUShaderProgram.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
-#include "OpenGLRenderer/OpenGLRenderer.h"
+#include "OpenGLRenderer/OpenGLGPUDevice.h"
+#include "OpenGLRenderer/OpenGLRenderBackend.h"
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(Renderer);
 
@@ -57,7 +58,7 @@ void OpenGLGPUShaderProgram::SetDebugName(const char *name)
     OpenGLHelpers::SetObjectDebugName(GL_PROGRAM, m_iGLProgramId, name);
 }
 
-bool OpenGLGPUShaderProgram::LoadBlob(OpenGLRenderer *pRenderer, const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
+bool OpenGLGPUShaderProgram::LoadBlob(OpenGLGPUDevice *pRenderer, const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
 {
     // binary reader
     BinaryReader binaryReader(pByteCodeStream);
@@ -69,9 +70,6 @@ bool OpenGLGPUShaderProgram::LoadBlob(OpenGLRenderer *pRenderer, const GPU_VERTE
         Log_ErrorPrintf("OpenGLGPUShaderProgram::Create: Shader cache entry header corrupted.");
         return false;
     }
-
-    // fill fields
-    DebugAssert(pRenderer->GetFeatureLevel() == (RENDERER_FEATURE_LEVEL)header.FeatureLevel);
 
     // begin checked section
     GL_CHECKED_SECTION_BEGIN();
@@ -256,7 +254,7 @@ bool OpenGLGPUShaderProgram::LoadBlob(OpenGLRenderer *pRenderer, const GPU_VERTE
             else
             {
                 // lookup in engine constant buffer list
-                const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(uniformBuffer->Name, pRenderer->GetPlatform(), pRenderer->GetFeatureLevel());
+                const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(uniformBuffer->Name, RENDERER_PLATFORM_OPENGL, OpenGLRenderBackend::GetInstance()->GetFeatureLevel());
                 if (pEngineConstantBuffer == nullptr)
                 {
                     Log_ErrorPrintf("OpenGLGPUShaderProgram::Create: Shader is requesting unknown non-local constant buffer named '%s'.", uniformBuffer->Name.GetCharArray());
@@ -951,7 +949,7 @@ void OpenGLGPUShaderProgram::SetParameterTexture(GPUContext *pContext, uint32 in
     InternalSetParameterResource(static_cast<OpenGLGPUContext *>(pContext), index, pTexture, static_cast<OpenGLGPUSamplerState *>(pSamplerState));
 }
 
-GPUShaderProgram *OpenGLRenderer::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
+GPUShaderProgram *OpenGLGPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
 {
     OpenGLGPUShaderProgram *pProgram = new OpenGLGPUShaderProgram();
     if (!pProgram->LoadBlob(this, pVertexElements, nVertexElements, pByteCodeStream))
@@ -963,7 +961,7 @@ GPUShaderProgram *OpenGLRenderer::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT
     return pProgram;
 }
 
-GPUShaderProgram *OpenGLRenderer::CreateComputeProgram(ByteStream *pByteCodeStream)
+GPUShaderProgram *OpenGLGPUDevice::CreateComputeProgram(ByteStream *pByteCodeStream)
 {
     OpenGLGPUShaderProgram *pProgram = new OpenGLGPUShaderProgram();
     if (!pProgram->LoadBlob(this, nullptr, 0, pByteCodeStream))

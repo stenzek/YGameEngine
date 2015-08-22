@@ -1,7 +1,7 @@
 #include "OpenGLES2Renderer/PrecompiledHeader.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUBuffer.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUContext.h"
-#include "OpenGLES2Renderer/OpenGLES2Renderer.h"
+#include "OpenGLES2Renderer/OpenGLES2GPUDevice.h"
 Log_SetChannel(OpenGLES2GPUBuffer);
 
 OpenGLES2GPUBuffer::OpenGLES2GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, GLuint glBufferId, GLenum glBufferTarget, GLenum glBufferUsage)
@@ -32,7 +32,7 @@ void OpenGLES2GPUBuffer::SetDebugName(const char *debugName)
     OpenGLES2Helpers::SetObjectDebugName(GL_BUFFER, m_glBufferId, debugName);
 }
 
-GPUBuffer *OpenGLES2Renderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /* = NULL */)
+GPUBuffer *OpenGLES2GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /* = NULL */)
 {
     // find target
     GLenum bufferTarget;
@@ -42,7 +42,7 @@ GPUBuffer *OpenGLES2Renderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const v
         bufferTarget = GL_ELEMENT_ARRAY_BUFFER;
     else
     {
-        Log_ErrorPrintf("OpenGLES2Renderer::CreateBuffer: Buffer target unknown for flags %u", pDesc->Flags);
+        Log_ErrorPrintf("OpenGLES2GPUDevice::CreateBuffer: Buffer target unknown for flags %u", pDesc->Flags);
         return nullptr;
     }
 
@@ -68,7 +68,7 @@ GPUBuffer *OpenGLES2Renderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const v
     glGenBuffers(1, &bufferId);
     if (bufferId == 0)
     {
-        GL_PRINT_ERROR("OpenGLES2Renderer::CreateBuffer: Buffer allocation failed.");
+        GL_PRINT_ERROR("OpenGLES2GPUDevice::CreateBuffer: Buffer allocation failed.");
         return NULL;
     }
 
@@ -80,7 +80,7 @@ GPUBuffer *OpenGLES2Renderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const v
     // check error state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLES2Renderer::CreateBuffer: One or more GL calls failed.");
+        GL_PRINT_ERROR("OpenGLES2GPUDevice::CreateBuffer: One or more GL calls failed.");
         if (bufferId != 0)
             glDeleteBuffers(1, &bufferId);
 

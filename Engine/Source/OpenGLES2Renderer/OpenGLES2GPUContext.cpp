@@ -1,7 +1,7 @@
 #include "OpenGLES2Renderer/PrecompiledHeader.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUContext.h"
-#include "OpenGLES2Renderer/OpenGLES2Renderer.h"
-#include "OpenGLES2Renderer/OpenGLES2RendererOutputBuffer.h"
+#include "OpenGLES2Renderer/OpenGLES2GPUDevice.h"
+#include "OpenGLES2Renderer/OpenGLES2GPUOutputBuffer.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUTexture.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUBuffer.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUShaderProgram.h"
@@ -11,13 +11,17 @@ Log_SetChannel(OpenGLES2GPUContext);
 
 #define DEFER_SHADER_STATE_CHANGES 1
 
-OpenGLES2GPUContext::OpenGLES2GPUContext()
+OpenGLES2GPUContext::OpenGLES2GPUContext(OpenGLES2GPUDevice *pDevice, OpenGLES2ConstantLibrary *pConstantLibrary, SDL_GLContext pSDLGLContext, OpenGLES2GPUOutputBuffer *pOutputBuffer)
 {
-    m_pRenderer = nullptr;
+    m_pDevice = pDevice;
+    m_pDevice->SetGPUContext(this);
+    m_pDevice->AddRef();
 
-    m_pSDLGLContext = nullptr;
-    m_pCurrentOutputBuffer = nullptr;
-    m_isUploadContext = false;
+    m_pConstantLibrary = pConstantLibrary;
+
+    m_pSDLGLContext = pSDLGLContext;
+    m_pCurrentOutputBuffer = pOutputBuffer;
+    m_pCurrentOutputBuffer->AddRef();
 
     m_pConstants = nullptr;
     m_pConstantLibrary = nullptr;
@@ -58,15 +62,10 @@ OpenGLES2GPUContext::OpenGLES2GPUContext()
     m_pUserVertexBuffer = nullptr;
     m_userVertexBufferSize = 1024 * 1024;
     m_userVertexBufferPosition = 0;
-
-    m_drawCallCounter = 0;
 }
 
 OpenGLES2GPUContext::~OpenGLES2GPUContext()
 {
-    // the thread that deletes the context should be the thread that owns it
-    DebugAssert(GetContextForCurrentThread() == this);
-
     // unbind shader stuff
     SetShaderVertexAttributes(nullptr, 0);
     CommitVertexAttributes();
@@ -117,7 +116,8 @@ OpenGLES2GPUContext::~OpenGLES2GPUContext()
     SAFE_RELEASE(m_pCurrentOutputBuffer);
 
     // no longer the context
-    SetContextForCurrentThread(nullptr);
+    m_pDevice->SetGPUContext(nullptr);
+    m_pDevice->Release();
 }
 
 void OpenGLES2GPUContext::UpdateVSyncState(RENDERER_VSYNC_TYPE vsyncType)
@@ -135,42 +135,8 @@ void OpenGLES2GPUContext::UpdateVSyncState(RENDERER_VSYNC_TYPE vsyncType)
     SDL_GL_SetSwapInterval(swapInterval);
 }
 
-void OpenGLES2GPUContext::BindToCurrentThread()
+bool OpenGLES2GPUContext::Create()
 {
-    // we shouldn't have a context
-    DebugAssert(SDL_GL_GetCurrentContext() == nullptr);
-
-    // make it current
-    if (SDL_GL_MakeCurrent(m_pCurrentOutputBuffer->GetSDLWindow(), m_pSDLGLContext) != 0)
-    {
-        Log_ErrorPrintf("OpenGLES2GPUContext::BindToCurrentThread: SDL_GL_MakeCurrent failed: %s", SDL_GetError());
-        Panic("SDL_GL_MakeCurrent failed");
-    }
-
-    // and update tls pointer
-    GPUContext::SetContextForCurrentThread(nullptr);
-}
-
-void OpenGLES2GPUContext::UnbindFromCurrentThread()
-{
-    // should be the current context
-    DebugAssert(SDL_GL_GetCurrentContext() == m_pSDLGLContext);
-    SDL_GL_MakeCurrent(nullptr, nullptr);
-    GPUContext::SetContextForCurrentThread(nullptr);
-}
-
-bool OpenGLES2GPUContext::Create(OpenGLES2Renderer *pRenderer, SDL_GLContext pGLContext, OpenGLES2RendererOutputBuffer *pOutputBuffer)
-{
-    // make us the current context for this thread
-    SetContextForCurrentThread(this);
-
-    // set vars
-    m_pRenderer = pRenderer;
-    m_pSDLGLContext = pGLContext;
-    m_pCurrentOutputBuffer = pOutputBuffer;
-    m_pCurrentOutputBuffer->AddRef();
-    m_isUploadContext = false;
-
     glGenFramebuffers(1, &m_drawFrameBufferObjectId);
     glGenFramebuffers(1, &m_readFrameBufferObjectId);
     if (m_drawFrameBufferObjectId == 0 || m_readFrameBufferObjectId == 0)
@@ -206,7 +172,7 @@ bool OpenGLES2GPUContext::Create(OpenGLES2Renderer *pRenderer, SDL_GLContext pGL
     // create plain vertex buffer
     {
         GPU_BUFFER_DESC vertexBufferDesc(GPU_BUFFER_FLAG_MAPPABLE | GPU_BUFFER_FLAG_BIND_VERTEX_BUFFER, m_userVertexBufferSize);
-        if ((m_pUserVertexBuffer = static_cast<OpenGLES2GPUBuffer *>(pRenderer->CreateBuffer(&vertexBufferDesc, NULL))) == NULL)
+        if ((m_pUserVertexBuffer = static_cast<OpenGLES2GPUBuffer *>(m_pDevice->CreateBuffer(&vertexBufferDesc, NULL))) == NULL)
         {
             Log_ErrorPrintf("OpenGLES2GPUContext::Create: Failed to create plain dynamic vertex buffer.");
             return false;
@@ -217,26 +183,12 @@ bool OpenGLES2GPUContext::Create(OpenGLES2Renderer *pRenderer, SDL_GLContext pGL
     m_pConstants = new GPUContextConstants(this);
 
     // allocate constant library buffer
-    m_pConstantLibrary = pRenderer->GetConstantLibrary();
-    m_pConstantLibraryBuffer = (byte *)Y_malloc(pRenderer->GetConstantLibrary()->GetConstantStorageBufferSize());
+    m_pConstantLibraryBuffer = (byte *)Y_malloc(m_pConstantLibrary->GetConstantStorageBufferSize());
 
     // update swap interval
-    UpdateVSyncState(pOutputBuffer->GetVSyncType());
+    UpdateVSyncState(m_pCurrentOutputBuffer->GetVSyncType());
 
     Log_InfoPrint("OpenGLES2GPUContext::Create: Context creation complete.");
-    return true;
-}
-
-bool OpenGLES2GPUContext::CreateUploadContext(OpenGLES2Renderer *pRenderer, SDL_GLContext pGLContext, OpenGLES2RendererOutputBuffer *pOutputBuffer)
-{
-    m_pRenderer = pRenderer;
-
-    m_pSDLGLContext = pGLContext;
-    m_pCurrentOutputBuffer = pOutputBuffer;
-    m_pCurrentOutputBuffer->AddRef();
-    m_isUploadContext = true;
-
-    Log_InfoPrint("OpenGLES2GPUContext::Create: Upload context creation complete.");
     return true;
 }
 
@@ -535,7 +487,7 @@ void OpenGLES2GPUContext::DiscardTargets(bool discardColor /* = true */, bool di
 
 void OpenGLES2GPUContext::SetOutputBuffer(GPUOutputBuffer *pSwapChain)
 {
-    OpenGLES2RendererOutputBuffer *pOpenGLOutputBuffer = static_cast<OpenGLES2RendererOutputBuffer *>(pSwapChain);
+    OpenGLES2GPUOutputBuffer *pOpenGLOutputBuffer = static_cast<OpenGLES2GPUOutputBuffer *>(pSwapChain);
     DebugAssert(pOpenGLOutputBuffer != nullptr);
 
     // same?
@@ -559,14 +511,98 @@ void OpenGLES2GPUContext::SetOutputBuffer(GPUOutputBuffer *pSwapChain)
     m_pCurrentOutputBuffer->AddRef();
 }
 
+bool OpenGLES2GPUContext::GetExclusiveFullScreen()
+{
+    if (SDL_GetWindowFlags(m_pCurrentOutputBuffer->GetSDLWindow()) & SDL_WINDOW_FULLSCREEN)
+        return true;
+    else
+        return false;
+}
+
+bool OpenGLES2GPUContext::SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate)
+{
+    if (enabled)
+    {
+        // find the matching sdl pixel format
+        SDL_DisplayMode preferredDisplayMode;
+        preferredDisplayMode.w = (width == 0) ? m_pCurrentOutputBuffer->GetWidth() : width;
+        preferredDisplayMode.h = (height == 0) ? m_pCurrentOutputBuffer->GetHeight() : height;
+        preferredDisplayMode.refresh_rate = refreshRate;
+        preferredDisplayMode.driverdata = nullptr;
+
+        // we only have a limited number of backbuffer format possibilities
+        switch (m_pCurrentOutputBuffer->GetBackBufferFormat())
+        {
+        case PIXEL_FORMAT_R8G8B8A8_UNORM:       preferredDisplayMode.format = SDL_PIXELFORMAT_RGBA8888;     break;
+        case PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB:  preferredDisplayMode.format = SDL_PIXELFORMAT_RGBA8888;     break;
+        case PIXEL_FORMAT_B8G8R8A8_UNORM:       preferredDisplayMode.format = SDL_PIXELFORMAT_BGRA8888;     break;
+        case PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB:  preferredDisplayMode.format = SDL_PIXELFORMAT_BGRA8888;     break;
+        case PIXEL_FORMAT_B8G8R8X8_UNORM:       preferredDisplayMode.format = SDL_PIXELFORMAT_BGRX8888;     break;
+        case PIXEL_FORMAT_B8G8R8X8_UNORM_SRGB:  preferredDisplayMode.format = SDL_PIXELFORMAT_BGRX8888;     break;
+        default:
+            Log_ErrorPrintf("OpenGLES2GPUContext::SetExclusiveFullScreen: Unable to find SDL pixel format for %s", PixelFormat_GetPixelFormatInfo(m_pCurrentOutputBuffer->GetBackBufferFormat())->Name);
+            return false;
+        }
+
+        // find the closest match
+        SDL_DisplayMode foundDisplayMode;
+        if (SDL_GetClosestDisplayMode(0, &preferredDisplayMode, &foundDisplayMode) == nullptr)
+        {
+            Log_ErrorPrintf("OpenGLES2GPUContext::SetExclusiveFullScreen: Unable to find matching video mode for: %i x %i (%s)", preferredDisplayMode.w, preferredDisplayMode.h, PixelFormat_GetPixelFormatInfo(m_pCurrentOutputBuffer->GetBackBufferFormat())->Name);
+            return false;
+        }
+
+        // change to this mode
+        if (SDL_SetWindowDisplayMode(m_pCurrentOutputBuffer->GetSDLWindow(), &foundDisplayMode) != 0)
+        {
+            Log_ErrorPrintf("OpenGLES2GPUContext::SetExclusiveFullScreen: SDL_SetWindowDisplayMode failed: %s", SDL_GetError());
+            return false;
+        }
+
+        // and switch to fullscreen if not already there
+        if (!(SDL_GetWindowFlags(m_pCurrentOutputBuffer->GetSDLWindow()) & SDL_WINDOW_FULLSCREEN))
+        {
+            if (SDL_SetWindowFullscreen(m_pCurrentOutputBuffer->GetSDLWindow(), SDL_WINDOW_FULLSCREEN) != 0)
+            {
+                Log_ErrorPrintf("OpenGLES2GPUContext::SetExclusiveFullScreen: SDL_SetWindowFullscreen failed: %s", SDL_GetError());
+                return false;
+            }
+        }
+
+        // update the window size
+        m_pCurrentOutputBuffer->Resize(foundDisplayMode.w, foundDisplayMode.h);
+        return true;
+    }
+    else
+    {
+        // leaving fullscreen
+        if (SDL_GetWindowFlags(m_pCurrentOutputBuffer->GetSDLWindow()) & SDL_WINDOW_FULLSCREEN)
+        {
+            if (SDL_SetWindowFullscreen(m_pCurrentOutputBuffer->GetSDLWindow(), 0) != 0)
+            {
+                Log_ErrorPrintf("OpenGLES2GPUContext::SetExclusiveFullScreen: SDL_SetWindowFullscreen failed: %s", SDL_GetError());
+                return false;
+            }
+        }
+
+        // get window size
+        int windowWidth, windowHeight;
+        SDL_GetWindowSize(m_pCurrentOutputBuffer->GetSDLWindow(), &windowWidth, &windowHeight);
+        m_pCurrentOutputBuffer->Resize(windowWidth, windowHeight);
+        return true;
+    }
+}
+
 bool OpenGLES2GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /* = 0 */)
 {
     // GL buffers are automatically resized
     m_pCurrentOutputBuffer->Resize(width, height);
+    return true;
 }
 
 void OpenGLES2GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour)
 {
+    // @TODO: Present Behaviour
     SDL_GL_SwapWindow(m_pCurrentOutputBuffer->GetSDLWindow());
 }
 
@@ -1285,7 +1321,7 @@ void OpenGLES2GPUContext::Draw(uint32 firstVertex, uint32 nVertices)
     CommitShaderResources();
 
     glDrawArrays(m_glDrawTopology, firstVertex, nVertices);
-    m_drawCallCounter++;
+    //m_drawCallCounter++;
 }
 
 void OpenGLES2GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32 nInstances)
@@ -1321,7 +1357,7 @@ void OpenGLES2GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32
     DebugAssert(baseVertex == 0);
     glDrawElements(m_glDrawTopology, nIndices, arrayType, reinterpret_cast<GLvoid *>(indexBufferOffset));
 
-    m_drawCallCounter++;
+    //m_drawCallCounter++;
 }
 
 void OpenGLES2GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, uint32 baseVertex, uint32 nInstances)
@@ -1370,7 +1406,7 @@ void OpenGLES2GPUContext::DrawUserPointer(const void *pVertices, uint32 VertexSi
 
         // invoke draw
         glDrawArrays(m_glDrawTopology, 0, nVerticesThisPass);
-        m_drawCallCounter++;
+        //m_drawCallCounter++;
 
         // increment pointers
         m_userVertexBufferPosition += spaceRequired;

@@ -34,7 +34,7 @@ class OpenGLES2GPUShaderProgram;
 class OpenGLES2GPUTexture2D;
 class OpenGLES2GPUTextureCube;
 class OpenGLES2GPUDepthTexture;
-class OpenGLES2Renderer;
+class OpenGLES2GPUDevice;
 class OpenGLESShaderCompiler;
 class OpenGLES2GPURasterizerState;
 class OpenGLES2GPUDepthStencilState;

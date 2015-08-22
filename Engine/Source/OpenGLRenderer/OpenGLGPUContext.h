@@ -1,8 +1,8 @@
 #pragma once
 #include "OpenGLRenderer/OpenGLCommon.h"
-#include "OpenGLRenderer/OpenGLRendererOutputBuffer.h"
+#include "OpenGLRenderer/OpenGLGPUOutputBuffer.h"
 
-class OpenGLRenderer;
+class OpenGLGPUDevice;
 class OpenGLGPURenderTargetView;
 class OpenGLGPUDepthStencilBufferView;
 class OpenGLGPUComputeView;
@@ -48,12 +48,8 @@ public:
     };
 
 public:
-    OpenGLGPUContext();
+    OpenGLGPUContext(OpenGLGPUDevice *pDevice, SDL_GLContext pSDLGLContext, OpenGLGPUOutputBuffer *pOutputBuffer);
     ~OpenGLGPUContext();
-
-    // Owner thread
-    virtual void BindToCurrentThread() override final;
-    virtual void UnbindFromCurrentThread() override final;
 
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) override final;
@@ -127,7 +123,9 @@ public:
     virtual void DiscardTargets(bool discardColor = true, bool discardDepth = true, bool discardStencil = true) override final;
 
     // Swap chain
-    virtual GPUOutputBuffer *GetOutputBuffer() override { return m_pCurrentOutputBuffer; }
+    virtual GPUOutputBuffer *GetOutputBuffer() override final { return m_pCurrentOutputBuffer; }
+    virtual bool GetExclusiveFullScreen() override final;
+    virtual bool SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate) override final;
     virtual void SetOutputBuffer(GPUOutputBuffer *pSwapChain) override final;
     virtual bool ResizeOutputBuffer(uint32 width = 0, uint32 height = 0) override final;
     virtual void PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour) override final;
@@ -169,9 +167,7 @@ public:
     virtual void Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ) override final;
 
     // --- gl methods ---
-    bool Create(OpenGLRenderer *pRenderer, SDL_GLContext pGLContext, OpenGLRendererOutputBuffer *pOutputBuffer);
-    bool CreateUploadContext(OpenGLRenderer *pRenderer, SDL_GLContext pGLContext, OpenGLRendererOutputBuffer *pOutputBuffer);
-    SDL_GLContext GetSDLGLContext() const { return m_pSDLGLContext; }
+    bool Create();
     OpenGLGPUShaderProgram *GetOpenGLCurrentShaderProgram() { return m_pCurrentShaderProgram; }
 
     // constant resource management
@@ -203,11 +199,9 @@ private:
     // preallocate constant buffers
     bool CreateConstantBuffers();
 
-    OpenGLRenderer *m_pRenderer;
-
+    OpenGLGPUDevice *m_pDevice;
     SDL_GLContext m_pSDLGLContext;
-    OpenGLRendererOutputBuffer *m_pCurrentOutputBuffer;
-    bool m_isUploadContext;
+    OpenGLGPUOutputBuffer *m_pCurrentOutputBuffer;
 
     GPUContextConstants *m_pConstants;
 

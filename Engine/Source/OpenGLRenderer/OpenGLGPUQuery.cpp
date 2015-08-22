@@ -1,7 +1,7 @@
 #include "OpenGLRenderer/PrecompiledHeader.h"
 #include "OpenGLRenderer/OpenGLGPUQuery.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
-#include "OpenGLRenderer/OpenGLRenderer.h"
+#include "OpenGLRenderer/OpenGLGPUDevice.h"
 //Log_SetChannel(OpenGLGPUDevice);
 
 OpenGLGPUQuery::OpenGLGPUQuery(GPU_QUERY_TYPE type, GLuint id)
@@ -35,7 +35,7 @@ void OpenGLGPUQuery::SetDebugName(const char *name)
 }
 
 
-GPUQuery *OpenGLRenderer::CreateQuery(GPU_QUERY_TYPE Type)
+GPUQuery *OpenGLGPUDevice::CreateQuery(GPU_QUERY_TYPE Type)
 {
     GLuint glQueryId = 0;
 
@@ -50,7 +50,7 @@ GPUQuery *OpenGLRenderer::CreateQuery(GPU_QUERY_TYPE Type)
             glGenQueries(1, &glQueryId);
             if (glQueryId == 0)
             {
-                GL_PRINT_ERROR("OpenGLRenderer::CreateQuery: glGenQueries failed: ");
+                GL_PRINT_ERROR("OpenGLGPUDevice::CreateQuery: glGenQueries failed: ");
                 return nullptr;
             }
         }

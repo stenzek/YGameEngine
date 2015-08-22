@@ -1,7 +1,7 @@
 #include "OpenGLES2Renderer/PrecompiledHeader.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUTexture.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUContext.h"
-#include "OpenGLES2Renderer/OpenGLES2Renderer.h"
+#include "OpenGLES2Renderer/OpenGLES2GPUDevice.h"
 Log_SetChannel(OpenGLES2Texture);
 
 static const GLenum s_GLCubeMapFaceEnums[CUBEMAP_FACE_COUNT] =
@@ -79,7 +79,7 @@ void OpenGLES2GPUTexture2D::SetDebugName(const char *name)
     OpenGLES2Helpers::SetObjectDebugName(GL_TEXTURE, m_glTextureId, name);
 }
 
-GPUTexture2D *OpenGLES2Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
+GPUTexture2D *OpenGLES2GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
@@ -90,9 +90,9 @@ GPUTexture2D *OpenGLES2Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pText
 
     // validate mip levels if using mipmapped sample filter
     if (pSamplerStateDesc != nullptr && Renderer::TextureFilterRequiresMips(pSamplerStateDesc->Filter) && pTextureDesc->MipLevels > 1 && 
-        pTextureDesc->MipLevels != CalculateMipCount(pTextureDesc->Width, pTextureDesc->Height))
+        pTextureDesc->MipLevels != Renderer::CalculateMipCount(pTextureDesc->Width, pTextureDesc->Height))
     { 
-        Log_ErrorPrintf("OpenGLES2Renderer::CreateTexture2D: GLES 2.0 requires a full texture mip chain if a mip filter is used.");
+        Log_ErrorPrintf("OpenGLES2GPUDevice::CreateTexture2D: GLES 2.0 requires a full texture mip chain if a mip filter is used.");
         return nullptr;
     }
 
@@ -102,7 +102,7 @@ GPUTexture2D *OpenGLES2Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pText
     GLenum glType;
     if (!OpenGLES2TypeConversion::GetOpenGLTextureFormat(pTextureDesc->Format, &glInternalFormat, &glFormat, &glType))
     {
-        Log_ErrorPrintf("OpenGLES2Renderer::CreateTexture2D: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
+        Log_ErrorPrintf("OpenGLES2GPUDevice::CreateTexture2D: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
         return nullptr;
     }
 
@@ -113,19 +113,15 @@ GPUTexture2D *OpenGLES2Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pText
     glGenTextures(1, &glTextureId);
     if (glTextureId == 0)
     {
-        GL_PRINT_ERROR("OpenGLES2Renderer::CreateTexture2D: glGenTextures failed: ");
+        GL_PRINT_ERROR("OpenGLES2GPUDevice::CreateTexture2D: glGenTextures failed: ");
         return nullptr;
     }
 
     // has data to upload?
     bool hasInitialData = (ppInitialData != nullptr && pInitialDataPitch != nullptr);
 
-    // obtain the context for this thread, we need this for the texture state
-    OpenGLES2GPUContext *pContext = static_cast<OpenGLES2GPUContext *>(GPUContext::GetContextForCurrentThread());
-    DebugAssert(pContext != nullptr);
-
     // switch to the mutator texture unit
-    pContext->BindMutatorTextureUnit();
+    BindMutatorTextureUnit();
 
     // bind texture
     glBindTexture(GL_TEXTURE_2D, glTextureId);
@@ -165,12 +161,12 @@ GPUTexture2D *OpenGLES2Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pText
     }
 
     // restore mutator texture unit
-    pContext->RestoreMutatorTextureUnit();
+    RestoreMutatorTextureUnit();
 
     // check state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLES2Renderer::CreateTexture2D: One or more GL errors occured: ");
+        GL_PRINT_ERROR("OpenGLES2GPUDevice::CreateTexture2D: One or more GL errors occured: ");
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
@@ -281,13 +277,12 @@ bool OpenGLES2GPUContext::WriteTexture(GPUTexture2D *pTexture, const void *pSour
     OpenGLES2TypeConversion::GetOpenGLTextureFormat(pOpenGLTexture->GetDesc()->Format, nullptr, &glFormat, &glType);
 
     // update the texture
-    OpenGLES2GPUContext *pContext = static_cast<OpenGLES2GPUContext *>(GPUContext::GetContextForCurrentThread());
-    pContext->BindMutatorTextureUnit();
+    BindMutatorTextureUnit();
     {
         glBindTexture(GL_TEXTURE_2D, pOpenGLTexture->GetGLTextureId());
         glTexSubImage2D(GL_TEXTURE_2D, mipIndex, startX, startY, countX, countY, glFormat, glType, pSource);
     }
-    pContext->RestoreMutatorTextureUnit();
+    RestoreMutatorTextureUnit();
 
     // free temporary buffer
     delete[] pFlippedPixels;
@@ -329,7 +324,7 @@ void OpenGLES2GPUTextureCube::SetDebugName(const char *name)
     OpenGLES2Helpers::SetObjectDebugName(GL_TEXTURE, m_glTextureId, name);
 }
 
-GPUTextureCube *OpenGLES2Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
+GPUTextureCube *OpenGLES2GPUDevice::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
@@ -340,9 +335,9 @@ GPUTextureCube *OpenGLES2Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC 
 
     // validate mip levels if using mipmapped sample filter
     if (pSamplerStateDesc != nullptr && Renderer::TextureFilterRequiresMips(pSamplerStateDesc->Filter) && pTextureDesc->MipLevels > 1 && 
-        pTextureDesc->MipLevels != CalculateMipCount(pTextureDesc->Width, pTextureDesc->Height))
+        pTextureDesc->MipLevels != Renderer::CalculateMipCount(pTextureDesc->Width, pTextureDesc->Height))
     {
-        Log_ErrorPrintf("OpenGLES2Renderer::CreateTexture2D: GLES 2.0 requires a full texture mip chain if a mip filter is used.");
+        Log_ErrorPrintf("OpenGLES2GPUDevice::CreateTexture2D: GLES 2.0 requires a full texture mip chain if a mip filter is used.");
         return nullptr;
     }
 
@@ -352,7 +347,7 @@ GPUTextureCube *OpenGLES2Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC 
     GLenum glType;
     if (!OpenGLES2TypeConversion::GetOpenGLTextureFormat(pTextureDesc->Format, &glInternalFormat, &glFormat, &glType))
     {
-        Log_ErrorPrintf("OpenGLES2Renderer::CreateTextureCube: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
+        Log_ErrorPrintf("OpenGLES2GPUDevice::CreateTextureCube: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
         return nullptr;
     }
 
@@ -363,19 +358,15 @@ GPUTextureCube *OpenGLES2Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC 
     glGenTextures(1, &glTextureId);
     if (glTextureId == 0)
     {
-        GL_PRINT_ERROR("OpenGLES2Renderer::CreateTextureCube: glGenTextures failed: ");
+        GL_PRINT_ERROR("OpenGLES2GPUDevice::CreateTextureCube: glGenTextures failed: ");
         return nullptr;
     }
 
     // has data to upload?
     bool hasInitialData = (ppInitialData != nullptr && pInitialDataPitch != nullptr);
 
-    // obtain the context for this thread, we need this for the texture state
-    OpenGLES2GPUContext *pContext = static_cast<OpenGLES2GPUContext *>(GPUContext::GetContextForCurrentThread());
-    DebugAssert(pContext != nullptr);
-
     // switch to the mutator texture unit
-    pContext->BindMutatorTextureUnit();
+    BindMutatorTextureUnit();
 
     // bind texture
     glBindTexture(GL_TEXTURE_CUBE_MAP, glTextureId);
@@ -443,12 +434,12 @@ GPUTextureCube *OpenGLES2Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC 
     }
 
     // restore currently-bound texture
-    pContext->RestoreMutatorTextureUnit();
+    RestoreMutatorTextureUnit();
 
     // check state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLES2Renderer::CreateTextureCube: One or more GL errors occured: ");
+        GL_PRINT_ERROR("OpenGLES2GPUDevice::CreateTextureCube: One or more GL errors occured: ");
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
@@ -559,13 +550,12 @@ bool OpenGLES2GPUContext::WriteTexture(GPUTextureCube *pTexture, const void *pSo
     OpenGLES2TypeConversion::GetOpenGLTextureFormat(pOpenGLTexture->GetDesc()->Format, nullptr, &glFormat, &glType);
 
     // update the texture
-    OpenGLES2GPUContext *pContext = static_cast<OpenGLES2GPUContext *>(GPUContext::GetContextForCurrentThread());
-    pContext->BindMutatorTextureUnit();
+    BindMutatorTextureUnit();
     {
         glBindTexture(GL_TEXTURE_CUBE_MAP, pOpenGLTexture->GetGLTextureId());
         glTexSubImage2D(s_GLCubeMapFaceEnums[face], mipIndex, startX, startY, countX, countY, glFormat, glType, pSource);
     }
-    pContext->RestoreMutatorTextureUnit();
+    RestoreMutatorTextureUnit();
 
     // free temporary buffer
     delete[] pFlippedPixels;
@@ -602,7 +592,7 @@ void OpenGLES2GPUDepthTexture::SetDebugName(const char *name)
     OpenGLES2Helpers::SetObjectDebugName(GL_RENDERBUFFER, m_glRenderBufferId, name);
 }
 
-GPUDepthTexture *OpenGLES2Renderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc)
+GPUDepthTexture *OpenGLES2GPUDevice::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc)
 {
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
@@ -615,7 +605,7 @@ GPUDepthTexture *OpenGLES2Renderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_D
     GLint glInternalFormat;
     if (!OpenGLES2TypeConversion::GetOpenGLTextureFormat(pTextureDesc->Format, &glInternalFormat, nullptr, nullptr))
     {
-        Log_ErrorPrintf("OpenGLES2Renderer::CreateDepthTexture: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
+        Log_ErrorPrintf("OpenGLES2GPUDevice::CreateDepthTexture: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
         return nullptr;
     }
 
@@ -626,7 +616,7 @@ GPUDepthTexture *OpenGLES2Renderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_D
     glGenRenderbuffers(1, &glRenderBufferId);
     if (glRenderBufferId == 0)
     {
-        GL_PRINT_ERROR("OpenGLES2Renderer::CreateDepthTexture: glGenTextures failed: ");
+        GL_PRINT_ERROR("OpenGLES2GPUDevice::CreateDepthTexture: glGenTextures failed: ");
         return nullptr;
     }
 
@@ -638,7 +628,7 @@ GPUDepthTexture *OpenGLES2Renderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_D
     // check state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLES2Renderer::CreateDepthTexture: One or more GL errors occured: ");
+        GL_PRINT_ERROR("OpenGLES2GPUDevice::CreateDepthTexture: One or more GL errors occured: ");
         glDeleteTextures(1, &glRenderBufferId);
         return nullptr;
     }
@@ -758,7 +748,7 @@ void OpenGLES2GPURenderTargetView::SetDebugName(const char *name)
 
 }
 
-GPURenderTargetView *OpenGLES2Renderer::CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc)
+GPURenderTargetView *OpenGLES2GPUDevice::CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc)
 {
     DebugAssert(pTexture != nullptr);
 
@@ -783,7 +773,7 @@ GPURenderTargetView *OpenGLES2Renderer::CreateRenderTargetView(GPUTexture *pText
         break;
 
     default:
-        Log_ErrorPrintf("OpenGLES2Renderer::CreateRenderTargetView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
+        Log_ErrorPrintf("OpenGLES2GPUDevice::CreateRenderTargetView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
         return nullptr;
     }
 
@@ -817,7 +807,7 @@ void OpenGLES2GPUDepthStencilBufferView::SetDebugName(const char *name)
 
 }
 
-GPUDepthStencilBufferView *OpenGLES2Renderer::CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc)
+GPUDepthStencilBufferView *OpenGLES2GPUDevice::CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc)
 {
     DebugAssert(pTexture != nullptr);
 
@@ -846,7 +836,7 @@ GPUDepthStencilBufferView *OpenGLES2Renderer::CreateDepthStencilBufferView(GPUTe
         break;
 
     default:
-        Log_ErrorPrintf("OpenGLES2Renderer::CreateDepthBufferView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
+        Log_ErrorPrintf("OpenGLES2GPUDevice::CreateDepthBufferView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
         return nullptr;
     }
 

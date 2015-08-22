@@ -1,7 +1,7 @@
 #include "OpenGLES2Renderer/PrecompiledHeader.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUShaderProgram.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUContext.h"
-#include "OpenGLES2Renderer/OpenGLES2Renderer.h"
+#include "OpenGLES2Renderer/OpenGLES2GPUDevice.h"
 #include "OpenGLRenderer/OpenGLShaderCacheEntry.h"
 Log_SetChannel(Renderer);
 
@@ -48,7 +48,7 @@ void OpenGLES2GPUShaderProgram::SetDebugName(const char *name)
     OpenGLES2Helpers::SetObjectDebugName(GL_PROGRAM, m_iGLProgramId, name);
 }
 
-bool OpenGLES2GPUShaderProgram::LoadProgram(OpenGLES2Renderer *pRenderer, const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
+bool OpenGLES2GPUShaderProgram::LoadProgram(OpenGLES2GPUDevice *pRenderer, const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
 {
     // binary reader
     BinaryReader binaryReader(pByteCodeStream);
@@ -535,7 +535,7 @@ void OpenGLES2GPUShaderProgram::SetParameterTexture(GPUContext *pContext, uint32
     InternalSetParameterTexture(static_cast<OpenGLES2GPUContext *>(pContext), index, pTexture);
 }
 
-GPUShaderProgram *OpenGLES2Renderer::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
+GPUShaderProgram *OpenGLES2GPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
 {
     OpenGLES2GPUShaderProgram *pProgram = new OpenGLES2GPUShaderProgram();
     if (!pProgram->LoadProgram(this, pVertexElements, nVertexElements, pByteCodeStream))
@@ -547,8 +547,8 @@ GPUShaderProgram *OpenGLES2Renderer::CreateGraphicsProgram(const GPU_VERTEX_ELEM
     return pProgram;
 }
 
-GPUShaderProgram *OpenGLES2Renderer::CreateComputeProgram(ByteStream *pByteCodeStream)
+GPUShaderProgram *OpenGLES2GPUDevice::CreateComputeProgram(ByteStream *pByteCodeStream)
 {
-    Log_ErrorPrintf("OpenGLES2Renderer::CreateComputeProgram: Unsupported on GLES 2.0");
+    Log_ErrorPrintf("OpenGLES2GPUDevice::CreateComputeProgram: Unsupported on GLES 2.0");
     return nullptr;
 }

@@ -259,5 +259,10 @@ GPUOutputBuffer *D3D11GPUDevice::CreateOutputBuffer(SDL_Window *pSDLWindow, REND
         return false;
     }
 
+    // disable alt+enter, we handle it elsewhere
+    HRESULT hResult = m_pDXGIFactory->MakeWindowAssociation(info.info.win.window, DXGI_MWA_NO_ALT_ENTER);
+    if (FAILED(hResult))
+        Log_WarningPrintf("D3D11GPUDevice::CreateOutputBuffer: MakeWindowAssociation failed with hResult %08X.", hResult);
+
     return D3D11GPUOutputBuffer::Create(m_pDXGIFactory, m_pD3DDevice, info.info.win.window, m_swapChainBackBufferFormat, m_swapChainDepthStencilBufferFormat, vsyncType);
 }

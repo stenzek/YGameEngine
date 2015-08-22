@@ -1,8 +1,8 @@
 #pragma once
 #include "OpenGLES2Renderer/OpenGLES2Common.h"
-#include "OpenGLES2Renderer/OpenGLES2RendererOutputBuffer.h"
+#include "OpenGLES2Renderer/OpenGLES2GPUOutputBuffer.h"
 
-class OpenGLES2Renderer;
+class OpenGLES2GPUDevice;
 class OpenGLES2ConstantLibrary;
 class OpenGLES2GPURasterizerState;
 class OpenGLES2GPUDepthStencilState;
@@ -41,12 +41,8 @@ public:
     typedef GPUTexture *TextureUnitBinding;
 
 public:
-    OpenGLES2GPUContext();
+    OpenGLES2GPUContext(OpenGLES2GPUDevice *pDevice, OpenGLES2ConstantLibrary *pConstantLibrary, SDL_GLContext pSDLGLContext, OpenGLES2GPUOutputBuffer *pOutputBuffer);
     ~OpenGLES2GPUContext();
-
-    // Owner thread
-    virtual void BindToCurrentThread() override final;
-    virtual void UnbindFromCurrentThread() override final;
 
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) override final;
@@ -122,6 +118,8 @@ public:
     // Swap chain
     virtual GPUOutputBuffer *GetOutputBuffer() override final { return m_pCurrentOutputBuffer; }
     virtual void SetOutputBuffer(GPUOutputBuffer *pSwapChain) override final;
+    virtual bool GetExclusiveFullScreen() override final;
+    virtual bool SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate) override final;
     virtual bool ResizeOutputBuffer(uint32 width = 0, uint32 height = 0) override final;
     virtual void PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour) override final;
 
@@ -162,8 +160,7 @@ public:
     virtual void Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ) override final;
 
     // --- gl methods ---
-    bool Create(OpenGLES2Renderer *pRenderer, SDL_GLContext pGLContext, OpenGLES2RendererOutputBuffer *pOutputBuffer);
-    bool CreateUploadContext(OpenGLES2Renderer *pRenderer, SDL_GLContext pGLContext, OpenGLES2RendererOutputBuffer *pOutputBuffer);
+    bool Create();
     SDL_GLContext GetSDLGLContext() const { return m_pSDLGLContext; }
     OpenGLES2GPUShaderProgram *GetOpenGLCurrentShaderProgram() { return m_pCurrentShaderProgram; }
     const OpenGLES2ConstantLibrary *GetConstantLibrary() const { return m_pConstantLibrary; }
@@ -189,14 +186,13 @@ public:
     void UpdateVSyncState(RENDERER_VSYNC_TYPE vsyncType);
 
 private:
-    OpenGLES2Renderer *m_pRenderer;
+    OpenGLES2GPUDevice *m_pDevice;
+    const OpenGLES2ConstantLibrary *m_pConstantLibrary;
 
     SDL_GLContext m_pSDLGLContext;
-    OpenGLES2RendererOutputBuffer *m_pCurrentOutputBuffer;
-    bool m_isUploadContext;
+    OpenGLES2GPUOutputBuffer *m_pCurrentOutputBuffer;
 
     GPUContextConstants *m_pConstants;
-    const OpenGLES2ConstantLibrary *m_pConstantLibrary;
     byte *m_pConstantLibraryBuffer;
 
     RENDERER_VIEWPORT m_currentViewport;

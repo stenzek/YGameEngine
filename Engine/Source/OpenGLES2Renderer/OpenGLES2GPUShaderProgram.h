@@ -27,7 +27,7 @@ public:
     virtual void SetDebugName(const char *name) override;
 
     // creation
-    bool LoadProgram(OpenGLES2Renderer *pRenderer, const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream);
+    bool LoadProgram(OpenGLES2GPUDevice *pRenderer, const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream);
 
     // bind to a context that has no current shader
     void Bind(OpenGLES2GPUContext *pContext);

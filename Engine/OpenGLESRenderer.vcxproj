@@ -42,8 +42,9 @@
     <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2GPUContext.cpp" />
     <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2GPUShaderProgram.cpp" />
     <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2GPUTexture.cpp" />
-    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2Renderer.cpp" />
-    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2RendererOutputBuffer.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2GPUDevice.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2GPUOutputBuffer.cpp" />
+    <ClCompile Include="Source\OpenGLES2Renderer\OpenGLES2RenderBackend.cpp" />
     <ClCompile Include="Source\OpenGLES2Renderer\PrecompiledHeader.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -57,8 +58,9 @@
     <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUContext.h" />
     <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUShaderProgram.h" />
     <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUTexture.h" />
-    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2Renderer.h" />
-    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2RendererOutputBuffer.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUDevice.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUOutputBuffer.h" />
+    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2RenderBackend.h" />
     <ClInclude Include="Source\OpenGLES2Renderer\PrecompiledHeader.h" />
   </ItemGroup>
   <ItemGroup>

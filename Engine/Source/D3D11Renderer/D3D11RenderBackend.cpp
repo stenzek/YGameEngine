@@ -209,6 +209,10 @@ bool D3D11RenderBackend::Create(const RendererInitializationParameters *pCreateP
         m_pGPUContext->SetOutputBuffer(pOutputBuffer);
     }
 
+    // add references for returned pointers
+    m_pGPUDevice->AddRef();
+    m_pGPUContext->AddRef();
+
     // set pointers
     *ppBackend = this;
     *ppDevice = m_pGPUDevice;

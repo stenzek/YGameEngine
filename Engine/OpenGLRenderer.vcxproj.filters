@@ -7,10 +7,11 @@
     <ClCompile Include="Source\OpenGLRenderer\OpenGLGPUQuery.cpp" />
     <ClCompile Include="Source\OpenGLRenderer\OpenGLGPUShaderProgram.cpp" />
     <ClCompile Include="Source\OpenGLRenderer\OpenGLGPUTexture.cpp" />
-    <ClCompile Include="Source\OpenGLRenderer\OpenGLRenderer.cpp" />
-    <ClCompile Include="Source\OpenGLRenderer\OpenGLRendererOutputBuffer.cpp" />
     <ClCompile Include="Source\OpenGLRenderer\OpenGLCVars.cpp" />
     <ClCompile Include="Source\OpenGLRenderer\PrecompiledHeader.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLGPUDevice.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLRenderBackend.cpp" />
+    <ClCompile Include="Source\OpenGLRenderer\OpenGLGPUOutputBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\OpenGLRenderer\OpenGLCommon.h" />
@@ -20,10 +21,11 @@
     <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUQuery.h" />
     <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUShaderProgram.h" />
     <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUTexture.h" />
-    <ClInclude Include="Source\OpenGLRenderer\OpenGLRenderer.h" />
     <ClInclude Include="Source\OpenGLRenderer\OpenGLShaderCacheEntry.h" />
-    <ClInclude Include="Source\OpenGLRenderer\OpenGLRendererOutputBuffer.h" />
     <ClInclude Include="Source\OpenGLRenderer\OpenGLCVars.h" />
     <ClInclude Include="Source\OpenGLRenderer\PrecompiledHeader.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUDevice.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLRenderBackend.h" />
+    <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUOutputBuffer.h" />
   </ItemGroup>
 </Project>

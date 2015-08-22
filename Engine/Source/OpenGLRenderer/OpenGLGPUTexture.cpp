@@ -1,7 +1,7 @@
 #include "OpenGLRenderer/PrecompiledHeader.h"
 #include "OpenGLRenderer/OpenGLGPUTexture.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
-#include "OpenGLRenderer/OpenGLRenderer.h"
+#include "OpenGLRenderer/OpenGLGPUDevice.h"
 Log_SetChannel(GLGPUTexture);
 
 //#undef GLEW_ARB_texture_storage
@@ -124,7 +124,7 @@ void OpenGLGPUTexture1D::SetDebugName(const char *name)
     OpenGLHelpers::SetObjectDebugName(GL_TEXTURE, m_glTextureId, name);
 }
 
-GPUTexture1D *OpenGLRenderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
+GPUTexture1D *OpenGLGPUDevice::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
@@ -139,7 +139,7 @@ GPUTexture1D *OpenGLRenderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTexture
     GLenum glType;
     if (!OpenGLTypeConversion::GetOpenGLTextureFormat(pTextureDesc->Format, &glInternalFormat, &glFormat, &glType))
     {
-        Log_ErrorPrintf("OpenGLRenderer::CreateTexture1D: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
+        Log_ErrorPrintf("OpenGLGPUDevice::CreateTexture1D: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
         return nullptr;
     }
 
@@ -150,7 +150,7 @@ GPUTexture1D *OpenGLRenderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTexture
     glGenTextures(1, &glTextureId);
     if (glTextureId == 0)
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTexture1D: glGenTextures failed: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTexture1D: glGenTextures failed: ");
         return nullptr;
     }
 
@@ -185,12 +185,8 @@ GPUTexture1D *OpenGLRenderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTexture
     }
     else
     {
-        // obtain the context for this thread, we need this for the texture state
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        DebugAssert(pContext != nullptr);
-
         // switch to the mutator texture unit
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
 
         // bind texture
         glBindTexture(GL_TEXTURE_1D, glTextureId);
@@ -238,13 +234,13 @@ GPUTexture1D *OpenGLRenderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTexture
         }
 
         // restore currently-bound texture
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // check state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTexture1D: One or more GL errors occured: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTexture1D: One or more GL errors occured: ");
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
@@ -285,12 +281,11 @@ bool OpenGLGPUContext::ReadTexture(GPUTexture1D *pTexture, void *pDestination, u
     // complete read?
     if (start == 0 && count == mipWidth)
     {
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
 
         glGetTexImage(GL_TEXTURE_1D, mipIndex, glFormat, glType, pDestination);
 
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
     else
     {
@@ -347,13 +342,12 @@ bool OpenGLGPUContext::WriteTexture(GPUTexture1D *pTexture, const void *pSource,
     }
     else
     {
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
         {
             glBindTexture(GL_TEXTURE_1D, pOpenGLTexture->GetGLTextureId());
             glTexSubImage1D(GL_TEXTURE_1D, mipIndex, start, count, glFormat, glType, pSource);
         }
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     return true;
@@ -394,7 +388,7 @@ void OpenGLGPUTexture1DArray::SetDebugName(const char *name)
     OpenGLHelpers::SetObjectDebugName(GL_TEXTURE, m_glTextureId, name);
 }
 
-GPUTexture1DArray *OpenGLRenderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
+GPUTexture1DArray *OpenGLGPUDevice::CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
@@ -409,7 +403,7 @@ GPUTexture1DArray *OpenGLRenderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY
     GLenum glType;
     if (!OpenGLTypeConversion::GetOpenGLTextureFormat(pTextureDesc->Format, &glInternalFormat, &glFormat, &glType))
     {
-        Log_ErrorPrintf("OpenGLRenderer::CreateTexture1DArray: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
+        Log_ErrorPrintf("OpenGLGPUDevice::CreateTexture1DArray: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
         return nullptr;
     }
 
@@ -420,7 +414,7 @@ GPUTexture1DArray *OpenGLRenderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY
     glGenTextures(1, &glTextureId);
     if (glTextureId == 0)
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTexture1DArray: glGenTextures failed: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTexture1DArray: glGenTextures failed: ");
         return nullptr;
     }
 
@@ -464,12 +458,8 @@ GPUTexture1DArray *OpenGLRenderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY
     }
     else
     {
-        // obtain the context for this thread, we need this for the texture state
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        DebugAssert(pContext != nullptr);
-
         // switch to the mutator texture unit
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
 
         // bind texture
         glBindTexture(GL_TEXTURE_1D_ARRAY, glTextureId);
@@ -533,13 +523,13 @@ GPUTexture1DArray *OpenGLRenderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY
         }
 
         // restore currently-bound texture
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // check state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTexture1DArray: One or more GL errors occured: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTexture1DArray: One or more GL errors occured: ");
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
@@ -629,14 +619,13 @@ bool OpenGLGPUContext::WriteTexture(GPUTexture1DArray *pTexture, const void *pSo
     }
     else
     {
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
         {
             glBindTexture(GL_TEXTURE_1D_ARRAY, pOpenGLTexture->GetGLTextureId());
             glTexSubImage2D(GL_TEXTURE_1D_ARRAY, mipIndex, start, arrayIndex, count, 1, glFormat, glType, pSource);
             glBindTexture(GL_TEXTURE_1D_ARRAY, 0);
         }
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     return true;
@@ -677,7 +666,7 @@ void OpenGLGPUTexture2D::SetDebugName(const char *name)
     OpenGLHelpers::SetObjectDebugName(GL_TEXTURE, m_glTextureId, name);
 }
 
-GPUTexture2D *OpenGLRenderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
+GPUTexture2D *OpenGLGPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
@@ -692,7 +681,7 @@ GPUTexture2D *OpenGLRenderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
     GLenum glType;
     if (!OpenGLTypeConversion::GetOpenGLTextureFormat(pTextureDesc->Format, &glInternalFormat, &glFormat, &glType))
     {
-        Log_ErrorPrintf("OpenGLRenderer::CreateTexture2D: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
+        Log_ErrorPrintf("OpenGLGPUDevice::CreateTexture2D: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
         return nullptr;
     }
 
@@ -703,7 +692,7 @@ GPUTexture2D *OpenGLRenderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
     glGenTextures(1, &glTextureId);
     if (glTextureId == 0)
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTexture2D: glGenTextures failed: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTexture2D: glGenTextures failed: ");
         return nullptr;
     }
 
@@ -757,12 +746,8 @@ GPUTexture2D *OpenGLRenderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
     }
     else
     {
-        // obtain the context for this thread, we need this for the texture state
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        DebugAssert(pContext != nullptr);
-
         // switch to the mutator texture unit
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
 
         // bind texture
         glBindTexture(GL_TEXTURE_2D, glTextureId);
@@ -850,13 +835,13 @@ GPUTexture2D *OpenGLRenderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         }
 
         // restore mutator texture unit
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // check state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTexture2D: One or more GL errors occured: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTexture2D: One or more GL errors occured: ");
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
@@ -905,12 +890,11 @@ bool OpenGLGPUContext::ReadTexture(GPUTexture2D *pTexture, void *pDestination, u
     // complete read?
     if (startX == 0 && startY == 0 && countX == mipWidth && countY == mipHeight)
     {
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
 
         glGetTexImage(GL_TEXTURE_2D, mipIndex, glFormat, glType, pDestination);
 
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
     else
     {
@@ -986,13 +970,12 @@ bool OpenGLGPUContext::WriteTexture(GPUTexture2D *pTexture, const void *pSource,
     }
     else
     {
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
         {
             glBindTexture(GL_TEXTURE_2D, pOpenGLTexture->GetGLTextureId());
             glTexSubImage2D(GL_TEXTURE_2D, mipIndex, startX, startY, countX, countY, glFormat, glType, pSource);
         }
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // free temporary buffer
@@ -1035,7 +1018,7 @@ void OpenGLGPUTexture2DArray::SetDebugName(const char *name)
     OpenGLHelpers::SetObjectDebugName(GL_TEXTURE, m_glTextureId, name);
 }
 
-GPUTexture2DArray *OpenGLRenderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
+GPUTexture2DArray *OpenGLGPUDevice::CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
@@ -1050,7 +1033,7 @@ GPUTexture2DArray *OpenGLRenderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY
     GLenum glType;
     if (!OpenGLTypeConversion::GetOpenGLTextureFormat(pTextureDesc->Format, &glInternalFormat, &glFormat, &glType))
     {
-        Log_ErrorPrintf("OpenGLRenderer::CreateTexture2DArray: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
+        Log_ErrorPrintf("OpenGLGPUDevice::CreateTexture2DArray: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
         return nullptr;
     }
 
@@ -1061,7 +1044,7 @@ GPUTexture2DArray *OpenGLRenderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY
     glGenTextures(1, &glTextureId);
     if (glTextureId == 0)
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTexture2DArray: glGenTextures failed: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTexture2DArray: glGenTextures failed: ");
         return nullptr;
     }
 
@@ -1123,12 +1106,8 @@ GPUTexture2DArray *OpenGLRenderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY
     }
     else
     {
-        // obtain the context for this thread, we need this for the texture state
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        DebugAssert(pContext != nullptr);
-
         // switch to the mutator texture unit
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
 
         // bind texture
         glBindTexture(GL_TEXTURE_2D_ARRAY, glTextureId);
@@ -1247,13 +1226,13 @@ GPUTexture2DArray *OpenGLRenderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY
         }
 
         // restore currently-bound texture
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // check state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTexture2DArray: One or more GL errors occured: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTexture2DArray: One or more GL errors occured: ");
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
@@ -1370,13 +1349,12 @@ bool OpenGLGPUContext::WriteTexture(GPUTexture2DArray *pTexture, const void *pSo
     }
     else
     {
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
         {
             glBindTexture(GL_TEXTURE_2D_ARRAY, pOpenGLTexture->GetGLTextureId());
             glTexSubImage3D(GL_TEXTURE_2D_ARRAY, mipIndex, startX, startY, arrayIndex, countX, countY, 1, glFormat, glType, pSource);
         }
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // free temporary buffer
@@ -1419,7 +1397,7 @@ void OpenGLGPUTexture3D::SetDebugName(const char *name)
     OpenGLHelpers::SetObjectDebugName(GL_TEXTURE, m_glTextureId, name);
 }
 
-GPUTexture3D *OpenGLRenderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */, const uint32 *pInitialDataSlicePitch /* = nullptr */)
+GPUTexture3D *OpenGLGPUDevice::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */, const uint32 *pInitialDataSlicePitch /* = nullptr */)
 {
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
@@ -1434,7 +1412,7 @@ GPUTexture3D *OpenGLRenderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTexture
     GLenum glType;
     if (!OpenGLTypeConversion::GetOpenGLTextureFormat(pTextureDesc->Format, &glInternalFormat, &glFormat, &glType))
     {
-        Log_ErrorPrintf("OpenGLRenderer::CreateTexture3D: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
+        Log_ErrorPrintf("OpenGLGPUDevice::CreateTexture3D: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
         return nullptr;
     }
 
@@ -1445,7 +1423,7 @@ GPUTexture3D *OpenGLRenderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTexture
     glGenTextures(1, &glTextureId);
     if (glTextureId == 0)
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTexture3D: glGenTextures failed: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTexture3D: glGenTextures failed: ");
         return nullptr;
     }
 
@@ -1503,12 +1481,8 @@ GPUTexture3D *OpenGLRenderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTexture
     }
     else
     {
-        // obtain the context for this thread, we need this for the texture state
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        DebugAssert(pContext != nullptr);
-
         // switch to the mutator texture unit
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
 
         // bind texture
         glBindTexture(GL_TEXTURE_3D, glTextureId);
@@ -1609,13 +1583,13 @@ GPUTexture3D *OpenGLRenderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTexture
         }
 
         // restore currently-bound texture
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // check state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTexture3D: One or more GL errors occured: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTexture3D: One or more GL errors occured: ");
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
@@ -1749,13 +1723,12 @@ bool OpenGLGPUContext::WriteTexture(GPUTexture3D *pTexture, const void *pSource,
     }
     else
     {
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
         {
             glBindTexture(GL_TEXTURE_3D, pOpenGLTexture->GetGLTextureId());
             glTexSubImage3D(GL_TEXTURE_3D, mipIndex, startX, startY, startZ, countX, countY, countZ, glFormat, glType, pSource);
         }
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // free temporary buffer
@@ -1798,7 +1771,7 @@ void OpenGLGPUTextureCube::SetDebugName(const char *name)
     OpenGLHelpers::SetObjectDebugName(GL_TEXTURE, m_glTextureId, name);
 }
 
-GPUTextureCube *OpenGLRenderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
+GPUTextureCube *OpenGLGPUDevice::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
@@ -1813,7 +1786,7 @@ GPUTextureCube *OpenGLRenderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pT
     GLenum glType;
     if (!OpenGLTypeConversion::GetOpenGLTextureFormat(pTextureDesc->Format, &glInternalFormat, &glFormat, &glType))
     {
-        Log_ErrorPrintf("OpenGLRenderer::CreateTextureCube: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
+        Log_ErrorPrintf("OpenGLGPUDevice::CreateTextureCube: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
         return nullptr;
     }
 
@@ -1824,7 +1797,7 @@ GPUTextureCube *OpenGLRenderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pT
     glGenTextures(1, &glTextureId);
     if (glTextureId == 0)
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTextureCube: glGenTextures failed: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTextureCube: glGenTextures failed: ");
         return nullptr;
     }
 
@@ -1891,12 +1864,8 @@ GPUTextureCube *OpenGLRenderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pT
     }
     else
     {
-        // obtain the context for this thread, we need this for the texture state
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        DebugAssert(pContext != nullptr);
-
         // switch to the mutator texture unit
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
 
         // bind texture
         glBindTexture(GL_TEXTURE_CUBE_MAP, glTextureId);
@@ -2026,13 +1995,13 @@ GPUTextureCube *OpenGLRenderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pT
         }
 
         // restore currently-bound texture
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // check state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTextureCube: One or more GL errors occured: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTextureCube: One or more GL errors occured: ");
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
@@ -2149,13 +2118,12 @@ bool OpenGLGPUContext::WriteTexture(GPUTextureCube *pTexture, const void *pSourc
     }
     else
     {
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
         {
             glBindTexture(GL_TEXTURE_CUBE_MAP, pOpenGLTexture->GetGLTextureId());
             glTexSubImage2D(s_GLCubeMapFaceEnums[face], mipIndex, startX, startY, countX, countY, glFormat, glType, pSource);
         }
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // free temporary buffer
@@ -2199,7 +2167,7 @@ void OpenGLGPUTextureCubeArray::SetDebugName(const char *name)
     OpenGLHelpers::SetObjectDebugName(GL_TEXTURE, m_glTextureId, name);
 }
 
-GPUTextureCubeArray *OpenGLRenderer::CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
+GPUTextureCubeArray *OpenGLGPUDevice::CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
@@ -2215,7 +2183,7 @@ GPUTextureCubeArray *OpenGLRenderer::CreateTextureCubeArray(const GPU_TEXTURECUB
     GLenum glType;
     if (!OpenGLTypeConversion::GetOpenGLTextureFormat(pTextureDesc->Format, &glInternalFormat, &glFormat, &glType))
     {
-        Log_ErrorPrintf("OpenGLRenderer::CreateTextureCubeArray: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
+        Log_ErrorPrintf("OpenGLGPUDevice::CreateTextureCubeArray: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
         return nullptr;
     }
 
@@ -2226,7 +2194,7 @@ GPUTextureCubeArray *OpenGLRenderer::CreateTextureCubeArray(const GPU_TEXTURECUB
     glGenTextures(1, &glTextureId);
     if (glTextureId == 0)
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTextureCubeArray: glGenTextures failed: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTextureCubeArray: glGenTextures failed: ");
         return nullptr;
     }
 
@@ -2288,12 +2256,8 @@ GPUTextureCubeArray *OpenGLRenderer::CreateTextureCubeArray(const GPU_TEXTURECUB
     }
     else
     {
-        // obtain the context for this thread, we need this for the texture state
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        DebugAssert(pContext != nullptr);
-
         // switch to the mutator texture unit
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
 
         // bind texture
         glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, glTextureId);
@@ -2412,13 +2376,13 @@ GPUTextureCubeArray *OpenGLRenderer::CreateTextureCubeArray(const GPU_TEXTURECUB
         }
 
         // restore currently-bound texture
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // check state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateTextureCubeArray: One or more GL errors occured: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateTextureCubeArray: One or more GL errors occured: ");
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
@@ -2535,13 +2499,12 @@ bool OpenGLGPUContext::WriteTexture(GPUTextureCubeArray *pTexture, const void *p
     }
     else
     {
-        OpenGLGPUContext *pContext = static_cast<OpenGLGPUContext *>(GPUContext::GetContextForCurrentThread());
-        pContext->BindMutatorTextureUnit();
+        BindMutatorTextureUnit();
         {
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, pOpenGLTexture->GetGLTextureId());
             glTexSubImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, mipIndex, startX, startY, (arrayIndex * CUBEMAP_FACE_COUNT) + (uint32)face, countX, countY, 1, glFormat, glType, pSource);
         }
-        pContext->RestoreMutatorTextureUnit();
+        RestoreMutatorTextureUnit();
     }
 
     // free temporary buffer
@@ -2579,7 +2542,7 @@ void OpenGLGPUDepthTexture::SetDebugName(const char *name)
     OpenGLHelpers::SetObjectDebugName(GL_RENDERBUFFER, m_glRenderBufferId, name);
 }
 
-GPUDepthTexture *OpenGLRenderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc)
+GPUDepthTexture *OpenGLGPUDevice::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc)
 {
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
@@ -2592,7 +2555,7 @@ GPUDepthTexture *OpenGLRenderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC
     GLint glInternalFormat;
     if (!OpenGLTypeConversion::GetOpenGLTextureFormat(pTextureDesc->Format, &glInternalFormat, nullptr, nullptr))
     {
-        Log_ErrorPrintf("OpenGLRenderer::CreateDepthTexture: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
+        Log_ErrorPrintf("OpenGLGPUDevice::CreateDepthTexture: Could not get mapping of texture format for %s", pPixelFormatInfo->Name);
         return nullptr;
     }
 
@@ -2603,7 +2566,7 @@ GPUDepthTexture *OpenGLRenderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC
     glGenRenderbuffers(1, &glRenderBufferId);
     if (glRenderBufferId == 0)
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateDepthTexture: glGenTextures failed: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateDepthTexture: glGenTextures failed: ");
         return nullptr;
     }
 
@@ -2615,7 +2578,7 @@ GPUDepthTexture *OpenGLRenderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC
     // check state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateDepthTexture: One or more GL errors occured: ");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateDepthTexture: One or more GL errors occured: ");
         glDeleteTextures(1, &glRenderBufferId);
         return nullptr;
     }
@@ -2738,7 +2701,7 @@ void OpenGLGPURenderTargetView::SetDebugName(const char *name)
 
 }
 
-GPURenderTargetView *OpenGLRenderer::CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc)
+GPURenderTargetView *OpenGLGPUDevice::CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc)
 {
     DebugAssert(pTexture != nullptr);
 
@@ -2791,7 +2754,7 @@ GPURenderTargetView *OpenGLRenderer::CreateRenderTargetView(GPUTexture *pTexture
         break;
 
     default:
-        Log_ErrorPrintf("OpenGLRenderer::CreateRenderTargetView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
+        Log_ErrorPrintf("OpenGLGPUDevice::CreateRenderTargetView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
         return nullptr;
     }
 
@@ -2826,7 +2789,7 @@ void OpenGLGPUDepthStencilBufferView::SetDebugName(const char *name)
 
 }
 
-GPUDepthStencilBufferView *OpenGLRenderer::CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc)
+GPUDepthStencilBufferView *OpenGLGPUDevice::CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc)
 {
     DebugAssert(pTexture != nullptr);
 
@@ -2887,7 +2850,7 @@ GPUDepthStencilBufferView *OpenGLRenderer::CreateDepthStencilBufferView(GPUTextu
         break;
 
     default:
-        Log_ErrorPrintf("OpenGLRenderer::CreateDepthBufferView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
+        Log_ErrorPrintf("OpenGLGPUDevice::CreateDepthBufferView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
         return nullptr;
     }
 
@@ -2918,7 +2881,7 @@ void OpenGLGPUComputeView::SetDebugName(const char *name)
 
 }
 
-GPUComputeView *OpenGLRenderer::CreateComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc)
+GPUComputeView *OpenGLGPUDevice::CreateComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc)
 {
     Panic("Unimplemented");
     return nullptr;

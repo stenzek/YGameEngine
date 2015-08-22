@@ -17,6 +17,9 @@ D3D11GPUContext::D3D11GPUContext(D3D11GPUDevice *pDevice, ID3D11Device *pD3DDevi
     , m_pD3DContext1(nullptr)
     , m_pConstants(nullptr)
 {
+    // add references
+    m_pDevice->AddRef();
+
     // null memory
     Y_memzero(&m_currentViewport, sizeof(m_currentViewport));
     Y_memzero(&m_scissorRect, sizeof(m_scissorRect));
@@ -136,9 +139,7 @@ D3D11GPUContext::~D3D11GPUContext()
 
     // clear swapchain last, like gl
     SAFE_RELEASE(m_pCurrentSwapChain);
-
-    SAFE_RELEASE(m_pD3DContext1);
-    SAFE_RELEASE(m_pD3DContext);
+    m_pDevice->Release();
 }
 
 bool D3D11GPUContext::Create()
@@ -589,66 +590,95 @@ bool D3D11GPUContext::SetExclusiveFullScreen(bool enabled, uint32 width, uint32 
     uint32 newWidth = width;
     uint32 newHeight = height;
 
-    // get output
-    IDXGIOutput *pOutput;
-    hResult = m_pDevice->GetDXGIAdapter()->EnumOutputs(0, &pOutput);
-    if (SUCCEEDED(hResult))
-    {
-        // fill in mode details with requested width/height
-        DXGI_MODE_DESC modeDesc;
-        Y_memzero(&modeDesc, sizeof(modeDesc));
-        modeDesc.Width = width;
-        modeDesc.Height = height;
-        modeDesc.RefreshRate.Numerator = refreshRate;
-        modeDesc.RefreshRate.Denominator = 1;
-        modeDesc.Format = m_pDevice->GetSwapChainBackBufferFormat();
+    // get current fullscreen state
+    BOOL currentFullScreenState;
+    if (FAILED(m_pCurrentSwapChain->GetDXGISwapChain()->GetFullscreenState(&currentFullScreenState, nullptr)))
+        currentFullScreenState = FALSE;
 
-        // find the best mode match
-        DXGI_MODE_DESC closestMatch;
-        hResult = pOutput->FindClosestMatchingMode(&modeDesc, &closestMatch, m_pD3DDevice);
+    // to fullscreen?
+    if (enabled)
+    {
+        // get output
+        IDXGIOutput *pOutput;
+        hResult = m_pDevice->GetDXGIAdapter()->EnumOutputs(0, &pOutput);
         if (SUCCEEDED(hResult))
         {
-            // update dimensions with closest match
-            Log_InfoPrintf("D3D11GPUContext::SetExclusiveFullScreen: Switching to closest mode match %ux%u RefreshRate %u/%u", closestMatch.Width, closestMatch.Height, closestMatch.RefreshRate.Numerator, closestMatch.RefreshRate.Denominator);
-            newWidth = closestMatch.Width;
-            newHeight = closestMatch.Height;
+            // fill in mode details with requested width/height
+            DXGI_MODE_DESC modeDesc;
+            Y_memzero(&modeDesc, sizeof(modeDesc));
+            modeDesc.Width = width;
+            modeDesc.Height = height;
+            modeDesc.RefreshRate.Numerator = refreshRate;
+            modeDesc.RefreshRate.Denominator = 1;
+            modeDesc.Format = m_pDevice->GetSwapChainBackBufferFormat();
 
-            // switch to fullscreen state
-            BOOL fullScreenState;
-            if (SUCCEEDED(m_pCurrentSwapChain->GetDXGISwapChain()->GetFullscreenState(&fullScreenState, nullptr)) && !fullScreenState)
+            // find the best mode match
+            DXGI_MODE_DESC closestMatch;
+            hResult = pOutput->FindClosestMatchingMode(&modeDesc, &closestMatch, m_pD3DDevice);
+            if (SUCCEEDED(hResult))
             {
-                hResult = m_pCurrentSwapChain->GetDXGISwapChain()->SetFullscreenState(TRUE, pOutput);
-                if (FAILED(hResult))
+                // update dimensions with closest match
+                Log_InfoPrintf("D3D11GPUContext::SetExclusiveFullScreen: Switching to closest mode match %ux%u RefreshRate %u/%u", closestMatch.Width, closestMatch.Height, closestMatch.RefreshRate.Numerator, closestMatch.RefreshRate.Denominator);
+                newWidth = closestMatch.Width;
+                newHeight = closestMatch.Height;
+
+                // switch to fullscreen state
+                if (!currentFullScreenState)
                 {
-                    Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGISwapChain::SetFullscreenState failed with hResult %08X.", hResult);
-                    switchResult = false;
+                    hResult = m_pCurrentSwapChain->GetDXGISwapChain()->SetFullscreenState(TRUE, pOutput);
+                    if (FAILED(hResult))
+                    {
+                        Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGISwapChain::SetFullscreenState failed with hResult %08X.", hResult);
+                        switchResult = false;
+                    }
+                }
+
+                // resize the target
+                if (switchResult)
+                {
+                    // call ResizeTarget to fix up the window size
+                    hResult = m_pCurrentSwapChain->GetDXGISwapChain()->ResizeTarget(&closestMatch);
+                    if (FAILED(hResult))
+                    {
+                        Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGISwapChain::ResizeTarget failed with hResult %08X.", hResult);
+                        switchResult = false;
+                    }
                 }
             }
-
-            // resize the target
-            if (switchResult)
+            else
             {
-                // call ResizeTarget to fix up the window size
-                hResult = m_pCurrentSwapChain->GetDXGISwapChain()->ResizeTarget(&closestMatch);
-                if (FAILED(hResult))
-                {
-                    Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGISwapChain::ResizeTarget failed with hResult %08X.", hResult);
-                    switchResult = false;
-                }
+                Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGIOutput::FindClosestMatchingMode failed with hResult %08X.", hResult);
+                switchResult = false;
             }
+
+            pOutput->Release();
         }
         else
         {
-            Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGIOutput::FindClosestMatchingMode failed with hResult %08X.", hResult);
+            Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGIAdapter::EnumOutputs failed with hResult %08X.", hResult);
             switchResult = false;
         }
-
-        pOutput->Release();
     }
     else
     {
-        Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGIAdapter::EnumOutputs failed with hResult %08X.", hResult);
-        switchResult = false;
+        // remove if currently set
+        if (currentFullScreenState)
+        {
+            hResult = m_pCurrentSwapChain->GetDXGISwapChain()->SetFullscreenState(FALSE, nullptr);
+            if (FAILED(hResult))
+            {
+                Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGISwapChain::SetFullscreenState failed with hResult %08X.", hResult);
+                switchResult = false;
+            }
+            else
+            {
+                // update dimensions
+                RECT clientRect;
+                GetClientRect(m_pCurrentSwapChain->GetHWND(), &clientRect);
+                newWidth = Max(clientRect.right - clientRect.left, (LONG)1);
+                newHeight = Max(clientRect.bottom - clientRect.top, (LONG)1);
+            }
+        }
     }
 
     // switch successful?

@@ -40,10 +40,10 @@ typedef bool(*RendererFactoryFunction)(const RendererInitializationParameters *p
     extern bool D3D12Renderer_CreateRenderer(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
 #endif
 #if defined(WITH_RENDERER_OPENGL)
-    extern bool OpenGLRenderer_CreateRenderer(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
+    extern bool OpenGLRenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
 #endif
 #if defined(WITH_RENDERER_OPENGLES2)
-    extern bool OpenGLESRenderer_CreateRenderer(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
+    extern bool OpenGLES2RenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
 #endif
 struct RENDERER_PLATFORM_FACTORY_FUNCTION
 {
@@ -61,10 +61,10 @@ static const RENDERER_PLATFORM_FACTORY_FUNCTION s_renderSystemDeclarations[] =
     //{ RENDERER_PLATFORM_D3D12,      D3D12Renderer_CreateRenderer,       false   },
 #endif
 #if defined(WITH_RENDERER_OPENGL)
-    //{ RENDERER_PLATFORM_OPENGL,     OpenGLRenderer_CreateRenderer,      true    },
+    { RENDERER_PLATFORM_OPENGL,     OpenGLRenderBackend_Create,     true    },
 #endif
 #if defined(WITH_RENDERER_OPENGLES2)
-    //{ RENDERER_PLATFORM_OPENGLES2,  OpenGLESRenderer_CreateRenderer,    true    },
+    { RENDERER_PLATFORM_OPENGLES2,  OpenGLES2RenderBackend_Create,  true    },
 #endif
 };
 
@@ -260,21 +260,9 @@ bool Renderer::Create(const RendererInitializationParameters *pCreateParameters)
         if (pCreateParameters->ImplicitSwapChainFullScreen == RENDERER_FULLSCREEN_STATE_WINDOWED_FULLSCREEN)
             windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 
-        // create output window
-        SDL_Window *pSDLWindow = nullptr;
-        if (!pCreateParameters->HideImplicitSwapChain)
-        {
-            Log_DevPrintf(" Creating implicit output window...");
-            pSDLWindow = SDL_CreateWindow(pCreateParameters->ImplicitSwapChainCaption, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, pCreateParameters->ImplicitSwapChainWidth, pCreateParameters->ImplicitSwapChainHeight, windowFlags);
-            if (pSDLWindow == nullptr)
-            {
-                Log_ErrorPrintf(" Failed to create implicit output window.");
-                return;
-            }
-        }
-
         // Try the preferred renderer first
         bool backendInitialized = false;
+        SDL_Window *pSDLWindow = nullptr;
         RenderBackend *pBackendInterface = nullptr;
         GPUDevice *pGPUDevice = nullptr;
         GPUContext *pGPUContext = nullptr;
@@ -284,24 +272,72 @@ bool Renderer::Create(const RendererInitializationParameters *pCreateParameters)
         {
             if (s_renderSystemDeclarations[i].Platform == pCreateParameters->Platform)
             {
-                Log_InfoPrintf(" Creating \"%s\" renderer...", NameTable_GetNameString(NameTables::RendererPlatform, s_renderSystemDeclarations[i].Platform));
+                // create output window
+                if (!pCreateParameters->HideImplicitSwapChain || s_renderSystemDeclarations[i].RequiresImplicitSwapChain)
+                {
+                    // fix flags for opengl
+                    if (s_renderSystemDeclarations[i].RequiresImplicitSwapChain)
+                        windowFlags |= SDL_WINDOW_OPENGL;
+                    else
+                        windowFlags &= ~SDL_WINDOW_OPENGL;
+
+                    Log_DevPrintf(" Creating implicit output window...");
+                    pSDLWindow = SDL_CreateWindow(pCreateParameters->ImplicitSwapChainCaption, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, pCreateParameters->ImplicitSwapChainWidth, pCreateParameters->ImplicitSwapChainHeight, windowFlags);
+                    if (pSDLWindow == nullptr)
+                    {
+                        Log_ErrorPrintf(" Failed to create implicit output window.");
+                        return;
+                    }
+                }
+
+                Log_InfoPrintf(" Creating \"%s\" render backend...", NameTable_GetNameString(NameTables::RendererPlatform, s_renderSystemDeclarations[i].Platform));
                 backendInitialized = s_renderSystemDeclarations[i].Function(pCreateParameters, pSDLWindow, &pBackendInterface, &pGPUDevice, &pGPUContext, &pOutputBuffer);
+                if (!backendInitialized && pSDLWindow != nullptr)
+                {
+                    SDL_DestroyWindow(pSDLWindow);
+                    pSDLWindow = nullptr;
+                }
+
                 break;
             }
         }
 
         if (!backendInitialized)
         {
-            Log_ErrorPrintf(" Unknown renderer or failed to create: %s", NameTable_GetNameString(NameTables::RendererPlatform, pCreateParameters->Platform));
+            Log_ErrorPrintf(" Unknown render backend or failed to create: %s", NameTable_GetNameString(NameTables::RendererPlatform, pCreateParameters->Platform));
             for (uint32 i = 0; i < countof(s_renderSystemDeclarations); i++)
             {
                 // no point creating the same thing again
                 if (s_renderSystemDeclarations[i].Platform != pCreateParameters->Platform)
                 {
-                    Log_InfoPrintf(" Creating \"%s\" renderer...", NameTable_GetNameString(NameTables::RendererPlatform, s_renderSystemDeclarations[i].Platform));
+                    // create output window
+                    if (!pCreateParameters->HideImplicitSwapChain || s_renderSystemDeclarations[i].RequiresImplicitSwapChain)
+                    {
+                        // fix flags for opengl
+                        if (s_renderSystemDeclarations[i].RequiresImplicitSwapChain)
+                            windowFlags |= SDL_WINDOW_OPENGL;
+                        else
+                            windowFlags &= ~SDL_WINDOW_OPENGL;
+
+                        Log_DevPrintf(" Creating implicit output window...");
+                        pSDLWindow = SDL_CreateWindow(pCreateParameters->ImplicitSwapChainCaption, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, pCreateParameters->ImplicitSwapChainWidth, pCreateParameters->ImplicitSwapChainHeight, windowFlags);
+                        if (pSDLWindow == nullptr)
+                        {
+                            Log_ErrorPrintf(" Failed to create implicit output window.");
+                            return;
+                        }
+                    }
+
+                    Log_InfoPrintf(" Creating \"%s\" render backend...", NameTable_GetNameString(NameTables::RendererPlatform, s_renderSystemDeclarations[i].Platform));
                     backendInitialized = s_renderSystemDeclarations[i].Function(pCreateParameters, pSDLWindow, &pBackendInterface, &pGPUDevice, &pGPUContext, &pOutputBuffer);
                     if (backendInitialized)
                         break;
+
+                    if (pSDLWindow != nullptr)
+                    {
+                        SDL_DestroyWindow(pSDLWindow);
+                        pSDLWindow = nullptr;
+                    }
                 }
             }
         }

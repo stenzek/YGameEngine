@@ -1,7 +1,7 @@
 #include "OpenGLRenderer/PrecompiledHeader.h"
 #include "OpenGLRenderer/OpenGLGPUBuffer.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
-#include "OpenGLRenderer/OpenGLRenderer.h"
+#include "OpenGLRenderer/OpenGLGPUDevice.h"
 Log_SetChannel(OpenGLGPUBuffer);
 
 OpenGLGPUBuffer::OpenGLGPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, GLuint glBufferId, GLenum glBufferUsage)
@@ -34,7 +34,7 @@ void OpenGLGPUBuffer::SetDebugName(const char *debugName)
     OpenGLHelpers::SetObjectDebugName(GL_BUFFER, m_glBufferId, debugName);
 }
 
-GPUBuffer *OpenGLRenderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /* = NULL */)
+GPUBuffer *OpenGLGPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /* = NULL */)
 {
     GL_CHECKED_SECTION_BEGIN();
 
@@ -42,7 +42,7 @@ GPUBuffer *OpenGLRenderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
     glGenBuffers(1, &bufferId);
     if (bufferId == 0)
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateBuffer: Buffer allocation failed.");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateBuffer: Buffer allocation failed.");
         return NULL;
     }
 
@@ -69,7 +69,7 @@ GPUBuffer *OpenGLRenderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
     // check error state
     if (GL_CHECK_ERROR_STATE())
     {
-        GL_PRINT_ERROR("OpenGLRenderer::CreateBuffer: One or more GL calls failed.");
+        GL_PRINT_ERROR("OpenGLGPUDevice::CreateBuffer: One or more GL calls failed.");
         if (bufferId != 0)
             glDeleteBuffers(1, &bufferId);
 

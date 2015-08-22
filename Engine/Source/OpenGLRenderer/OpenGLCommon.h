@@ -20,7 +20,7 @@ class OpenGLGPUTexture3D;
 class OpenGLGPUTextureCube;
 class OpenGLGPUTextureCubeArray;
 class OpenGLGPUDepthTexture;
-class OpenGLRenderer;
+class OpenGLGPUDevice;
 class OpenGLShaderCompiler;
 class OpenGLGPUSamplerState;
 class OpenGLGPURasterizerState;

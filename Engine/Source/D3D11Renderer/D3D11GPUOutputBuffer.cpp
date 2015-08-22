@@ -84,6 +84,11 @@ D3D11GPUOutputBuffer *D3D11GPUOutputBuffer::Create(IDXGIFactory *pDXGIFactory, I
         return false;
     }
 
+    // disable alt+enter, we handle it elsewhere
+    hResult = pDXGIFactory->MakeWindowAssociation(swapChainDesc.OutputWindow, DXGI_MWA_NO_ALT_ENTER);
+    if (FAILED(hResult))
+        Log_WarningPrintf("D3D11GPUOutputBuffer::Create: MakeWindowAssociation failed with hResult %08X.", hResult);
+
     // create object
     pD3DDevice->AddRef();
     D3D11GPUOutputBuffer *pSwapChain = new D3D11GPUOutputBuffer(pD3DDevice, pDXGISwapChain, hWnd, width, height, backBufferFormat, depthStencilBufferFormat, vsyncType);
@@ -258,11 +263,6 @@ GPUOutputBuffer *D3D11GPUDevice::CreateOutputBuffer(SDL_Window *pSDLWindow, REND
         Log_ErrorPrintf("D3D11RenderBackend::Create: SDL_GetWindowWMInfo failed: %s", SDL_GetError());
         return false;
     }
-
-    // disable alt+enter, we handle it elsewhere
-    HRESULT hResult = m_pDXGIFactory->MakeWindowAssociation(info.info.win.window, DXGI_MWA_NO_ALT_ENTER);
-    if (FAILED(hResult))
-        Log_WarningPrintf("D3D11GPUDevice::CreateOutputBuffer: MakeWindowAssociation failed with hResult %08X.", hResult);
 
     return D3D11GPUOutputBuffer::Create(m_pDXGIFactory, m_pD3DDevice, info.info.win.window, m_swapChainBackBufferFormat, m_swapChainDepthStencilBufferFormat, vsyncType);
 }

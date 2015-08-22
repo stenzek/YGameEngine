@@ -507,13 +507,13 @@ void Renderer::CorrectProjectionMatrix(float4x4 &projectionMatrix)
     }
 }
 
-GPUDevice *Renderer::GetGPUDevice() const
+GPUDevice *Renderer::GetGPUDevice()
 {
     DebugAssert(s_pCurrentThreadGPUDevice != nullptr);
     return s_pCurrentThreadGPUDevice;
 }
 
-GPUContext *Renderer::GetGPUContext() const
+GPUContext *Renderer::GetGPUContext()
 {
     DebugAssert(s_pCurrentThreadGPUContext != nullptr);
     return s_pCurrentThreadGPUContext;
@@ -550,20 +550,6 @@ bool Renderer::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PI
     return m_pBackendInterface->CheckTexturePixelFormatCompatibility(PixelFormat, CompatibleFormat);
 }
 
-GPUOutputBuffer *Renderer::CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType)
-{
-    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateOutputBuffer(hWnd, vsyncType);
-}
-
-GPUOutputBuffer *Renderer::CreateOutputBuffer(SDL_Window *pSDLWindow, RENDERER_VSYNC_TYPE vsyncType)
-{
-    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateOutputBuffer(pSDLWindow, vsyncType);
-}
-
 RendererOutputWindow *Renderer::CreateOutputWindow(const char *windowTitle, uint32 windowWidth, uint32 windowHeight, RENDERER_VSYNC_TYPE vsyncType)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
@@ -594,143 +580,277 @@ RendererOutputWindow *Renderer::CreateOutputWindow(const char *windowTitle, uint
     return new RendererOutputWindow(pSDLWindow, pOutputBuffer, RENDERER_FULLSCREEN_STATE_WINDOWED);
 }
 
+GPUOutputBuffer *Renderer::CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateOutputBuffer(hWnd, vsyncType);
+
+    GPUOutputBuffer *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([hWnd, vsyncType, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateOutputBuffer(hWnd, vsyncType);
+    });
+    return pReturnValue;
+}
+
+GPUOutputBuffer *Renderer::CreateOutputBuffer(SDL_Window *pSDLWindow, RENDERER_VSYNC_TYPE vsyncType)
+{
+    GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateOutputBuffer(pSDLWindow, vsyncType);
+
+    GPUOutputBuffer *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pSDLWindow, vsyncType, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateOutputBuffer(pSDLWindow, vsyncType);
+    });
+    return pReturnValue;
+}
+
 GPUDepthStencilState *Renderer::CreateDepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateDepthStencilState(pDepthStencilStateDesc);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateDepthStencilState(pDepthStencilStateDesc);
+
+    GPUDepthStencilState *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pDepthStencilStateDesc, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateDepthStencilState(pDepthStencilStateDesc);
+    });
+    return pReturnValue;
 }
 
 GPURasterizerState *Renderer::CreateRasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateRasterizerState(pRasterizerStateDesc);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateRasterizerState(pRasterizerStateDesc);
+
+    GPURasterizerState *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pRasterizerStateDesc, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateRasterizerState(pRasterizerStateDesc);
+    });
+    return pReturnValue;
 }
 
 GPUBlendState *Renderer::CreateBlendState(const RENDERER_BLEND_STATE_DESC *pBlendStateDesc)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateBlendState(pBlendStateDesc);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateBlendState(pBlendStateDesc);
+
+    GPUBlendState *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pBlendStateDesc, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateBlendState(pBlendStateDesc);
+    });
+    return pReturnValue;
 }
 
 GPUQuery *Renderer::CreateQuery(GPU_QUERY_TYPE type)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateQuery(type);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateQuery(type);
+
+    GPUQuery *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([type, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateQuery(type);
+    });
+    return pReturnValue;
 }
 
 GPUBuffer *Renderer::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /*= NULL*/)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateBuffer(pDesc, pInitialData);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateBuffer(pDesc, pInitialData);
+
+    GPUBuffer *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pDesc, pInitialData, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateBuffer(pDesc, pInitialData);
+    });
+    return pReturnValue;
 }
 
 GPUTexture1D *Renderer::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateTexture1D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateTexture1D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+
+    GPUTexture1D *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateTexture1D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    });
+    return pReturnValue;
 }
 
 GPUTexture1DArray *Renderer::CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateTexture1DArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateTexture1DArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+
+    GPUTexture1DArray *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateTexture1DArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    });
+    return pReturnValue;
 }
 
 GPUTexture2D *Renderer::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateTexture2D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateTexture2D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+
+    GPUTexture2D *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateTexture2D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    });
+    return pReturnValue;
 }
 
 GPUTexture2DArray *Renderer::CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateTexture2DArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateTexture2DArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+
+    GPUTexture2DArray *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateTexture2DArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    });
+    return pReturnValue;
 }
 
 GPUTexture3D *Renderer::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/, const uint32 *pInitialDataSlicePitch /*= NULL*/)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateTexture3D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateTexture3D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+
+    GPUTexture3D *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateTexture3D(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    });
+    return pReturnValue;
 }
 
 GPUTextureCube *Renderer::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateTextureCube(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateTextureCube(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+
+    GPUTextureCube *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateTextureCube(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    });
+    return pReturnValue;
 }
 
 GPUTextureCubeArray *Renderer::CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= NULL*/, const uint32 *pInitialDataPitch /*= NULL*/)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateTextureCubeArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateTextureCubeArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+
+    GPUTextureCubeArray *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateTextureCubeArray(pTextureDesc, pSamplerStateDesc, ppInitialData, pInitialDataPitch);
+    });
+    return pReturnValue;
 }
 
 GPUDepthTexture *Renderer::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateDepthTexture(pTextureDesc);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateDepthTexture(pTextureDesc);
+
+    GPUDepthTexture *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pTextureDesc, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateDepthTexture(pTextureDesc);
+    });
+    return pReturnValue;
 }
 
 GPUSamplerState *Renderer::CreateSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateSamplerState(pSamplerStateDesc);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateSamplerState(pSamplerStateDesc);
+
+    GPUSamplerState *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pSamplerStateDesc, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateSamplerState(pSamplerStateDesc);
+    });
+    return pReturnValue;
 }
 
 GPURenderTargetView *Renderer::CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateRenderTargetView(pTexture, pDesc);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateRenderTargetView(pTexture, pDesc);
+
+    GPURenderTargetView *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pTexture, pDesc, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateRenderTargetView(pTexture, pDesc);
+    });
+    return pReturnValue;
 }
 
 GPUDepthStencilBufferView *Renderer::CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateDepthStencilBufferView(pTexture, pDesc);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateDepthStencilBufferView(pTexture, pDesc);
+
+    GPUDepthStencilBufferView *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pTexture, pDesc, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateDepthStencilBufferView(pTexture, pDesc);
+    });
+    return pReturnValue;
 }
 
 GPUComputeView *Renderer::CreateComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateComputeView(pResource, pDesc);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateComputeView(pResource, pDesc);
+
+    GPUComputeView *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pResource, pDesc, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateComputeView(pResource, pDesc);
+    });
+    return pReturnValue;
 }
 
 GPUShaderProgram *Renderer::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateGraphicsProgram(pVertexElements, nVertexElements, pByteCodeStream);
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateGraphicsProgram(pVertexElements, nVertexElements, pByteCodeStream);
+
+    GPUShaderProgram *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pVertexElements, nVertexElements, pByteCodeStream, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateGraphicsProgram(pVertexElements, nVertexElements, pByteCodeStream);
+    });
+    return pReturnValue;
 }
 
 GPUShaderProgram *Renderer::CreateComputeProgram(ByteStream *pByteCodeStream)
 {
     GPUDevice *pGPUDevice = s_pCurrentThreadGPUDevice;
-    DebugAssert(pGPUDevice != nullptr);
-    return pGPUDevice->CreateComputeProgram(pByteCodeStream);
-}
+    if (pGPUDevice != nullptr)
+        return pGPUDevice->CreateComputeProgram(pByteCodeStream);
 
-bool Renderer::HandleSDLEvent(const union SDL_Event *pEvent)
-{
-    // @TODO: handle implicit swap chain messages
-    return false;
+    GPUShaderProgram *pReturnValue;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pByteCodeStream, &pReturnValue]() {
+        pReturnValue = GetGPUDevice()->CreateComputeProgram(pByteCodeStream);
+    });
+    return pReturnValue;
 }
 
 bool Renderer::ChangeResolution(RENDERER_FULLSCREEN_STATE state, uint32 width /*= 0*/, uint32 height /*= 0*/, uint32 refreshRate /*= 0*/)
@@ -766,6 +886,8 @@ bool Renderer::ChangeResolution(RENDERER_FULLSCREEN_STATE state, uint32 width /*
         }
 
         // alter window dimensions
+        width = m_pImplicitOutputWindow->GetOutputBuffer()->GetWidth();
+        height = m_pImplicitOutputWindow->GetOutputBuffer()->GetHeight();
         m_pImplicitOutputWindow->SetDimensions(width, height);
     }
     else

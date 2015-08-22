@@ -18,6 +18,7 @@ namespace CVars
     extern CVar r_platform;
     extern CVar r_use_render_thread;
     extern CVar r_fullscreen;
+    extern CVar r_fullscreen_exclusive;
     extern CVar r_fullscreen_width;
     extern CVar r_fullscreen_height;
     extern CVar r_windowed_width;

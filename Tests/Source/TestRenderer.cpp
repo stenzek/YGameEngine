@@ -36,7 +36,11 @@ static bool RendererStart()
     }
 
     // determine w/h to use, windowed fullscreen uses desktop size, ie (0, 0)
-    initParameters.ImplicitSwapChainFullScreen = (RENDERER_FULLSCREEN_STATE)CVars::r_fullscreen.GetUInt();
+    if (CVars::r_fullscreen.GetBool())
+        initParameters.ImplicitSwapChainFullScreen = (CVars::r_fullscreen_exclusive.GetBool()) ? RENDERER_FULLSCREEN_STATE_FULLSCREEN : RENDERER_FULLSCREEN_STATE_WINDOWED_FULLSCREEN;
+    else
+        initParameters.ImplicitSwapChainFullScreen = RENDERER_FULLSCREEN_STATE_WINDOWED;
+    
     if (initParameters.ImplicitSwapChainFullScreen == RENDERER_FULLSCREEN_STATE_FULLSCREEN)
     {
         initParameters.ImplicitSwapChainWidth = CVars::r_fullscreen_width.GetUInt();

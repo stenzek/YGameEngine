@@ -89,10 +89,11 @@ void LaunchpadGameState::OnRenderThreadBeginFrame(float deltaTime)
 
 void LaunchpadGameState::OnRenderThreadDraw(float deltaTime)
 {
-    m_pDemoGame->GetGUIContext()->DrawTextAt(16, 16, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255), "Demo selector");
+    m_pDemoGame->GetGUIContext()->DrawTextAt(16, 16, g_pRenderer->GetFixedResources()->GetDebugFont(), 32, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255), "Demo selector");
 
     bool invoked = false;
-    if (ImGui::Begin("Demo Selector", nullptr, ImGuiWindowFlags_NoTitleBar))
+    ImGui::SetNextWindowPos(ImVec2(16, 64), ImGuiSetCond_Always);
+    if (ImGui::Begin("Demo Selector", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
     {
         if (ImGui::Button("Skeletal Animation Demo") && !invoked)
         {
@@ -115,6 +116,14 @@ void LaunchpadGameState::OnRenderThreadDraw(float deltaTime)
             invoked = true;
             QUEUE_MAIN_THREAD_LAMBDA_COMMAND([this]() {
                 InvokeDrawCallStressDemo();
+            });
+        }
+
+        if (ImGui::Button("Exit") && !invoked)
+        {
+            invoked = true;
+            QUEUE_MAIN_THREAD_LAMBDA_COMMAND([this]() {
+                m_pDemoGame->Quit();
             });
         }
 

@@ -91,9 +91,13 @@ void BaseGame::OnWindowResized(uint32 width, uint32 height)
     {
         Log_WarningPrintf("BaseGame::OnWindowResized: Fullscreen state lost outside our control. Updating internal state.");
         m_pOutputWindow->SetFullscreenState(RENDERER_FULLSCREEN_STATE_WINDOWED);
-        m_pGPUContext->ResizeOutputBuffer();
+        g_pConsole->SetCVar(&CVars::r_fullscreen, false);
         QueueRendererRestart();
     }
+
+    // resize the output window and buffer
+    m_pOutputWindow->SetDimensions(width, height);
+    m_pGPUContext->ResizeOutputBuffer(width, height);
 
     // pass to game state
     m_pGameState->OnWindowResized(width, height);
@@ -473,6 +477,26 @@ void BaseGame::RenderThreadCollectEvents(float deltaTime)
                     continue;
                 }
                 break;
+
+                // handle alt+enter
+            case SDL_KEYDOWN:
+            case SDL_KEYUP:
+                {
+                    if (pEvent->key.keysym.scancode == SDL_SCANCODE_RETURN && SDL_GetModState() & (KMOD_LALT | KMOD_RALT))
+                    {
+                        // only toggle on key up
+                        if (pEvent->type == SDL_KEYUP)
+                        {
+                            Log_DevPrintf("Toggling fullscreen.");
+                            g_pConsole->SetCVar(&CVars::r_fullscreen, !CVars::r_fullscreen.GetPendingBool());
+                            QueueRendererRestart();
+                        }
+
+                        // skip passing to game
+                        continue;
+                    }
+                }
+                break;
             }
 
 #ifdef WITH_PROFILER
@@ -603,14 +627,21 @@ bool BaseGame::RendererStart()
     }
 
     // determine w/h to use, windowed fullscreen uses desktop size, ie (0, 0)
-    initParameters.ImplicitSwapChainFullScreen = (RENDERER_FULLSCREEN_STATE)CVars::r_fullscreen.GetUInt();
-    if (initParameters.ImplicitSwapChainFullScreen == RENDERER_FULLSCREEN_STATE_FULLSCREEN)
+    if (CVars::r_fullscreen.GetBool() && CVars::r_fullscreen_exclusive.GetBool())
     {
+        initParameters.ImplicitSwapChainFullScreen = RENDERER_FULLSCREEN_STATE_FULLSCREEN;
         initParameters.ImplicitSwapChainWidth = CVars::r_fullscreen_width.GetUInt();
         initParameters.ImplicitSwapChainHeight = CVars::r_fullscreen_height.GetUInt();
     }
-    else if (initParameters.ImplicitSwapChainFullScreen == RENDERER_FULLSCREEN_STATE_WINDOWED)
+    else if (CVars::r_fullscreen.GetBool())
     {
+        initParameters.ImplicitSwapChainFullScreen = RENDERER_FULLSCREEN_STATE_WINDOWED_FULLSCREEN;
+        initParameters.ImplicitSwapChainWidth = 0;
+        initParameters.ImplicitSwapChainHeight = 0;
+    }
+    else
+    {
+        initParameters.ImplicitSwapChainFullScreen = RENDERER_FULLSCREEN_STATE_WINDOWED;
         initParameters.ImplicitSwapChainWidth = CVars::r_windowed_width.GetUInt();
         initParameters.ImplicitSwapChainHeight = CVars::r_windowed_height.GetUInt();
     }
@@ -727,17 +758,42 @@ void BaseGame::RenderThreadRestartRenderer()
     delete m_pWorldRenderer;
     m_pWorldRenderer = nullptr;
 
+    // get state
+    bool modeChanged = (CVars::r_fullscreen.IsChangePending() | CVars::r_fullscreen_exclusive.IsChangePending() | 
+                        CVars::r_fullscreen_width.IsChangePending() | CVars::r_fullscreen_height.IsChangePending() |
+                        CVars::r_windowed_width.IsChangePending() | CVars::r_windowed_height.IsChangePending());
+
     // apply pending cvars
     g_pConsole->ApplyPendingRenderCVars();
 
-    // get state @TODO remove the double cvars.. ick.
-    RENDERER_FULLSCREEN_STATE fullscreenState = (RENDERER_FULLSCREEN_STATE)CVars::r_fullscreen.GetUInt();
-    uint32 newWidth = (fullscreenState == RENDERER_FULLSCREEN_STATE_FULLSCREEN) ? CVars::r_fullscreen_width.GetUInt() : CVars::r_windowed_width.GetUInt();
-    uint32 newHeight = (fullscreenState == RENDERER_FULLSCREEN_STATE_FULLSCREEN) ? CVars::r_fullscreen_height.GetUInt() : CVars::r_windowed_height.GetUInt();
+    // was a mode change pending?
+    if (modeChanged)
+    {
+        RENDERER_FULLSCREEN_STATE fullscreenState;
+        uint32 newWidth, newHeight;
+        if (CVars::r_fullscreen.GetBool() && CVars::r_fullscreen_exclusive.GetBool())
+        {
+            fullscreenState = RENDERER_FULLSCREEN_STATE_FULLSCREEN;
+            newWidth = CVars::r_fullscreen_width.GetUInt();
+            newHeight = CVars::r_fullscreen_height.GetUInt();
+        }
+        else if (CVars::r_fullscreen.GetBool())
+        {
+            fullscreenState = RENDERER_FULLSCREEN_STATE_WINDOWED_FULLSCREEN;
+            newWidth = 0;
+            newHeight = 0;
+        }
+        else
+        {
+            fullscreenState = RENDERER_FULLSCREEN_STATE_WINDOWED;
+            newWidth = CVars::r_windowed_width.GetUInt();
+            newHeight = CVars::r_windowed_height.GetUInt();
+        }
 
-    // switch modes
-    if (!g_pRenderer->ChangeResolution(fullscreenState, newWidth, newHeight, 60))
-        Log_ErrorPrintf("Failed to change resolutions.");
+        // switch modes
+        if (!g_pRenderer->ChangeResolution(fullscreenState, newWidth, newHeight, 60))
+            Log_ErrorPrintf("Failed to change resolutions.");
+    }
 
     // process any pending events due to window changes
     RenderThreadCollectEvents(0.0f);
@@ -1325,45 +1381,57 @@ void BaseGame::RenderThreadDrawImGuiOverlays()
             if (ImGui::CollapsingHeader("Display", nullptr, true, true))
             {
                 ImGui::PushItemWidth(160.0f);
+                ImGui::Text("Mode: ");
+                ImGui::SameLine();
 
-                intValue = CVars::r_fullscreen.GetPendingInt();
-                if (ImGui::Combo("", &intValue, "Windowed\0Windowed Fullscreen\0Exclusive Fullscreen\0\0"))
-                    g_pConsole->SetCVar(&CVars::r_fullscreen, intValue);
+                intValue = (int)CVars::r_fullscreen.GetPendingBool();
+                if (intValue)
+                    intValue += (int)CVars::r_fullscreen_exclusive.GetPendingBool();
+
+                if (ImGui::Combo("##mode", &intValue, "Windowed\0Windowed Fullscreen\0Exclusive Fullscreen\0\0"))
+                {
+                    g_pConsole->SetCVar(&CVars::r_fullscreen, intValue != 0);
+                    g_pConsole->SetCVar(&CVars::r_fullscreen_exclusive, intValue > 1);
+                }
 
                 ImGui::PopItemWidth();
-                ImGui::PushItemWidth(80.0f);
-                ImGui::SameLine();
-
-                if (intValue == 0)
+                
+                if (intValue != 1)
                 {
-                    intValue = CVars::r_windowed_width.GetPendingInt();
-                    if (ImGui::InputInt("", &intValue))
-                        g_pConsole->SetCVar(&CVars::r_windowed_width, intValue);
-
+                    ImGui::PushItemWidth(80.0f);
+                    ImGui::Text("Resolution: ");
                     ImGui::SameLine();
 
-                    intValue = CVars::r_windowed_height.GetPendingInt();
-                    if (ImGui::InputInt("", &intValue))
-                        g_pConsole->SetCVar(&CVars::r_windowed_height, intValue);
+                    if (intValue == 0)
+                    {
+                        intValue = CVars::r_windowed_width.GetPendingInt();
+                        if (ImGui::InputInt("##windowed_width", &intValue))
+                            g_pConsole->SetCVar(&CVars::r_windowed_width, intValue);
+
+                        ImGui::SameLine();
+
+                        intValue = CVars::r_windowed_height.GetPendingInt();
+                        if (ImGui::InputInt("##windowed_height", &intValue))
+                            g_pConsole->SetCVar(&CVars::r_windowed_height, intValue);
+                    }
+                    else if (intValue == 2)
+                    {
+                        intValue = CVars::r_fullscreen_width.GetPendingInt();
+                        if (ImGui::InputInt("##fullscreen_width", &intValue))
+                            g_pConsole->SetCVar(&CVars::r_fullscreen_width, intValue);
+
+                        ImGui::SameLine();
+
+                        intValue = CVars::r_fullscreen_height.GetPendingInt();
+                        if (ImGui::InputInt("##fullscreen_height", &intValue))
+                            g_pConsole->SetCVar(&CVars::r_fullscreen_height, intValue);
+                    }
+
+                    ImGui::PopItemWidth();
                 }
-                else if (intValue == 2)
-                {
-                    intValue = CVars::r_fullscreen_width.GetPendingInt();
-                    if (ImGui::InputInt("", &intValue))
-                        g_pConsole->SetCVar(&CVars::r_fullscreen_width, intValue);
 
-                    ImGui::SameLine();
-
-                    intValue = CVars::r_fullscreen_height.GetPendingInt();
-                    if (ImGui::InputInt("", &intValue))
-                        g_pConsole->SetCVar(&CVars::r_fullscreen_height, intValue);
-                }
-
-                ImGui::SameLine();
                 if (ImGui::Button("Update"))
                     QueueRendererRestart();
-
-                ImGui::PopItemWidth();
             }
 
             if (ImGui::CollapsingHeader("Render Settings", nullptr, true, true))
@@ -1378,7 +1446,7 @@ void BaseGame::RenderThreadDrawImGuiOverlays()
 
                 // shadows
                 intValue = CVars::r_shadows.GetInt();
-                if (ImGui::Text("Dynamic shadows: "), ImGui::SameLine(), ImGui::Combo("", &intValue, "No shadows\0All shadows\0Directional shadows only\0\0"))
+                if (ImGui::Text("Dynamic shadows: "), ImGui::SameLine(), ImGui::Combo("##dynamic_shadows", &intValue, "No shadows\0All shadows\0Directional shadows only\0\0"))
                 {
                     g_pConsole->SetCVar(&CVars::r_shadows, intValue);
                     QueueRendererRestart();
@@ -1386,7 +1454,7 @@ void BaseGame::RenderThreadDrawImGuiOverlays()
 
                 // shadows
                 intValue = CVars::r_shadow_filtering.GetBool();
-                if (ImGui::Text("Shadow filtering: "), ImGui::SameLine(), ImGui::Combo("", &intValue, "No filtering\0""3x3 filter\0""5x5 filter\0\0"))
+                if (ImGui::Text("Shadow filtering: "), ImGui::SameLine(), ImGui::Combo("##shadow_filtering", &intValue, "No filtering\0""3x3 filter\0""5x5 filter\0\0"))
                 {
                     g_pConsole->SetCVar(&CVars::r_shadow_filtering, intValue);
                     QueueRendererRestart();

@@ -23,7 +23,8 @@ namespace CVars
     // Renderer cvars
     CVar r_platform("r_platform", CVAR_FLAG_REQUIRE_APP_RESTART, "", "Rendering API to use, empty is default for platform", "string:D3D9|D3D11|OPENGL|OPENGL_ES");
     CVar r_use_render_thread("r_use_render_thread", CVAR_FLAG_REQUIRE_APP_RESTART, "true", "Enable multithreaded rendering", "bool");
-    CVar r_fullscreen("r_fullscreen", CVAR_FLAG_REQUIRE_RENDER_RESTART, "0", "Renderer uses fullscreen mode, 0 = windowed, 1 = windowed fullscreen, 2 = exclusive fullscreen", "uint:0-2");
+    CVar r_fullscreen("r_fullscreen", CVAR_FLAG_REQUIRE_RENDER_RESTART, "0", "Renderer uses fullscreen mode", "bool");
+    CVar r_fullscreen_exclusive("r_fullscreen_exclusive", CVAR_FLAG_REQUIRE_RENDER_RESTART, "0", "Use exclusive fullscreen instead of borderless window.", "bool");
     CVar r_fullscreen_width("r_fullscreen_width", CVAR_FLAG_REQUIRE_RENDER_RESTART, "1280", "Width of backbuffer", "uint");
     CVar r_fullscreen_height("r_fullscreen_height", CVAR_FLAG_REQUIRE_RENDER_RESTART, "720", "Height of backbuffer", "uint");
     CVar r_windowed_width("r_windowed_width", CVAR_FLAG_REQUIRE_RENDER_RESTART, "1280", "Width of backbuffer", "uint");

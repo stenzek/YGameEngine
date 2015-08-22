@@ -7,7 +7,7 @@
 #include "OpenGLRenderer/OpenGLGPUShaderProgram.h"
 #include "OpenGLRenderer/OpenGLRenderBackend.h"
 #include "Renderer/ShaderConstantBuffer.h"
-Log_SetChannel(OpenGLGPUContext);
+Log_SetChannel(OpenGLRenderBackend);
 
 #define DEFER_SHADER_STATE_CHANGES 1
 

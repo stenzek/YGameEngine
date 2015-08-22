@@ -4,22 +4,6 @@ namespace NameTables {
     Y_Declare_NameTable(GLErrors);
 }
 
-extern GLenum g_eGLLastError;
-extern void GLRenderer_PrintError(const char *Format, ...);
-
-#define GL_CHECKED_SECTION_BEGIN() glGetError();
-#define GL_CHECK_ERROR_STATE() ((g_eGLLastError = glGetError()) != GL_NO_ERROR)
-#define GL_PRINT_ERROR(...) GLRenderer_PrintError(__VA_ARGS__)
-
-// aliases for HDC
-#if defined(Y_PLATFORM_WINDOWS)
-    typedef HDC OpenGLWindowDeviceContext;
-#elif defined(Y_PLATFORM_LINUX)
-    typedef void *OpenGLWindowDeviceContext;
-#elif defined(Y_PLATFORM_OSX)
-    typedef void *OpenGLWindowDeviceContext;
-#endif
-
 namespace OpenGLTypeConversion
 {
     void GetOpenGLVersionForRendererFeatureLevel(RENDERER_FEATURE_LEVEL featureLevel, uint32 *pMajorVersion, uint32 *pMinorVersion);

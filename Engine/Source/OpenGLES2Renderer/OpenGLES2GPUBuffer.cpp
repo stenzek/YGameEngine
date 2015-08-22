@@ -2,7 +2,7 @@
 #include "OpenGLES2Renderer/OpenGLES2GPUBuffer.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUContext.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUDevice.h"
-Log_SetChannel(OpenGLES2GPUBuffer);
+Log_SetChannel(OpenGLES2RenderBackend);
 
 OpenGLES2GPUBuffer::OpenGLES2GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, GLuint glBufferId, GLenum glBufferTarget, GLenum glBufferUsage)
     : GPUBuffer(pBufferDesc),

@@ -2,7 +2,7 @@
 #include "OpenGLES2Renderer/OpenGLES2ConstantLibrary.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUContext.h"
 #include "Renderer/ShaderConstantBuffer.h"
-Log_SetChannel(OpenGLES2ConstantLibrary);
+Log_SetChannel(OpenGLES2RenderBackend);
 
 const OpenGLES2ConstantLibrary::ConstantID OpenGLES2ConstantLibrary::ConstantIndexInvalid = 0xFFFFFFFF;
 const uint32 OpenGLES2ConstantLibrary::BufferOffsetInvalid = 0xFFFFFFFF;

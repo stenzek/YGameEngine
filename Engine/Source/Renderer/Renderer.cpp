@@ -529,7 +529,10 @@ bool Renderer::EnableResourceCreationForCurrentThread()
 
     s_pCurrentThreadGPUDevice = m_pBackendInterface->CreateDeviceInterface();
     if (s_pCurrentThreadGPUDevice == nullptr)
+    {
+        Log_ErrorPrintf("Failed to enable renderer resource creation for thread %u", (uint32)Thread::GetCurrentThreadId());
         return false;
+    }
 
     Log_DevPrintf("Renderer resource creation enabled for thread %u", (uint32)Thread::GetCurrentThreadId());
     return true;

@@ -4,7 +4,7 @@
 #include "OpenGLRenderer/OpenGLGPUDevice.h"
 #include "OpenGLRenderer/OpenGLRenderBackend.h"
 #include "Renderer/ShaderConstantBuffer.h"
-Log_SetChannel(Renderer);
+Log_SetChannel(OpenGLRenderBackend);
 
 #define LAZY_RESOURCE_CLEANUP_AFTER_SWITCH
 
@@ -958,6 +958,7 @@ GPUShaderProgram *OpenGLGPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMEN
         return nullptr;
     }
 
+    FlushOffThreadCommands();
     return pProgram;
 }
 
@@ -970,5 +971,6 @@ GPUShaderProgram *OpenGLGPUDevice::CreateComputeProgram(ByteStream *pByteCodeStr
         return nullptr;
     }
 
+    FlushOffThreadCommands();
     return pProgram;
 }

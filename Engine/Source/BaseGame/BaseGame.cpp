@@ -713,6 +713,10 @@ bool BaseGame::RendererStart()
         return false;
     }
 
+    // enable resource creation from this thread
+    if (g_pRenderer->GetCapabilities().SupportsMultithreadedResourceCreation)
+        g_pRenderer->EnableResourceCreationForCurrentThread();
+
     // done
     return true;
 }
@@ -963,6 +967,7 @@ void BaseGame::RendererShutdown()
 
     m_pOutputWindow = nullptr;
     m_pGPUContext = nullptr;
+    g_pRenderer->DisableResourceCreationForCurrentThread();
     g_pRenderer->Shutdown();
 }
 

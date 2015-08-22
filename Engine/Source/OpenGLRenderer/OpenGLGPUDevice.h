@@ -148,10 +148,12 @@ public:
     virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) override final;
 
     // helper methods
+    SDL_GLContext GetSDLGLContext() const { return m_pSDLGLContext; }
     OpenGLGPUContext *GetGPUContext() const { return m_pGPUContext; }
     void SetGPUContext(OpenGLGPUContext *pContext) { m_pGPUContext = pContext; }
     void BindMutatorTextureUnit();
     void RestoreMutatorTextureUnit();
+    void FlushOffThreadCommands();
 
 private:
     SDL_GLContext m_pSDLGLContext;

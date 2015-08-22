@@ -5,8 +5,6 @@
 #include "OpenGLES2Renderer/OpenGLES2GPUTexture.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUBuffer.h"
 
-class OpenGLES2ConstantLibrary;
-
 class OpenGLES2GPURasterizerState : public GPURasterizerState
 {
 public:
@@ -103,7 +101,7 @@ private:
 class OpenGLES2GPUDevice : public GPUDevice
 {
 public:
-    OpenGLES2GPUDevice(SDL_GLContext pSDLGLContext, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat);
+    OpenGLES2GPUDevice(OpenGLES2RenderBackend *pBackend, SDL_GLContext pSDLGLContext, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat);
     ~OpenGLES2GPUDevice();
 
     // Creates a swap chain on an existing window.
@@ -132,16 +130,16 @@ public:
     virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) override final;
 
     // helper methods
-    const OpenGLES2ConstantLibrary *GetConstantLibrary() const { return m_pConstantLibrary; }
+    OpenGLES2RenderBackend *GetBackend() const { return m_pRenderBackend; }
     OpenGLES2GPUContext *GetGPUContext() const { return m_pGPUContext; }
     void SetGPUContext(OpenGLES2GPUContext *pContext) { m_pGPUContext = pContext; }
     void BindMutatorTextureUnit();
     void RestoreMutatorTextureUnit();
 
 private:
-    SDL_GLContext m_pSDLGLContext;
-    OpenGLES2ConstantLibrary *m_pConstantLibrary;
+    OpenGLES2RenderBackend *m_pRenderBackend;
     OpenGLES2GPUContext *m_pGPUContext;
+    SDL_GLContext m_pSDLGLContext;
     PIXEL_FORMAT m_outputBackBufferFormat;
     PIXEL_FORMAT m_outputDepthStencilFormat;
 };

@@ -2,7 +2,7 @@
 #include "OpenGLES2Renderer/OpenGLES2GPUOutputBuffer.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUDevice.h"
 #include "Engine/SDLHeaders.h"
-Log_SetChannel(RenderBackend);
+Log_SetChannel(OpenGLES2RenderBackend);
 
 OpenGLES2GPUOutputBuffer::OpenGLES2GPUOutputBuffer(SDL_Window *pSDLWindow, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilBufferFormat, RENDERER_VSYNC_TYPE vsyncType, bool externalWindow)
     : GPUOutputBuffer(vsyncType)

@@ -1,15 +1,5 @@
 #pragma once
 #include "OpenGLES2Renderer/OpenGLES2Common.h"
-#include "OpenGLES2Renderer/OpenGLES2GPUOutputBuffer.h"
-
-class OpenGLES2GPUDevice;
-class OpenGLES2ConstantLibrary;
-class OpenGLES2GPURasterizerState;
-class OpenGLES2GPUDepthStencilState;
-class OpenGLES2GPUBlendState;
-class OpenGLES2GPUBuffer;
-class OpenGLESGPUInputLayout;
-class OpenGLES2GPUShaderProgram;
 
 class OpenGLES2GPUContext : public GPUContext
 {
@@ -41,7 +31,7 @@ public:
     typedef GPUTexture *TextureUnitBinding;
 
 public:
-    OpenGLES2GPUContext(OpenGLES2GPUDevice *pDevice, OpenGLES2ConstantLibrary *pConstantLibrary, SDL_GLContext pSDLGLContext, OpenGLES2GPUOutputBuffer *pOutputBuffer);
+    OpenGLES2GPUContext(OpenGLES2RenderBackend *pBackend, OpenGLES2GPUDevice *pDevice, SDL_GLContext pSDLGLContext, OpenGLES2GPUOutputBuffer *pOutputBuffer);
     ~OpenGLES2GPUContext();
 
     // State clearing
@@ -116,7 +106,7 @@ public:
     virtual void DiscardTargets(bool discardColor = true, bool discardDepth = true, bool discardStencil = true) override final;
 
     // Swap chain
-    virtual GPUOutputBuffer *GetOutputBuffer() override final { return m_pCurrentOutputBuffer; }
+    virtual GPUOutputBuffer *GetOutputBuffer() override final;
     virtual void SetOutputBuffer(GPUOutputBuffer *pSwapChain) override final;
     virtual bool GetExclusiveFullScreen() override final;
     virtual bool SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate) override final;
@@ -163,7 +153,7 @@ public:
     bool Create();
     SDL_GLContext GetSDLGLContext() const { return m_pSDLGLContext; }
     OpenGLES2GPUShaderProgram *GetOpenGLCurrentShaderProgram() { return m_pCurrentShaderProgram; }
-    const OpenGLES2ConstantLibrary *GetConstantLibrary() const { return m_pConstantLibrary; }
+    OpenGLES2ConstantLibrary *GetConstantLibrary() const { return m_pConstantLibrary; }
     byte *GetConstantLibraryBuffer() const { return m_pConstantLibraryBuffer; }
 
     // commit vertex buffer resources
@@ -186,13 +176,14 @@ public:
     void UpdateVSyncState(RENDERER_VSYNC_TYPE vsyncType);
 
 private:
+    OpenGLES2RenderBackend *m_pBackend;
     OpenGLES2GPUDevice *m_pDevice;
-    const OpenGLES2ConstantLibrary *m_pConstantLibrary;
 
     SDL_GLContext m_pSDLGLContext;
     OpenGLES2GPUOutputBuffer *m_pCurrentOutputBuffer;
 
     GPUContextConstants *m_pConstants;
+    OpenGLES2ConstantLibrary *m_pConstantLibrary;
     byte *m_pConstantLibraryBuffer;
 
     RENDERER_VIEWPORT m_currentViewport;

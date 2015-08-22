@@ -408,11 +408,11 @@ bool OpenGLRenderBackend::Create(const RendererInitializationParameters *pCreate
         Log_WarningPrint("Missing GL_ARB_copy_image and GL_NV_copy_image, performance will suffer as a result. Please update your drivers.");
 
     // create output buffer
-    OpenGLGPUOutputBuffer *pOutputBuffer = new OpenGLGPUOutputBuffer(pSDLWindow, m_outputBackBufferFormat, m_outputDepthStencilFormat, pCreateParameters->ImplicitSwapChainVSyncType, false);
+    m_pImplicitOutputBuffer = new OpenGLGPUOutputBuffer(pSDLWindow, m_outputBackBufferFormat, m_outputDepthStencilFormat, pCreateParameters->ImplicitSwapChainVSyncType, false);
 
     // create device and context
     m_pGPUDevice = new OpenGLGPUDevice(pSDLGLContext, m_outputBackBufferFormat, m_outputDepthStencilFormat);
-    m_pGPUContext = new OpenGLGPUContext(m_pGPUDevice, pSDLGLContext, pOutputBuffer);
+    m_pGPUContext = new OpenGLGPUContext(m_pGPUDevice, pSDLGLContext, m_pImplicitOutputBuffer);
     if (!m_pGPUContext->Create())
     {
         Log_ErrorPrintf("OpenGLRenderBackend::Create: Could not create device context.");
@@ -422,12 +422,13 @@ bool OpenGLRenderBackend::Create(const RendererInitializationParameters *pCreate
     // add references for returned pointers
     m_pGPUDevice->AddRef();
     m_pGPUContext->AddRef();
+    m_pImplicitOutputBuffer->AddRef();
 
     // set pointers
     *ppBackend = this;
     *ppDevice = m_pGPUDevice;
     *ppContext = m_pGPUContext;
-    *ppOutputBuffer = pOutputBuffer;
+    *ppOutputBuffer = m_pImplicitOutputBuffer;
 
     Log_InfoPrint("OpenGLRenderBackend::Create: Creation successful.");
     return true;
@@ -436,8 +437,47 @@ bool OpenGLRenderBackend::Create(const RendererInitializationParameters *pCreate
 void OpenGLRenderBackend::Shutdown()
 {
     // cleanup our objects
+    m_pImplicitOutputBuffer->Release();
     m_pGPUContext->Release();
     m_pGPUDevice->Release();
+}
+
+// Since we have multiple threads, the last GL error has to be thread-local
+Y_DECLARE_THREAD_LOCAL(GLenum) s_lastGLError = GL_NO_ERROR;
+
+void OpenGLRenderBackend::ClearLastGLError()
+{
+    s_lastGLError = GL_NO_ERROR;
+    while (glGetError() != GL_NO_ERROR)
+        ;
+}
+
+GLenum OpenGLRenderBackend::CheckForGLError()
+{
+    GLenum error = glGetError();
+    s_lastGLError = error;
+    return (error != GL_NO_ERROR);
+}
+
+GLenum OpenGLRenderBackend::GetLastGLError()
+{
+    return s_lastGLError;
+}
+
+void OpenGLRenderBackend::PrintLastGLError(const char *format, ...)
+{
+    char buffer[128];
+    va_list ap;
+
+    va_start(ap, format);
+    Y_vsnprintf(buffer, countof(buffer), format, ap);
+    va_end(ap);
+
+    GLenum error = s_lastGLError;
+    if (error != GL_NO_ERROR)
+        Log_ErrorPrintf("%s%s (0x%X)", buffer, NameTable_GetNameString(NameTables::GLErrors, error), error);
+    else
+        Log_ErrorPrintf("%sno error", buffer);
 }
 
 bool OpenGLRenderBackend::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat /*= NULL*/) const
@@ -463,8 +503,6 @@ TEXTURE_PLATFORM OpenGLRenderBackend::GetTexturePlatform() const
 
 void OpenGLRenderBackend::GetCapabilities(RendererCapabilities *pCapabilities) const
 {
-    DebugAssert(GetGPUDevice() != nullptr);
-
     // run glget calls
     uint32 maxTextureAnisotropy = 0;
     uint32 maxVertexAttributes = 0;
@@ -486,7 +524,7 @@ void OpenGLRenderBackend::GetCapabilities(RendererCapabilities *pCapabilities) c
     pCapabilities->MaximumSamplers = maxTextureUnits;
     pCapabilities->MaximumRenderTargets = maxRenderTargets;
     pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
-    pCapabilities->SupportsMultithreadedResourceCreation = false;
+    pCapabilities->SupportsMultithreadedResourceCreation = true;
     pCapabilities->SupportsDrawBaseVertex = true; // @TODO
     pCapabilities->SupportsDepthTextures = (GLAD_GL_ARB_depth_texture == GL_TRUE);
     pCapabilities->SupportsTextureArrays = (GLAD_GL_EXT_texture_array == GL_TRUE);
@@ -499,10 +537,29 @@ void OpenGLRenderBackend::GetCapabilities(RendererCapabilities *pCapabilities) c
 
 GPUDevice *OpenGLRenderBackend::CreateDeviceInterface()
 {
-    // D3D11 doesn't have to do anything special with multithread resource creation, so just return the same interface
-    //m_pGPUDevice->AddRef();
-    //return m_pGPUDevice;
-    return nullptr;
+    // Create another SDL GL Context. Everything should already be initialized from the first context.
+    SDL_GLContext newContext = nullptr;
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([this, &newContext]()
+    {
+        SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+        newContext = SDL_GL_CreateContext(m_pImplicitOutputBuffer->GetSDLWindow());
+        if (newContext == nullptr)
+        {
+            Log_ErrorPrintf("SDL_GL_CreateContext failed: %s", SDL_GetError());
+            return;
+        }
+
+        // restore old context
+        SDL_GL_MakeCurrent(m_pImplicitOutputBuffer->GetSDLWindow(), m_pGPUDevice->GetSDLGLContext());
+    });
+    if (newContext == nullptr)
+        return nullptr;
+
+    // Activate this context.
+    SDL_GL_MakeCurrent(m_pImplicitOutputBuffer->GetSDLWindow(), newContext);
+
+    // Create a device wrapping this context.
+    return new OpenGLGPUDevice(newContext, m_outputBackBufferFormat, m_outputDepthStencilFormat);
 }
 
 bool OpenGLRenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer)

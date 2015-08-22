@@ -2,7 +2,8 @@
 #include "OpenGLRenderer/OpenGLGPUTexture.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
 #include "OpenGLRenderer/OpenGLGPUDevice.h"
-Log_SetChannel(GLGPUTexture);
+#include "OpenGLRenderer/OpenGLRenderBackend.h"
+Log_SetChannel(OpenGLRenderBackend);
 
 //#undef GLEW_ARB_texture_storage
 //#define GLEW_ARB_texture_storage 0
@@ -244,6 +245,9 @@ GPUTexture1D *OpenGLGPUDevice::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextur
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
+
+    // flush if we're not main context
+    FlushOffThreadCommands();
 
     // create texture class
     return new OpenGLGPUTexture1D(pTextureDesc, glTextureId);
@@ -533,6 +537,9 @@ GPUTexture1DArray *OpenGLGPUDevice::CreateTexture1DArray(const GPU_TEXTURE1DARRA
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
+
+    // flush if we're not main context
+    FlushOffThreadCommands();
 
     // create texture class
     return new OpenGLGPUTexture1DArray(pTextureDesc, glTextureId);
@@ -845,6 +852,9 @@ GPUTexture2D *OpenGLGPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextur
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
+
+    // flush if we're not main context
+    FlushOffThreadCommands();
 
     // create texture class
     return new OpenGLGPUTexture2D(pTextureDesc, glTextureId);
@@ -1237,6 +1247,9 @@ GPUTexture2DArray *OpenGLGPUDevice::CreateTexture2DArray(const GPU_TEXTURE2DARRA
         return nullptr;
     }
 
+    // flush if we're not main context
+    FlushOffThreadCommands();
+
     // create texture class
     return new OpenGLGPUTexture2DArray(pTextureDesc, glTextureId);
 }
@@ -1593,6 +1606,9 @@ GPUTexture3D *OpenGLGPUDevice::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextur
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
+
+    // flush if we're not main context
+    FlushOffThreadCommands();
 
     // create texture class
     return new OpenGLGPUTexture3D(pTextureDesc, glTextureId);
@@ -2006,6 +2022,9 @@ GPUTextureCube *OpenGLGPUDevice::CreateTextureCube(const GPU_TEXTURECUBE_DESC *p
         return nullptr;
     }
 
+    // flush if we're not main context
+    FlushOffThreadCommands();
+
     // create texture class
     return new OpenGLGPUTextureCube(pTextureDesc, glTextureId);
 }
@@ -2387,6 +2406,9 @@ GPUTextureCubeArray *OpenGLGPUDevice::CreateTextureCubeArray(const GPU_TEXTURECU
         return nullptr;
     }
 
+    // flush if we're not main context
+    FlushOffThreadCommands();
+
     // create texture class
     return new OpenGLGPUTextureCubeArray(pTextureDesc, glTextureId);
 }
@@ -2582,6 +2604,9 @@ GPUDepthTexture *OpenGLGPUDevice::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DES
         glDeleteTextures(1, &glRenderBufferId);
         return nullptr;
     }
+
+    // flush if we're not main context
+    FlushOffThreadCommands();
 
     // create texture class
     return new OpenGLGPUDepthTexture(pTextureDesc, glRenderBufferId);

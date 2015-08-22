@@ -7,7 +7,7 @@
 #include "OpenGLES2Renderer/OpenGLES2ConstantLibrary.h"
 #include "Engine/EngineCVars.h"
 #include "Engine/SDLHeaders.h"
-Log_SetChannel(OpenGLRenderBackend);
+Log_SetChannel(OpenGLES2RenderBackend);
 
 OpenGLES2RenderBackend *OpenGLES2RenderBackend::m_pInstance = nullptr;
 
@@ -142,7 +142,7 @@ bool OpenGLES2RenderBackend::Create(const RendererInitializationParameters *pCre
     }
 
     // log+return
-    Log_InfoPrintf("OpenGLES2GPUDevice::CreateMainSDLGLContext: Got a GLES 2.0 context.");
+    Log_InfoPrintf("OpenGLES2RenderBackend::Create: Got a GLES 2.0 context.");
 
     // initialize glew
     if (!InitializeGLAD())
@@ -199,8 +199,8 @@ bool OpenGLES2RenderBackend::Create(const RendererInitializationParameters *pCre
     m_pConstantLibrary = new OpenGLES2ConstantLibrary(m_featureLevel);
 
     // create device and context
-    m_pGPUDevice = new OpenGLES2GPUDevice(pSDLGLContext, m_outputBackBufferFormat, m_outputDepthStencilFormat);
-    m_pGPUContext = new OpenGLES2GPUContext(m_pGPUDevice, m_pConstantLibrary, pSDLGLContext, pOutputBuffer);
+    m_pGPUDevice = new OpenGLES2GPUDevice(this, pSDLGLContext, m_outputBackBufferFormat, m_outputDepthStencilFormat);
+    m_pGPUContext = new OpenGLES2GPUContext(this, m_pGPUDevice, pSDLGLContext, pOutputBuffer);
     if (!m_pGPUContext->Create())
     {
         Log_ErrorPrintf("OpenGLRenderBackend::Create: Could not create device context.");

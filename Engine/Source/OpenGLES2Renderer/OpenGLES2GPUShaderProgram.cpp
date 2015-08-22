@@ -2,8 +2,9 @@
 #include "OpenGLES2Renderer/OpenGLES2GPUShaderProgram.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUContext.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUDevice.h"
+#include "OpenGLES2Renderer/OpenGLES2RenderBackend.h"
 #include "OpenGLRenderer/OpenGLShaderCacheEntry.h"
-Log_SetChannel(Renderer);
+Log_SetChannel(OpenGLES2RenderBackend);
 
 OpenGLES2GPUShaderProgram::OpenGLES2GPUShaderProgram()
     : m_pBoundContext(nullptr)
@@ -48,7 +49,7 @@ void OpenGLES2GPUShaderProgram::SetDebugName(const char *name)
     OpenGLES2Helpers::SetObjectDebugName(GL_PROGRAM, m_iGLProgramId, name);
 }
 
-bool OpenGLES2GPUShaderProgram::LoadProgram(OpenGLES2GPUDevice *pRenderer, const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
+bool OpenGLES2GPUShaderProgram::LoadProgram(OpenGLES2GPUDevice *pDevice, const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
 {
     // binary reader
     BinaryReader binaryReader(pByteCodeStream);
@@ -328,7 +329,7 @@ bool OpenGLES2GPUShaderProgram::LoadProgram(OpenGLES2GPUDevice *pRenderer, const
                 parameter->BindLocation = uniformLocation;
 
                 // we have to check the library for a mapping of a constant buffer entry to this parameter.
-                parameter->LibraryID = pRenderer->GetConstantLibrary()->LookupConstantID(parameter->Name);
+                parameter->LibraryID = pDevice->GetBackend()->GetConstantLibrary()->LookupConstantID(parameter->Name);
                 parameter->LibraryValueChanged = (parameter->LibraryID != OpenGLES2ConstantLibrary::ConstantIndexInvalid);
             }
             break;

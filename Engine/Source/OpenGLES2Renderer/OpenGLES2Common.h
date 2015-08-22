@@ -29,16 +29,19 @@
 // Forward declare all our types
 class OpenGLES2GPUBuffer;
 class OpenGLES2GPUContext;
-class OpenGLESGPUQuery;
 class OpenGLES2GPUShaderProgram;
 class OpenGLES2GPUTexture2D;
 class OpenGLES2GPUTextureCube;
 class OpenGLES2GPUDepthTexture;
 class OpenGLES2GPUDevice;
-class OpenGLESShaderCompiler;
 class OpenGLES2GPURasterizerState;
 class OpenGLES2GPUDepthStencilState;
 class OpenGLES2GPUBlendState;
+class OpenGLES2GPUOutputBuffer;
+class OpenGLES2GPURenderTargetView;
+class OpenGLES2GPUDepthStencilBufferView;
+class OpenGLES2RenderBackend;
+class OpenGLES2ConstantLibrary;
 
 #include "OpenGLES2Renderer/OpenGLES2Defines.h"
 #include "OpenGLES2Renderer/OpenGLES2CVars.h"

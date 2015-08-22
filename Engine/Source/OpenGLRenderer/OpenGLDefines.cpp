@@ -1,12 +1,7 @@
 #include "OpenGLRenderer/PrecompiledHeader.h"
 #include "OpenGLRenderer/OpenGLCommon.h"
 #include "OpenGLRenderer/OpenGLGPUTexture.h"
-Log_SetChannel(GLDefines);
-
-// gl libraries
-#if defined(Y_PLATFORM_WINDOWS)
-    #pragma comment(lib, "opengl32.lib")
-#endif
+Log_SetChannel(OpenGLRenderBackend);
 
 #define GL_ERROR_NAME(s) Y_NameTable_Entry(#s, s)
 
@@ -19,22 +14,6 @@ Y_Define_NameTable(NameTables::GLErrors)
     GL_ERROR_NAME(GL_STACK_UNDERFLOW)
     GL_ERROR_NAME(GL_OUT_OF_MEMORY)
 Y_NameTable_End()
-
-GLenum g_eGLLastError = GL_NO_ERROR;
-void GLRenderer_PrintError(const char *Format, ...)
-{
-    char buffer[1024];
-    va_list ap;
-
-    va_start(ap, Format);
-    Y_vsnprintf(buffer, countof(buffer), Format, ap);
-    va_end(ap);
-
-    if (g_eGLLastError != GL_NO_ERROR)
-        Log_ErrorPrintf("%s%s (0x%X)", buffer, NameTable_GetNameString(NameTables::GLErrors, g_eGLLastError), g_eGLLastError);
-    else
-        Log_ErrorPrintf("%sno error", buffer);
-}
 
 void OpenGLTypeConversion::GetOpenGLVersionForRendererFeatureLevel(RENDERER_FEATURE_LEVEL featureLevel, uint32 *pMajorVersion, uint32 *pMinorVersion)
 {

@@ -1,10 +1,12 @@
 #include "OpenGLRenderer/PrecompiledHeader.h"
 #include "OpenGLRenderer/OpenGLGPUDevice.h"
+#include "OpenGLRenderer/OpenGLRenderBackend.h"
 #include "Engine/EngineCVars.h"
-Log_SetChannel(OpenGLGPUDevice);
+Log_SetChannel(OpenGLRenderBackend);
 
 OpenGLGPUDevice::OpenGLGPUDevice(SDL_GLContext pSDLGLContext, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat)
     : m_pSDLGLContext(pSDLGLContext)
+    , m_pGPUContext(nullptr)
     , m_outputBackBufferFormat(outputBackBufferFormat)
     , m_outputDepthStencilFormat(outputDepthStencilFormat)
 {
@@ -29,6 +31,15 @@ void OpenGLGPUDevice::RestoreMutatorTextureUnit()
 {
     if (m_pGPUContext != nullptr)
         m_pGPUContext->RestoreMutatorTextureUnit();
+}
+
+void OpenGLGPUDevice::FlushOffThreadCommands()
+{
+    if (m_pGPUContext == nullptr)
+    {
+        // glFlush() or glFinish() for shared lists?
+        glFlush();
+    }
 }
 
 // ------------------
@@ -87,6 +98,9 @@ GPUSamplerState *OpenGLGPUDevice::CreateSamplerState(const GPU_SAMPLER_STATE_DES
         glSamplerParameterf(samplerID, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)pSamplerStateDesc->MaxAnisotropy);
     else
         glSamplerParameterf(samplerID, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.0f);
+
+    // flush if we're not main context
+    FlushOffThreadCommands();
 
     return new OpenGLGPUSamplerState(pSamplerStateDesc, samplerID);
 }

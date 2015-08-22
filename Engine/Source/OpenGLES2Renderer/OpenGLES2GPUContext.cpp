@@ -6,18 +6,19 @@
 #include "OpenGLES2Renderer/OpenGLES2GPUBuffer.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUShaderProgram.h"
 #include "OpenGLES2Renderer/OpenGLES2ConstantLibrary.h"
+#include "OpenGLES2Renderer/OpenGLES2RenderBackend.h"
 #include "Renderer/ShaderConstantBuffer.h"
-Log_SetChannel(OpenGLES2GPUContext);
+Log_SetChannel(OpenGLES2RenderBackend);
 
 #define DEFER_SHADER_STATE_CHANGES 1
 
-OpenGLES2GPUContext::OpenGLES2GPUContext(OpenGLES2GPUDevice *pDevice, OpenGLES2ConstantLibrary *pConstantLibrary, SDL_GLContext pSDLGLContext, OpenGLES2GPUOutputBuffer *pOutputBuffer)
+OpenGLES2GPUContext::OpenGLES2GPUContext(OpenGLES2RenderBackend *pBackend, OpenGLES2GPUDevice *pDevice, SDL_GLContext pSDLGLContext, OpenGLES2GPUOutputBuffer *pOutputBuffer)
 {
+    m_pBackend = pBackend;
+
     m_pDevice = pDevice;
     m_pDevice->SetGPUContext(this);
     m_pDevice->AddRef();
-
-    m_pConstantLibrary = pConstantLibrary;
 
     m_pSDLGLContext = pSDLGLContext;
     m_pCurrentOutputBuffer = pOutputBuffer;
@@ -183,6 +184,7 @@ bool OpenGLES2GPUContext::Create()
     m_pConstants = new GPUContextConstants(this);
 
     // allocate constant library buffer
+    m_pConstantLibrary = m_pBackend->GetConstantLibrary();
     m_pConstantLibraryBuffer = (byte *)Y_malloc(m_pConstantLibrary->GetConstantStorageBufferSize());
 
     // update swap interval
@@ -483,6 +485,11 @@ void OpenGLES2GPUContext::DiscardTargets(bool discardColor /* = true */, bool di
         glDiscardFramebufferEXT(GL_FRAMEBUFFER, nAttachments, attachments);
     }
 #endif
+}
+
+GPUOutputBuffer *OpenGLES2GPUContext::GetOutputBuffer()
+{
+    return m_pCurrentOutputBuffer;
 }
 
 void OpenGLES2GPUContext::SetOutputBuffer(GPUOutputBuffer *pSwapChain)

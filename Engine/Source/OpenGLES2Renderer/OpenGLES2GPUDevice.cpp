@@ -2,10 +2,11 @@
 #include "OpenGLES2Renderer/OpenGLES2GPUDevice.h"
 #include "OpenGLES2Renderer/OpenGLES2ConstantLibrary.h"
 #include "Engine/EngineCVars.h"
-Log_SetChannel(OpenGLES2GPUDevice);
+Log_SetChannel(OpenGLES2RenderBackend);
 
-OpenGLES2GPUDevice::OpenGLES2GPUDevice(SDL_GLContext pSDLGLContext, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat)
-    : m_pSDLGLContext(pSDLGLContext)
+OpenGLES2GPUDevice::OpenGLES2GPUDevice(OpenGLES2RenderBackend *pBackend, SDL_GLContext pSDLGLContext, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat)
+    : m_pRenderBackend(pBackend)
+    , m_pSDLGLContext(pSDLGLContext)
     , m_outputBackBufferFormat(outputBackBufferFormat)
     , m_outputDepthStencilFormat(outputDepthStencilFormat)
 {

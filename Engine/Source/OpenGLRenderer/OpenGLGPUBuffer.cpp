@@ -2,7 +2,8 @@
 #include "OpenGLRenderer/OpenGLGPUBuffer.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
 #include "OpenGLRenderer/OpenGLGPUDevice.h"
-Log_SetChannel(OpenGLGPUBuffer);
+#include "OpenGLRenderer/OpenGLRenderBackend.h"
+Log_SetChannel(OpenGLRenderBackend);
 
 OpenGLGPUBuffer::OpenGLGPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, GLuint glBufferId, GLenum glBufferUsage)
     : GPUBuffer(pBufferDesc),
@@ -77,6 +78,7 @@ GPUBuffer *OpenGLGPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const voi
     }
 
     // create object
+    FlushOffThreadCommands();
     return new OpenGLGPUBuffer(pDesc, bufferId, bufferUsage);
 }
 

@@ -2,7 +2,7 @@
 #include "OpenGLES2Renderer/OpenGLES2GPUTexture.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUContext.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUDevice.h"
-Log_SetChannel(OpenGLES2Texture);
+Log_SetChannel(OpenGLES2RenderBackend);
 
 static const GLenum s_GLCubeMapFaceEnums[CUBEMAP_FACE_COUNT] =
 {

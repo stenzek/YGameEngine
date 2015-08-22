@@ -688,7 +688,7 @@ public:
     virtual void GetCapabilities(RendererCapabilities *pCapabilities) const = 0;
     virtual bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = nullptr) const = 0;
 
-    // Create a device interface. Must be called on the render thread.
+    // Create a device interface. Must be called on the thread that wishes to own this device interface.
     virtual GPUDevice *CreateDeviceInterface() = 0;
 
     // Shuts down the renderer backend.

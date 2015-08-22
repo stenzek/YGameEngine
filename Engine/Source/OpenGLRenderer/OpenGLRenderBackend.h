@@ -4,6 +4,10 @@
 #include "OpenGLRenderer/OpenGLGPUContext.h"
 #include "OpenGLRenderer/OpenGLGPUOutputBuffer.h"
 
+#define GL_CHECKED_SECTION_BEGIN() (OpenGLRenderBackend::ClearLastGLError())
+#define GL_CHECK_ERROR_STATE() (OpenGLRenderBackend::CheckForGLError() != GL_NO_ERROR)
+#define GL_PRINT_ERROR(...) OpenGLRenderBackend::PrintLastGLError(__VA_ARGS__)
+
 class OpenGLRenderBackend : public RenderBackend
 {
 public:
@@ -29,6 +33,12 @@ public:
     virtual GPUDevice *CreateDeviceInterface() override final;
     virtual void Shutdown() override final;
 
+    // GL error handling
+    static void ClearLastGLError();
+    static GLenum CheckForGLError();
+    static GLenum GetLastGLError();
+    static void PrintLastGLError(const char *format, ...);
+
 private:
     RENDERER_FEATURE_LEVEL m_featureLevel;
     TEXTURE_PLATFORM m_texturePlatform;
@@ -38,6 +48,7 @@ private:
 
     OpenGLGPUDevice *m_pGPUDevice;
     OpenGLGPUContext *m_pGPUContext;
+    OpenGLGPUOutputBuffer *m_pImplicitOutputBuffer;
 
     // instance
     static OpenGLRenderBackend *m_pInstance;

@@ -2,7 +2,8 @@
 #include "OpenGLRenderer/OpenGLGPUQuery.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
 #include "OpenGLRenderer/OpenGLGPUDevice.h"
-//Log_SetChannel(OpenGLGPUDevice);
+#include "OpenGLRenderer/OpenGLRenderBackend.h"
+//Log_SetChannel(OpenGLRenderBackend);
 
 OpenGLGPUQuery::OpenGLGPUQuery(GPU_QUERY_TYPE type, GLuint id)
     : m_eType(type)
@@ -64,6 +65,8 @@ GPUQuery *OpenGLGPUDevice::CreateQuery(GPU_QUERY_TYPE Type)
         UnreachableCode();
         break;
     }
+
+    FlushOffThreadCommands();
 
     return new OpenGLGPUQuery(Type, glQueryId);
 }

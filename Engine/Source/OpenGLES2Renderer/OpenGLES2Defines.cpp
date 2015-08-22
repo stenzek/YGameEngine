@@ -1,7 +1,7 @@
 #include "OpenGLES2Renderer/PrecompiledHeader.h"
 #include "OpenGLES2Renderer/OpenGLES2Common.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUTexture.h"
-Log_SetChannel(GLDefines);
+Log_SetChannel(OpenGLES2RenderBackend);
 
 #define GL_ERROR_NAME(s) Y_NameTable_Entry(#s, s)
 

@@ -98,6 +98,10 @@ public:
     virtual GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream) override final;
     virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) override final;
 
+    // off-thread resource creation
+    virtual void BeginResourceBatchUpload() override final;
+    virtual void EndResourceBatchUpload() override final;
+
     // helper methods
     D3D12GPUContext *GetGPUContext() const { return m_pGPUContext; }
     void SetGPUContext(D3D12GPUContext *pContext) { m_pGPUContext = pContext; }

@@ -119,6 +119,16 @@ D3D12GPUDevice::~D3D12GPUDevice()
     SAFE_RELEASE(m_pDXGIFactory);
 }
 
+void D3D12GPUDevice::BeginResourceBatchUpload()
+{
+
+}
+
+void D3D12GPUDevice::EndResourceBatchUpload()
+{
+
+}
+
 GPUQuery *D3D12GPUDevice::CreateQuery(GPU_QUERY_TYPE type)
 {
     return nullptr;

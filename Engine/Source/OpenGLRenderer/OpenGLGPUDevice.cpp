@@ -9,6 +9,8 @@ OpenGLGPUDevice::OpenGLGPUDevice(SDL_GLContext pSDLGLContext, PIXEL_FORMAT outpu
     , m_pGPUContext(nullptr)
     , m_outputBackBufferFormat(outputBackBufferFormat)
     , m_outputDepthStencilFormat(outputDepthStencilFormat)
+    , m_offThreadBatchEnableCount(0)
+    , m_offThreadBatchUploadCount(0)
 {
 
 }
@@ -33,12 +35,44 @@ void OpenGLGPUDevice::RestoreMutatorTextureUnit()
         m_pGPUContext->RestoreMutatorTextureUnit();
 }
 
+void OpenGLGPUDevice::BeginResourceBatchUpload()
+{
+    if (m_pGPUContext != nullptr)
+        return;
+
+    m_offThreadBatchEnableCount++;
+}
+
+void OpenGLGPUDevice::EndResourceBatchUpload()
+{
+    if (m_pGPUContext != nullptr)
+        return;
+
+    DebugAssert(m_offThreadBatchEnableCount > 0);
+    if ((--m_offThreadBatchEnableCount) == 0)
+    {
+        if (m_offThreadBatchUploadCount > 0)
+        {
+            m_offThreadBatchUploadCount = 0;
+            glFlush();
+        }
+    }
+}
+
 void OpenGLGPUDevice::FlushOffThreadCommands()
 {
     if (m_pGPUContext == nullptr)
     {
-        // glFlush() or glFinish() for shared lists?
-        glFlush();
+        if (m_offThreadBatchEnableCount == 0)
+        {
+            // glFlush() or glFinish() for shared lists?
+            glFlush();
+        }
+        else
+        {
+            // push it for later
+            m_offThreadBatchUploadCount++;
+        }
     }
 }
 

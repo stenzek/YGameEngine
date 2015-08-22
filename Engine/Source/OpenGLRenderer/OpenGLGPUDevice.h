@@ -147,6 +147,10 @@ public:
     virtual GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream) override final;
     virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) override final;
 
+    // off-thread resource creation
+    virtual void BeginResourceBatchUpload() override final;
+    virtual void EndResourceBatchUpload() override final;
+
     // helper methods
     SDL_GLContext GetSDLGLContext() const { return m_pSDLGLContext; }
     OpenGLGPUContext *GetGPUContext() const { return m_pGPUContext; }
@@ -160,6 +164,8 @@ private:
     OpenGLGPUContext *m_pGPUContext;
     PIXEL_FORMAT m_outputBackBufferFormat;
     PIXEL_FORMAT m_outputDepthStencilFormat;
+    uint32 m_offThreadBatchEnableCount;
+    uint32 m_offThreadBatchUploadCount;
 };
 
 

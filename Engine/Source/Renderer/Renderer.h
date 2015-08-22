@@ -517,6 +517,10 @@ public:
     virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) = 0;
     // CreateGraphicsPipeline
     // CreateComputePipeline
+
+    // When creating resources off-thread, there is an implicit flush/wait after each resource creation. This forces a group to be batched together.
+    virtual void BeginResourceBatchUpload() = 0;
+    virtual void EndResourceBatchUpload() = 0;
 };
 
 class GPUCommandList

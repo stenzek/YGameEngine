@@ -32,6 +32,16 @@ void OpenGLES2GPUDevice::RestoreMutatorTextureUnit()
         m_pGPUContext->RestoreMutatorTextureUnit();
 }
 
+void OpenGLES2GPUDevice::BeginResourceBatchUpload()
+{
+
+}
+
+void OpenGLES2GPUDevice::EndResourceBatchUpload()
+{
+
+}
+
 // ------------------
 
 OpenGLES2GPURasterizerState::OpenGLES2GPURasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc)

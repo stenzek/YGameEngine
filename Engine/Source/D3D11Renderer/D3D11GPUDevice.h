@@ -102,6 +102,10 @@ public:
     virtual GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream) override final;
     virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) override final;
 
+    // off-thread resource creation
+    virtual void BeginResourceBatchUpload() override final;
+    virtual void EndResourceBatchUpload() override final;
+
 private:
     IDXGIFactory *m_pDXGIFactory;
     IDXGIAdapter *m_pDXGIAdapter;

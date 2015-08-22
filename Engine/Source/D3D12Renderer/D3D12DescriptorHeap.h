@@ -43,6 +43,8 @@ private:
     uint32 m_descriptorCount;
 
     ID3D12DescriptorHeap *m_pD3DDescriptorHeap;
+    D3D12_CPU_DESCRIPTOR_HANDLE m_CPUHandleStart;
+    D3D12_GPU_DESCRIPTOR_HANDLE m_GPUHandleStart;
     BitSet32 m_allocationMap;
     uint32 m_incrementSize;
 

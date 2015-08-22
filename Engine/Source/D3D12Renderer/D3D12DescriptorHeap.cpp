@@ -6,6 +6,8 @@ D3D12DescriptorHeap::D3D12DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32
     : m_type(type)
     , m_descriptorCount(descriptorCount)
     , m_pD3DDescriptorHeap(pD3DDescriptorHeap)
+    , m_CPUHandleStart(pD3DDescriptorHeap->GetCPUDescriptorHandleForHeapStart())
+    , m_GPUHandleStart(pD3DDescriptorHeap->GetGPUDescriptorHandleForHeapStart())
     , m_allocationMap(descriptorCount)
     , m_incrementSize(incrementSize)
 {
@@ -54,12 +56,11 @@ bool D3D12DescriptorHeap::Allocate(Handle *handle)
     m_mutex.Unlock();
 
     // create handle
+    handle->CPUHandle.ptr = m_CPUHandleStart.ptr + index * m_incrementSize;
+    handle->GPUHandle.ptr = m_GPUHandleStart.ptr + index * m_incrementSize;
     handle->StartIndex = (uint32)index;
     handle->DescriptorCount = 1;
-    handle->CPUHandle = m_pD3DDescriptorHeap->GetCPUDescriptorHandleForHeapStart();     // @TODO cache this
-    handle->CPUHandle.ptr += index * m_incrementSize;
-    handle->GPUHandle = m_pD3DDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-    handle->GPUHandle.ptr += index * m_incrementSize;
+    handle->IncrementSize = m_incrementSize;
     return true;
 }
 
@@ -81,12 +82,11 @@ bool D3D12DescriptorHeap::AllocateRange(uint32 count, Handle *handle)
     m_mutex.Unlock();
 
     // create handle
+    handle->CPUHandle.ptr = m_CPUHandleStart.ptr + startIndex * m_incrementSize;
+    handle->GPUHandle.ptr = m_GPUHandleStart.ptr + startIndex * m_incrementSize;
     handle->StartIndex = (uint32)startIndex;
     handle->DescriptorCount = count;
-    handle->CPUHandle = m_pD3DDescriptorHeap->GetCPUDescriptorHandleForHeapStart();     // @TODO cache this
-    handle->CPUHandle.ptr += startIndex * m_incrementSize;
-    handle->GPUHandle = m_pD3DDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-    handle->GPUHandle.ptr += startIndex * m_incrementSize;
+    handle->IncrementSize = m_incrementSize;
     return true;
 }
 

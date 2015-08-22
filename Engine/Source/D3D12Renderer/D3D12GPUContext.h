@@ -1,63 +1,20 @@
 #pragma once
-#include "OpenGLRenderer/OpenGLCommon.h"
-#include "OpenGLRenderer/OpenGLGPUOutputBuffer.h"
+#include "D3D12Renderer/D3D12Common.h"
+#include "D3D12Renderer/D3D12ScratchBuffer.h"
 
-class OpenGLGPUDevice;
-class OpenGLGPURenderTargetView;
-class OpenGLGPUDepthStencilBufferView;
-class OpenGLGPUComputeView;
-class OpenGLGPURasterizerState;
-class OpenGLGPUDepthStencilState;
-class OpenGLGPUBlendState;
-class OpenGLGPUSamplerState;
-class OpenGLGPUBuffer;
-class OpenGLGPUInputLayout;
-class OpenGLGPUShaderProgram;
-
-class OpenGLGPUContext : public GPUContext
+class D3D12GPUContext : public GPUContext
 {
 public:
-    struct VertexBufferBinding
-    {
-        OpenGLGPUBuffer *pVertexBuffer;
-        uint32 Offset;
-        uint32 Stride;
-        bool Dirty;
-    };
-
-    struct VertexAttributeBinding
-    {
-        uint32 VertexBufferIndex;
-        uint32 Offset;
-
-        GLenum Type;
-        GLint Size;
-        GLboolean Normalized;
-        GLuint Divisor;
-
-        bool IntegerFormat;
-        bool Initialized;
-        bool Enabled;
-        bool Dirty;
-    };
-
-    struct TextureUnitBinding
-    {
-        GPUTexture *pTexture;
-        OpenGLGPUSamplerState *pSampler;
-    };
-
-public:
-    OpenGLGPUContext(OpenGLGPUDevice *pDevice, SDL_GLContext pSDLGLContext, OpenGLGPUOutputBuffer *pOutputBuffer);
-    ~OpenGLGPUContext();
+    D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice);
+    ~D3D12GPUContext();
 
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) override final;
 
     // Retrieve RendererVariables interface.
-    virtual GPUContextConstants *GetConstants() override { return m_pConstants; }
+    virtual GPUContextConstants *GetConstants() override final { return m_pConstants; }
 
-    // State Management (D3D11RenderSystem.cpp)
+    // State Management (D3D12RenderSystem.cpp)
     virtual GPURasterizerState *GetRasterizerState() override final;
     virtual void SetRasterizerState(GPURasterizerState *pRasterizerState) override final;
     virtual GPUDepthStencilState *GetDepthStencilState() override final;
@@ -67,12 +24,12 @@ public:
     virtual const float4 &GetBlendStateBlendFactor() override final;
     virtual void SetBlendState(GPUBlendState *pBlendState, const float4 &blendFactor = float4::One) override final;
 
-    // Viewport Management (D3D11RenderSystem.cpp)
+    // Viewport Management (D3D12RenderSystem.cpp)
     virtual const RENDERER_VIEWPORT *GetViewport() override final;
     virtual void SetViewport(const RENDERER_VIEWPORT *pNewViewport) override final;
     virtual void SetFullViewport(GPUTexture *pForRenderTarget = NULL) override final;
 
-    // Scissor Rect Management (D3D11RenderSystem.cpp)
+    // Scissor Rect Management (D3D12RenderSystem.cpp)
     virtual const RENDERER_SCISSOR_RECT *GetScissorRect() override final;
     virtual void SetScissorRect(const RENDERER_SCISSOR_RECT *pScissorRect) override final;
 
@@ -107,7 +64,7 @@ public:
     // Blit (copy) a texture to the currently bound framebuffer. If this texture is a different size, it'll be resized
     virtual void BlitFrameBuffer(GPUTexture2D *pTexture, uint32 sourceX, uint32 sourceY, uint32 sourceWidth, uint32 sourceHeight, uint32 destX, uint32 destY, uint32 destWidth, uint32 destHeight, RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER resizeFilter = RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER_NEAREST) override final;
 
-    // Generate mips
+    // Mip generation
     virtual void GenerateMips(GPUTexture *pTexture) override final;
 
     // Query accessing
@@ -123,10 +80,10 @@ public:
     virtual void DiscardTargets(bool discardColor = true, bool discardDepth = true, bool discardStencil = true) override final;
 
     // Swap chain
-    virtual GPUOutputBuffer *GetOutputBuffer() override final { return m_pCurrentOutputBuffer; }
+    virtual GPUOutputBuffer *GetOutputBuffer() override final;
+    virtual void SetOutputBuffer(GPUOutputBuffer *pSwapChain) override final;
     virtual bool GetExclusiveFullScreen() override final;
     virtual bool SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate) override final;
-    virtual void SetOutputBuffer(GPUOutputBuffer *pSwapChain) override final;
     virtual bool ResizeOutputBuffer(uint32 width = 0, uint32 height = 0) override final;
     virtual void PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour) override final;
 
@@ -165,71 +122,82 @@ public:
     // Compute shaders
     virtual void Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ) override final;
 
-    // --- gl methods ---
+    // --- our methods ---
+
+    // accessors
+    ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
+    ID3D12CommandList *GetCurrentCommandList() const { return m_pCurrentCommandList; }
+    D3D12GPUShaderProgram *GetD3D12ShaderProgram() const { return m_pCurrentShaderProgram; }
+
+    // create device
     bool Create();
-    OpenGLGPUShaderProgram *GetOpenGLCurrentShaderProgram() { return m_pCurrentShaderProgram; }
 
     // constant resource management
-    OpenGLGPUBuffer *GetConstantBuffer(uint32 index);
-
-    // commit vertex buffer resources
-    void CommitVertexAttributes();
+    D3D12GPUBuffer *GetConstantBuffer(uint32 index);
 
     // access to shader states for the shader mutators to modify
-    void SetShaderVertexAttributes(const GPU_VERTEX_ELEMENT_DESC *pAttributeDescriptors, uint32 nAttributes);
-    void SetShaderUniformBlock(uint32 index, OpenGLGPUBuffer *pBuffer);
-    void SetShaderTextureUnit(uint32 index, GPUTexture *pTexture, OpenGLGPUSamplerState *pSamplerState);
-    void SetShaderImageUnit(uint32 index, GPUTexture *pTexture);
-    void SetShaderStorageBuffer(uint32 index, GPUResource *pResource);
+    void SetShaderConstantBuffers(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
+    void SetShaderResources(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
+    void SetShaderSamplers(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
+    void SetShaderUAVs(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
 
-    // commit shader resources (uniform blocks, texture units, image units, storage buffers)
-    void CommitShaderResources();
+    // synchronize the states with the d3d context
+    void SynchronizeRenderTargetsAndUAVs();
+    void SynchronizeShaderStates();
 
-    // sets the active texture unit to the unit that can be most easily used for mutation (ie less likely to be bound)
-    void BindMutatorTextureUnit();
-
-    // when using texture creation/modification functions, restores the texture if there was one bound to this texture unit
-    void RestoreMutatorTextureUnit();
-
-    // update vsync settings in opengl
-    void UpdateVSyncState(RENDERER_VSYNC_TYPE vsyncType);
+    // temporarily disable predication to force a call to go through
+    void BypassPredication();
+    void RestorePredication();
 
 private:
     // preallocate constant buffers
     bool CreateConstantBuffers();
+    bool CreateQueuedFrameData();
 
-    OpenGLGPUDevice *m_pDevice;
-    SDL_GLContext m_pSDLGLContext;
-    OpenGLGPUOutputBuffer *m_pCurrentOutputBuffer;
+    // allocate from scratch buffer
+    bool AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress);
+
+    D3D12RenderBackend *m_pBackend;
+    D3D12GPUDevice *m_pDevice;
+    ID3D12Device *m_pD3DDevice;
 
     GPUContextConstants *m_pConstants;
 
+    // Current command list
+    ID3D12GraphicsCommandList *m_pCurrentCommandList;
+    D3D12ScratchBuffer *m_pCurrentScratchBuffer;
+
+    // Pool of command lists
+    struct QueuesdFrameData
+    {
+        ID3D12GraphicsCommandList *pCommandList;
+        D3D12ScratchBuffer *pScratchBuffer;
+        uint64 FenceValue;
+        bool Pending;
+    };
+    MemArray<QueuesdFrameData> m_queuedFrameData;
+    uint32 m_currentQueuedFrameIndex;
+
+    // state
     RENDERER_VIEWPORT m_currentViewport;
     RENDERER_SCISSOR_RECT m_scissorRect;
-    DRAW_TOPOLOGY m_drawTopology;
-    GLenum m_glDrawTopology;
+    DRAW_TOPOLOGY m_currentTopology;
 
-    // vertex buffer state
-    GLuint m_vertexArrayObjectId;
-    MemArray<VertexBufferBinding> m_currentVertexBuffers;
-    uint32 m_activeVertexBuffers;
-    bool m_dirtyVertexBuffers;
-    MemArray<VertexAttributeBinding> m_currentVertexAttributes;
-    uint32 m_activeVertexAttributes;
-    bool m_dirtyVertexAttributes;
+    D3D12GPUBuffer *m_pCurrentVertexBuffers[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
+    uint32 m_currentVertexBufferOffsets[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
+    uint32 m_currentVertexBufferStrides[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
+    uint32 m_currentVertexBufferBindCount;
 
-    // index buffer state
-    OpenGLGPUBuffer *m_pCurrentIndexBuffer;
+    D3D12GPUBuffer *m_pCurrentIndexBuffer;
     GPU_INDEX_FORMAT m_currentIndexFormat;
     uint32 m_currentIndexBufferOffset;
 
-    // shader state
-    OpenGLGPUShaderProgram *m_pCurrentShaderProgram;
+    D3D12GPUShaderProgram *m_pCurrentShaderProgram;
 
     // constant buffers
     struct ConstantBuffer
     {
-        OpenGLGPUBuffer *pGPUBuffer;
+        D3D12GPUBuffer *pGPUBuffer;
         uint32 Size;
 
         byte *pLocalMemory;
@@ -238,41 +206,52 @@ private:
     };
     MemArray<ConstantBuffer> m_constantBuffers;
 
-    // shader states
-    PODArray<OpenGLGPUBuffer *> m_currentUniformBlockBindings;
-    uint32 m_activeUniformBlockBindings;
-    int32 m_dirtyUniformBlockBindingsLowerBounds;
-    int32 m_dirtyUniformBlockBindingsUpperBounds;
-    MemArray<TextureUnitBinding> m_currentTextureUnitBindings;
-    uint32 m_activeTextureUnitBindings;
-    uint32 m_mutatorTextureUnit;
-    int32 m_dirtyTextureUnitsLowerBounds;
-    int32 m_dirtyTextureUnitsUpperBounds;
-    PODArray<GPUTexture *> m_currentImageUnitBindings;
-    uint32 m_activeImageUnitBindings;
-    int32 m_dirtyImageUnitsLowerBounds;
-    int32 m_dirtyImageUnitsUpperBounds;
-    PODArray<GPUResource *> m_currentShaderStorageBufferBindings;
-    uint32 m_activeShaderStorageBufferBindings;
-    int32 m_dirtyShaderStorageBuffersLowerBounds;
-    int32 m_dirtyShaderStorageBuffersUpperBounds;
+    // shader stage state
+    // we can cheat this in d3d by storing pointers to the d3d objects themselves,
+    // since they're reference counted by the runtime. even if our wrapper object is
+    // deleted by release, the runtime will hold its own reference.
+    struct ShaderStageState
+    {
+        D3D12_GPU_DESCRIPTOR_HANDLE ConstantBuffers[D3D12_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT];
+        uint32 ConstantBufferBindCount;
+        int32 ConstantBufferDirtyLowerBounds;
+        int32 ConstantBufferDirtyUpperBounds;
 
-    // states
-    OpenGLGPURasterizerState *m_pCurrentRasterizerState;
-    OpenGLGPUDepthStencilState *m_pCurrentDepthStencilState;
-    uint8 m_currentDepthStencilStateStencilRef;
-    OpenGLGPUBlendState *m_pCurrentBlendState;
+        D3D12_GPU_DESCRIPTOR_HANDLE Resources[D3D12_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT];
+        uint32 ResourceBindCount;
+        int32 ResourceDirtyLowerBounds;
+        int32 ResourceDirtyUpperBounds;
+
+        D3D12_GPU_DESCRIPTOR_HANDLE Samplers[D3D12_COMMONSHADER_SAMPLER_SLOT_COUNT];
+        uint32 SamplerBindCount;
+        int32 SamplerDirtyLowerBounds;
+        int32 SamplerDirtyUpperBounds;
+
+        D3D12_GPU_DESCRIPTOR_HANDLE UAVs[D3D12_PS_CS_UAV_REGISTER_COUNT];
+        uint32 UAVBindCount;
+        int32 UAVDirtyLowerBounds;
+        int32 UAVDirtyUpperBounds;
+    };
+    ShaderStageState m_shaderStates[SHADER_PROGRAM_STAGE_COUNT];
+
+    D3D12GPURasterizerState *m_pCurrentRasterizerState;
+    D3D12GPUDepthStencilState *m_pCurrentDepthStencilState;
+    uint8 m_currentDepthStencilRef;
+    D3D12GPUBlendState *m_pCurrentBlendState;
     float4 m_currentBlendStateBlendFactors;
+    bool m_pipelineChanged;
 
-    GLuint m_drawFrameBufferObjectId;
-    GLuint m_readFrameBufferObjectId;
+    D3D12GPUOutputBuffer *m_pCurrentSwapChain;
 
-    OpenGLGPURenderTargetView *m_pCurrentRenderTargets[GPU_MAX_SIMULTANEOUS_RENDER_TARGETS];
-    OpenGLGPUDepthStencilBufferView *m_pCurrentDepthStencilBuffer;
+    D3D12GPURenderTargetView *m_pCurrentRenderTargetViews[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT];
+    D3D12GPUDepthStencilBufferView *m_pCurrentDepthBufferView;
     uint32 m_nCurrentRenderTargets;
 
-    OpenGLGPUBuffer *m_pUserVertexBuffer;
-    uint32 m_userVertexBufferSize;
-    uint32 m_userVertexBufferPosition;
+    // predication
+    GPUQuery *m_pCurrentPredicate;
+    //ID3D12Predicate *m_pCurrentPredicateD3D;
+    uint32 m_predicateBypassCount;
 };
+
+
 

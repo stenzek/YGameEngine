@@ -9,7 +9,7 @@ public:
     virtual ~D3D12RenderBackend();
 
     // instance accessor
-    static D3D12RenderBackend *GetInstance() { return m_pInstance; }
+    static D3D12RenderBackend *GetInstance() { return s_pInstance; }
 
     // internal methods
     IDXGIFactory3 *GetDXGIFactory() const { return m_pDXGIFactory; }
@@ -18,6 +18,10 @@ public:
     D3D12GPUDevice *GetGPUDevice() const { return m_pGPUDevice; }
     D3D12GPUContext *GetGPUContext() const { return m_pGPUContext; }
     D3D12DescriptorHeap *GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) { return m_pDescriptorHeaps[type]; }
+    uint32 GetFrameLatency() const { return m_frameLatency; }
+    void ScheduleResourceForDeletion(ID3D12Resource *pResource, uint32 frameNumber = g_pRenderer->GetFrameNumber());
+    void ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle *pHandle, uint32 frameNumber = g_pRenderer->GetFrameNumber());
+    void DeletePendingResources(uint32 frameNumber);
 
     // creation
     bool Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
@@ -48,6 +52,8 @@ private:
     DXGI_FORMAT m_outputBackBufferFormat;
     DXGI_FORMAT m_outputDepthStencilFormat;
 
+    uint32 m_frameLatency;
+
     // device
     D3D12GPUDevice *m_pGPUDevice;
     D3D12GPUContext *m_pGPUContext;
@@ -55,6 +61,21 @@ private:
     // descriptor heaps
     D3D12DescriptorHeap *m_pDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
+    // object scheduled for deletion
+    struct PendingDeletionResource
+    {
+        ID3D12Resource *pResource;
+        uint32 FrameNumber;
+    };
+    struct PendingDeletionDescriptor
+    {
+        D3D12_DESCRIPTOR_HEAP_TYPE Type;
+        D3D12DescriptorHeap::Handle Handle;
+        uint32 FrameNumber;
+    };
+    MemArray<PendingDeletionResource> m_pendingDeletionResources;
+    MemArray<PendingDeletionDescriptor> m_pendingDeletionDescriptors;
+
     // instance
-    static D3D12RenderBackend *m_pInstance;
+    static D3D12RenderBackend *s_pInstance;
 };

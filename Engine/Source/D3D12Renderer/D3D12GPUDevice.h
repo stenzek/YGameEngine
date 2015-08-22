@@ -16,11 +16,11 @@ private:
     D3D12_SAMPLER_DESC m_D3DSamplerStateDesc;
 };
 
-class D3D12RasterizerState : public GPURasterizerState
+class D3D12GPURasterizerState : public GPURasterizerState
 {
 public:
-    D3D12RasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc, const D3D12_RASTERIZER_DESC *pD3DRasterizerDesc);
-    virtual ~D3D12RasterizerState();
+    D3D12GPURasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc, const D3D12_RASTERIZER_DESC *pD3DRasterizerDesc);
+    virtual ~D3D12GPURasterizerState();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
     virtual void SetDebugName(const char *name) override;
@@ -31,11 +31,11 @@ private:
     D3D12_RASTERIZER_DESC m_D3DRasterizerDesc;
 };
 
-class D3D12DepthStencilState : public GPUDepthStencilState
+class D3D12GPUDepthStencilState : public GPUDepthStencilState
 {
 public:
-    D3D12DepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc, const D3D12_DEPTH_STENCIL_DESC *pD3DDepthStencilDesc);
-    virtual ~D3D12DepthStencilState();
+    D3D12GPUDepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc, const D3D12_DEPTH_STENCIL_DESC *pD3DDepthStencilDesc);
+    virtual ~D3D12GPUDepthStencilState();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
     virtual void SetDebugName(const char *name) override;
@@ -46,11 +46,11 @@ private:
     D3D12_DEPTH_STENCIL_DESC m_D3DDepthStencilDesc;
 };
 
-class D3D12BlendState : public GPUBlendState
+class D3D12GPUBlendState : public GPUBlendState
 {
 public:
-    D3D12BlendState(const RENDERER_BLEND_STATE_DESC *pBlendStateDesc, const D3D12_BLEND_DESC *pD3DBlendDesc);
-    virtual ~D3D12BlendState();
+    D3D12GPUBlendState(const RENDERER_BLEND_STATE_DESC *pBlendStateDesc, const D3D12_BLEND_DESC *pD3DBlendDesc);
+    virtual ~D3D12GPUBlendState();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
     virtual void SetDebugName(const char *name) override;

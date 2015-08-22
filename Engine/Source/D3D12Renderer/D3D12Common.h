@@ -26,7 +26,13 @@ class D3D12GPUTextureCube;
 class D3D12GPUTextureCubeArray;
 class D3D12GPUDepthTexture;
 class D3D12GPUDepthTextureArray;
+class D3D12GPURasterizerState;
+class D3D12GPUDepthStencilState;
+class D3D12GPUBlendState;
 class D3D12GPUSamplerState;
+class D3D12GPURenderTargetView;
+class D3D12GPUDepthStencilBufferView;
+class D3D12GPUComputeView;
 class D3D12RenderBackend;
 
 #include "D3D12Renderer/D3D12Defines.h"

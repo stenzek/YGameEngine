@@ -1430,11 +1430,6 @@ void OpenGLES2GPUContext::DrawUserPointer(const void *pVertices, uint32 VertexSi
     //CommitVertexAttributes();
 }
 
-void OpenGLES2GPUContext::DrawIndexedUserPointer(const void *pVertices, uint32 VertexSize, uint32 nVertices, const void *pIndices, GPU_INDEX_FORMAT IndexFormat, uint32 nIndices)
-{
-    Panic("");
-}
-
 bool OpenGLES2GPUContext::CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pDestinationTexture)
 {
     // textures have to be compatible, for now this means same texture format

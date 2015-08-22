@@ -144,7 +144,6 @@ public:
 
     // Draw calls with user-space buffer
     virtual void DrawUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices) override final;
-    virtual void DrawIndexedUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices, const void *pIndices, GPU_INDEX_FORMAT indexFormat, uint32 nIndices) override final;
 
     // Compute shaders
     virtual void Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ) override final;

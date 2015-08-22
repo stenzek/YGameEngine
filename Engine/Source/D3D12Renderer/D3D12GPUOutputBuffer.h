@@ -16,6 +16,7 @@ public:
     static D3D12GPUOutputBuffer *Create(D3D12RenderBackend *pBackend, IDXGIFactory3 *pDXGIFactory, ID3D12Device *pD3DDevice, HWND hWnd, DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType);
 
     // views
+    HWND GetHWND() const { return m_hWnd; }
     ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
     IDXGISwapChain3 *GetDXGISwapChain() const { return m_pDXGISwapChain; }
     DXGI_FORMAT GetBackBufferFormat() const { return m_backBufferFormat; }

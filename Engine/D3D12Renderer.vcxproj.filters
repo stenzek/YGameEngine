@@ -8,6 +8,12 @@
     <ClCompile Include="Source\D3D12Renderer\D3D12GPUOutputBuffer.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12DescriptorHeap.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12GPUDevice.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12GPUContext.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12ScratchBuffer.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12GPUTexture.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12GPUQuery.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12GPUBuffer.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12GPUShaderProgram.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\D3D12Renderer\PrecompiledHeader.h" />
@@ -18,5 +24,11 @@
     <ClInclude Include="Source\D3D12Renderer\D3D12GPUOutputBuffer.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12DescriptorHeap.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12GPUDevice.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12GPUContext.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12ScratchBuffer.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12GPUQuery.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12GPUTexture.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12GPUBuffer.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12GPUShaderProgram.h" />
   </ItemGroup>
 </Project>

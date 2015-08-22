@@ -25,19 +25,6 @@ class ShaderProgram;
 // Required for output window
 struct SDL_Window;
 
-// GPU memory usage totals
-struct GPUMemoryUsage
-{
-    Y_ATOMIC_DECL size_t BufferMemory;
-    Y_ATOMIC_DECL size_t Texture1DMemory;
-    Y_ATOMIC_DECL size_t Texture1DArrayMemory;
-    Y_ATOMIC_DECL size_t Texture2DMemory;
-    Y_ATOMIC_DECL size_t Texture2DArrayMemory;
-    Y_ATOMIC_DECL size_t Texture3DMemory;
-    Y_ATOMIC_DECL size_t TextureCubeMemory;
-    Y_ATOMIC_DECL size_t TextureCubeArrayMemory;
-};
-
 // Base class of all gpu resources
 class GPUResource : public ReferenceCounted
 {
@@ -654,7 +641,6 @@ public:
 
     // Draw calls with user-space buffer
     virtual void DrawUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices) = 0;
-    virtual void DrawIndexedUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices, const void *pIndices, GPU_INDEX_FORMAT indexFormat, uint32 nIndices) = 0;
 
     // Compute shaders
     virtual void Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ) = 0;
@@ -743,11 +729,34 @@ struct RendererInitializationParameters
     uint32 GPUFrameLatency;
 };
 
-struct RendererStats
+// Renderer stats
+class RendererStats
 {
-    uint32 DrawCalls;
-    uint32 StateChanges;
-    uint32 ResourceMemoryUsage[1];      // FIXME
+public:
+    RendererStats();
+    ~RendererStats();
+
+    // Counters
+    uint32 GetDrawCallCounter() const { return m_drawCallCounter; }
+    uint32 GetShaderChangeCounter() const { return m_shaderChangeCounter; }
+
+    // Counter updating
+    void IncrementDrawCallCounter() { Y_AtomicIncrement(m_drawCallCounter); }
+    void IncrementShaderChangeCounter() { Y_AtomicIncrement(m_shaderChangeCounter); }
+    void ResetCounters();
+
+    // Resource memory management
+    void OnResourceCreated(const GPUResource *pResource);
+    void OnResourceDeleted(const GPUResource *pResource);
+
+private:
+    uint32 m_frameNumber;
+
+    uint32 m_drawCallCounter;
+    uint32 m_shaderChangeCounter;
+
+    Y_ATOMIC_DECL ptrdiff_t m_resourceCPUMemoryUsage[GPU_RESOURCE_TYPE_COUNT];
+    Y_ATOMIC_DECL ptrdiff_t m_resourceGPUMemoryUsage[GPU_RESOURCE_TYPE_COUNT];
 };
 
 class Renderer
@@ -912,6 +921,13 @@ public:
     static GPUDevice *GetGPUDevice();
     static GPUContext *GetGPUContext();
 
+    // Frame number
+    uint32 GetFrameNumber() const { return m_frameNumber; }
+    void EndFrame();
+
+    // Stats access
+    RendererStats *GetStats() { return &m_stats; }
+
     // render thread
     static const Thread::ThreadIdType GetRenderThreadId() { return s_renderThreadId; }
     static const bool IsOnRenderThread() { return (Thread::GetCurrentThreadId() == s_renderThreadId); }
@@ -1012,6 +1028,7 @@ protected:
     TEXTURE_PLATFORM m_eTexturePlatform;
     RendererCapabilities m_RendererCapabilities;
     float m_fTexelOffset;
+    uint32 m_frameNumber;
 
     // backend
     RenderBackend *m_pBackendInterface;
@@ -1027,6 +1044,9 @@ protected:
 
     // gui context - owned by, and usage only by render thread
     MiniGUIContext m_guiContext;
+
+    // stats
+    RendererStats m_stats;
 
 private:
     bool InternalDrawPlain(GPUContext *pGPUDevice, const PlainVertexFactory::Vertex *pVertices, uint32 nVertices, uint32 flags);

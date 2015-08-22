@@ -375,21 +375,6 @@ GLenum OpenGLES2TypeConversion::GetOpenGLTextureTarget(TEXTURE_TYPE textureType)
     return GL_TEXTURE_2D;
 }
 
-void OpenGLES2Helpers::CorrectProjectionMatrix(float4x4 &projectionMatrix)
-{
-    float4x4 scaleMatrix(1.0f, 0.0f, 0.0f, 0.0f,
-                         0.0f, 1.0f, 0.0f, 0.0f,
-                         0.0f, 0.0f, 2.0f, 0.0f,
-                         0.0f, 0.0f, 0.0f, 1.0f);
-
-    float4x4 biasMatrix(1.0f, 0.0f, 0.0f, 0.0f,
-                        0.0f, 1.0f, 0.0f, 0.0f,
-                        0.0f, 0.0f, 1.0f, -1.0f,
-                        0.0f, 0.0f, 0.0f, 1.0f);
-
-    projectionMatrix = biasMatrix * scaleMatrix * projectionMatrix;
-}
-
 GLenum OpenGLES2Helpers::GetOpenGLTextureTarget(GPUTexture *pGPUTexture)
 {
     if (pGPUTexture == NULL)

@@ -127,7 +127,6 @@ public:
 
     // Draw calls with user-space buffer
     virtual void DrawUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices) override final;
-    virtual void DrawIndexedUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices, const void *pIndices, GPU_INDEX_FORMAT indexFormat, uint32 nIndices) override final;
 
     // Compute shaders
     virtual void Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ) override final;
@@ -162,8 +161,6 @@ public:
 private:
     // preallocate constant buffers
     bool CreateConstantBuffers();
-    bool GetTempVertexBufferPointer(uint32 VertexSize, uint32 nVertices, void **ppBufferPointer, uint32 *pBufferOffset, uint32 *pMaxVertices);
-    bool GetTempIndexBufferPointer(uint32 indexSize, uint32 nIndices, void **ppBufferPointer, uint32 *pBufferOffset, uint32 *pMaxIndices);
 
     D3D11GPUDevice *m_pDevice;
     ID3D11Device *m_pD3DDevice;
@@ -248,10 +245,6 @@ private:
     ID3D11Buffer *m_pUserVertexBuffer;
     uint32 m_userVertexBufferSize;
     uint32 m_userVertexBufferPosition;
-
-    ID3D11Buffer *m_pUserIndexBuffer;
-    uint32 m_userIndexBufferSize;
-    uint32 m_userIndexBufferPosition;
 };
 
 

@@ -34,8 +34,6 @@ namespace OpenGLES2TypeConversion
 
 namespace OpenGLES2Helpers
 {
-    void CorrectProjectionMatrix(float4x4 &projectionMatrix);
-
     GLenum GetOpenGLTextureTarget(GPUTexture *pGPUTexture);
     GLuint GetOpenGLTextureId(GPUTexture *pGPUTexture);
     void BindOpenGLTexture(GPUTexture *pGPUTexture);

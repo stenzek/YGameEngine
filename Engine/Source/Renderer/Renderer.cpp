@@ -37,7 +37,7 @@ typedef bool(*RendererFactoryFunction)(const RendererInitializationParameters *p
     extern bool D3D11RenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
 #endif
 #if defined(WITH_RENDERER_D3D12)
-    extern bool D3D12Renderer_CreateRenderer(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
+    extern bool D3D12RenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
 #endif
 #if defined(WITH_RENDERER_OPENGL)
     extern bool OpenGLRenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
@@ -55,10 +55,10 @@ struct RENDERER_PLATFORM_FACTORY_FUNCTION
 static const RENDERER_PLATFORM_FACTORY_FUNCTION s_renderSystemDeclarations[] =
 {
 #if defined(WITH_RENDERER_D3D11)
-    { RENDERER_PLATFORM_D3D11,      D3D11RenderBackend_Create,       false   },
+    { RENDERER_PLATFORM_D3D11,      D3D11RenderBackend_Create,      false   },
 #endif
 #if defined(WITH_RENDERER_D3D12)
-    //{ RENDERER_PLATFORM_D3D12,      D3D12Renderer_CreateRenderer,       false   },
+    { RENDERER_PLATFORM_D3D12,      D3D12RenderBackend_Create,      false   },
 #endif
 #if defined(WITH_RENDERER_OPENGL)
     { RENDERER_PLATFORM_OPENGL,     OpenGLRenderBackend_Create,     true    },
@@ -502,7 +502,25 @@ void Renderer::CorrectProjectionMatrix(float4x4 &projectionMatrix)
     switch (m_eRendererPlatform)
     {
     case RENDERER_PLATFORM_D3D11:
+    case RENDERER_PLATFORM_D3D12:
         projectionMatrix.SetRow(2, ((projectionMatrix.GetRow(2)) + (projectionMatrix.GetRow(3))) * 0.5f);
+        break;
+
+    case RENDERER_PLATFORM_OPENGL:
+    case RENDERER_PLATFORM_OPENGLES2:
+        {
+            float4x4 scaleMatrix(1.0f, 0.0f, 0.0f, 0.0f,
+                                 0.0f, 1.0f, 0.0f, 0.0f,
+                                 0.0f, 0.0f, 2.0f, 0.0f,
+                                 0.0f, 0.0f, 0.0f, 1.0f);
+
+            float4x4 biasMatrix(1.0f, 0.0f, 0.0f, 0.0f,
+                                0.0f, 1.0f, 0.0f, 0.0f,
+                                0.0f, 0.0f, 1.0f, -1.0f,
+                                0.0f, 0.0f, 0.0f, 1.0f);
+
+            projectionMatrix = biasMatrix * scaleMatrix * projectionMatrix;
+        }
         break;
     }
 }
@@ -517,6 +535,50 @@ GPUContext *Renderer::GetGPUContext()
 {
     DebugAssert(s_pCurrentThreadGPUContext != nullptr);
     return s_pCurrentThreadGPUContext;
+}
+
+
+RendererStats::RendererStats()
+    : m_drawCallCounter(0)
+    , m_shaderChangeCounter(0)
+{
+    Y_memzero((void *)m_resourceCPUMemoryUsage, sizeof(m_resourceCPUMemoryUsage));
+    Y_memzero((void *)m_resourceGPUMemoryUsage, sizeof(m_resourceGPUMemoryUsage));
+}
+
+RendererStats::~RendererStats()
+{
+
+}
+
+void RendererStats::ResetCounters()
+{
+    m_drawCallCounter = 0;
+    m_shaderChangeCounter = 0;
+}
+
+void RendererStats::OnResourceCreated(const GPUResource *pResource)
+{
+    GPU_RESOURCE_TYPE type = pResource->GetResourceType();
+    uint32 cpuMemoryUsage, gpuMemoryUsage;
+    pResource->GetMemoryUsage(&cpuMemoryUsage, &gpuMemoryUsage);
+    Y_AtomicAdd(m_resourceCPUMemoryUsage[type], (ptrdiff_t)cpuMemoryUsage);
+    Y_AtomicAdd(m_resourceGPUMemoryUsage[type], (ptrdiff_t)gpuMemoryUsage);
+}
+
+void RendererStats::OnResourceDeleted(const GPUResource *pResource)
+{
+    GPU_RESOURCE_TYPE type = pResource->GetResourceType();
+    uint32 cpuMemoryUsage, gpuMemoryUsage;
+    pResource->GetMemoryUsage(&cpuMemoryUsage, &gpuMemoryUsage);
+    Y_AtomicAdd(m_resourceCPUMemoryUsage[type], -(ptrdiff_t)cpuMemoryUsage);
+    Y_AtomicAdd(m_resourceGPUMemoryUsage[type], -(ptrdiff_t)gpuMemoryUsage);
+}
+
+void Renderer::EndFrame()
+{
+    m_frameNumber++;
+    m_stats.ResetCounters();
 }
 
 bool Renderer::EnableResourceCreationForCurrentThread()

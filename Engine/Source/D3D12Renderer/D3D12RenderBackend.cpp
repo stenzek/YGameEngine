@@ -1,11 +1,12 @@
 #include "D3D12Renderer/PrecompiledHeader.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12GPUDevice.h"
-//#include "D3D12Renderer/D3D12GPUContext.h"
+#include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12GPUOutputBuffer.h"
 #include "Engine/EngineCVars.h"
 Log_SetChannel(D3D12GPUDevice);
 
+D3D12RenderBackend *D3D12RenderBackend::s_pInstance = nullptr;
 static HMODULE s_hD3D12DLL = nullptr;
 
 D3D12RenderBackend::D3D12RenderBackend()
@@ -25,8 +26,8 @@ D3D12RenderBackend::D3D12RenderBackend()
 
 D3D12RenderBackend::~D3D12RenderBackend()
 {
-    DebugAssert(m_pInstance == this);
-    m_pInstance = nullptr;
+    DebugAssert(s_pInstance == this);
+    s_pInstance = nullptr;
 }
 
 bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer)
@@ -175,13 +176,16 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
         Log_InfoPrintf("Texture Platform: %s", NameTable_GetNameString(NameTables::TexturePlatform, m_texturePlatform));
     }
 
+    // other vars
+    m_frameLatency = pCreateParameters->GPUFrameLatency;
+
     // create device wrapper class
     m_pGPUDevice = new D3D12GPUDevice(this, m_pDXGIFactory, m_pDXGIAdapter, m_pD3DDevice, m_outputBackBufferFormat, m_outputDepthStencilFormat);
 
     // create context wrapper class
-    //m_pGPUContext = new D3D12GPUContext(this, m_pGPUDevice, m_pD3DDevice);
-    //if (!m_pGPUContext->Create())
-        //return false;
+    m_pGPUContext = new D3D12GPUContext(this, m_pGPUDevice, m_pD3DDevice);
+    if (!m_pGPUContext->Create())
+        return false;
 
     // create implicit swap chain
     GPUOutputBuffer *pOutputBuffer = nullptr;
@@ -193,17 +197,17 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
             return false;
 
         // bind to context
-        //m_pGPUContext->SetOutputBuffer(pOutputBuffer);
+        m_pGPUContext->SetOutputBuffer(pOutputBuffer);
     }
 
     // add references for returned pointers
     m_pGPUDevice->AddRef();
-    //m_pGPUContext->AddRef();
+    m_pGPUContext->AddRef();
 
     // set pointers
     *ppBackend = this;
-    //*ppDevice = m_pGPUDevice;
-    //*ppContext = m_pGPUContext;
+    *ppDevice = m_pGPUDevice;
+    *ppContext = m_pGPUContext;
     *ppOutputBuffer = pOutputBuffer;
 
     Log_InfoPrint("D3D12RenderBackend::Create: Creation successful.");
@@ -213,7 +217,7 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
 void D3D12RenderBackend::Shutdown()
 {
     // cleanup our objects
-    //SAFE_RELEASE(m_pGPUContext);
+    SAFE_RELEASE(m_pGPUContext);
     SAFE_RELEASE(m_pGPUDevice);
 
     // remove descriptor heaps
@@ -317,6 +321,21 @@ GPUDevice *D3D12RenderBackend::CreateDeviceInterface()
 {
     // @TODO
     return nullptr;
+}
+
+void D3D12RenderBackend::ScheduleResourceForDeletion(ID3D12Resource *pResource, uint32 frameNumber /*= g_pRenderer->GetFrameNumber()*/)
+{
+
+}
+
+void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle *pHandle, uint32 frameNumber /*= g_pRenderer->GetFrameNumber()*/)
+{
+
+}
+
+void D3D12RenderBackend::DeletePendingResources(uint32 frameNumber)
+{
+
 }
 
 bool D3D12RenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer)

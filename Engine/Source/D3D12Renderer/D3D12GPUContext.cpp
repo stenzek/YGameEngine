@@ -1,23 +1,23 @@
-#include "D3D11Renderer/PrecompiledHeader.h"
-#include "D3D11Renderer/D3D11Common.h"
-#include "D3D11Renderer/D3D11GPUDevice.h"
-#include "D3D11Renderer/D3D11GPUContext.h"
-#include "D3D11Renderer/D3D11GPUBuffer.h"
-#include "D3D11Renderer/D3D11GPUTexture.h"
-#include "D3D11Renderer/D3D11GPUShaderProgram.h"
-#include "D3D11Renderer/D3D11RenderBackend.h"
+#include "D3D12Renderer/PrecompiledHeader.h"
+#include "D3D12Renderer/D3D12Common.h"
+#include "D3D12Renderer/D3D12GPUDevice.h"
+#include "D3D12Renderer/D3D12GPUContext.h"
+#include "D3D12Renderer/D3D12GPUBuffer.h"
+#include "D3D12Renderer/D3D12GPUTexture.h"
+#include "D3D12Renderer/D3D12GPUShaderProgram.h"
+#include "D3D12Renderer/D3D12RenderBackend.h"
+#include "D3D12Renderer/D3D12GPUOutputBuffer.h"
 #include "Renderer/ShaderConstantBuffer.h"
-Log_SetChannel(D3D11GPUContext);
+Log_SetChannel(D3D12GPUContext);
 
-D3D11GPUContext::D3D11GPUContext(D3D11GPUDevice *pDevice, ID3D11Device *pD3DDevice, ID3D11Device1 *pD3DDevice1, ID3D11DeviceContext *pImmediateContext)
-    : m_pDevice(pDevice)
+D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice)
+    : m_pBackend(pBackend)
+    , m_pDevice(pDevice)
     , m_pD3DDevice(pD3DDevice)
-    , m_pD3DDevice1(pD3DDevice1)
-    , m_pD3DContext(pImmediateContext)
-    , m_pD3DContext1(nullptr)
     , m_pConstants(nullptr)
 {
     // add references
+    m_pDevice->SetGPUContext(this);
     m_pDevice->AddRef();
 
     // null memory
@@ -51,6 +51,7 @@ D3D11GPUContext::D3D11GPUContext(D3D11GPUDevice *pDevice, ID3D11Device *pD3DDevi
     m_currentDepthStencilRef = 0;
     m_pCurrentBlendState = NULL;
     m_currentBlendStateBlendFactors.SetZero();
+    m_pipelineChanged = false;
 
     m_pCurrentSwapChain = NULL;
 
@@ -59,16 +60,13 @@ D3D11GPUContext::D3D11GPUContext(D3D11GPUDevice *pDevice, ID3D11Device *pD3DDevi
     m_nCurrentRenderTargets = 0;
 
     m_pCurrentPredicate = nullptr;
-    m_pCurrentPredicateD3D = nullptr;
+    //m_pCurrentPredicateD3D = nullptr;
     m_predicateBypassCount = 0;
-
-    m_pUserVertexBuffer = NULL;
-    m_userVertexBufferSize = 16 * 1024 * 1024;  // 16MB
-    m_userVertexBufferPosition = 0;
 }
 
-D3D11GPUContext::~D3D11GPUContext()
+D3D12GPUContext::~D3D12GPUContext()
 {
+#if 0
     // clear any state
     ClearState(true, true, true, true);
     m_pD3DContext->OMSetRenderTargets(0, nullptr, nullptr);
@@ -129,29 +127,17 @@ D3D11GPUContext::~D3D11GPUContext()
     }
     SAFE_RELEASE(m_pCurrentDepthBufferView);
 
-    SAFE_RELEASE(m_pUserVertexBuffer);
+#endif
 
     delete m_pConstants;
 
-    // clear swapchain last, like gl
-    SAFE_RELEASE(m_pCurrentSwapChain);
+    //SAFE_RELEASE(m_pCurrentSwapChain);
+    m_pDevice->SetGPUContext(nullptr);
     m_pDevice->Release();
 }
 
-bool D3D11GPUContext::Create()
+bool D3D12GPUContext::Create()
 {
-    HRESULT hResult;
-
-    // get the 11.1 context, if there was a 11.1 device successfully retrieved
-    if (m_pD3DDevice1 != nullptr)
-    {
-        if (FAILED(hResult = m_pD3DContext->QueryInterface(__uuidof(ID3D11DeviceContext1), (void **)&m_pD3DContext1)))
-        {
-            Log_ErrorPrintf("D3D11GPUContext::Create: Failed to retrieve ID3D11DeviceContext1 interface with hResult %08X", hResult);
-            return false;
-        }
-    }
-
     // allocate constants
     m_pConstants = new GPUContextConstants(this);
 
@@ -159,33 +145,20 @@ bool D3D11GPUContext::Create()
     if (!CreateConstantBuffers())
         return false;
 
-    // create user buffers
-    {
-        D3D11_BUFFER_DESC bufferDesc;
-        bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-        bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        bufferDesc.MiscFlags = 0;
-        bufferDesc.StructureByteStride = 0;
-
-        // vertex buffer
-        bufferDesc.ByteWidth = m_userVertexBufferSize;
-        bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-        if (FAILED(hResult = m_pD3DDevice->CreateBuffer(&bufferDesc, NULL, &m_pUserVertexBuffer)))
-        {
-            Log_ErrorPrintf("Failed to create user vertex buffer %08X", hResult);
-            return false;
-        }
-    }
+    // create queued frame data
+    if (!CreateQueuedFrameData())
+        return false;
 
     return true;
 }
 
-void D3D11GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffers /* = true */, bool clearStates /* = true */, bool clearRenderTargets /* = true */)
+void D3D12GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffers /* = true */, bool clearStates /* = true */, bool clearRenderTargets /* = true */)
 {
     if (clearShaders)
     {
         SetShaderProgram(nullptr);
 
+#if 0
         for (uint32 stage = 0; stage < SHADER_PROGRAM_STAGE_COUNT; stage++)
         {
             ShaderStageState &state = m_shaderStates[stage];
@@ -226,6 +199,7 @@ void D3D11GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffe
                 state.UAVDirtyUpperBounds = state.UAVBindCount - 1;
             }
         }
+#endif
 
         SynchronizeShaderStates();
     }
@@ -234,8 +208,8 @@ void D3D11GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffe
     {
         if (m_currentVertexBufferBindCount > 0)
         {
-            static GPUBuffer *nullVertexBuffers[D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT] = { nullptr };
-            static const uint32 nullSizeOrOffset[D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT] = { 0 };
+            static GPUBuffer *nullVertexBuffers[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT] = { nullptr };
+            static const uint32 nullSizeOrOffset[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT] = { 0 };
             SetVertexBuffers(0, m_currentVertexBufferBindCount, nullVertexBuffers, nullSizeOrOffset, nullSizeOrOffset);
         }
 
@@ -263,120 +237,105 @@ void D3D11GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffe
     }
 }
 
-GPURasterizerState *D3D11GPUContext::GetRasterizerState()
+GPURasterizerState *D3D12GPUContext::GetRasterizerState()
 {
     return m_pCurrentRasterizerState;
 }
 
-void D3D11GPUContext::SetRasterizerState(GPURasterizerState *pRasterizerState)
+void D3D12GPUContext::SetRasterizerState(GPURasterizerState *pRasterizerState)
 {
     if (m_pCurrentRasterizerState != pRasterizerState)
     {
-        if (m_pCurrentRasterizerState != NULL)
+        if (m_pCurrentRasterizerState != nullptr)
             m_pCurrentRasterizerState->Release();
 
-        if ((m_pCurrentRasterizerState = static_cast<D3D11RasterizerState *>(pRasterizerState)) != NULL)
-        {
+        if ((m_pCurrentRasterizerState = static_cast<D3D12GPURasterizerState *>(pRasterizerState)) != nullptr)
             m_pCurrentRasterizerState->AddRef();
-            m_pD3DContext->RSSetState(m_pCurrentRasterizerState->GetD3DRasterizerState());
-        }
-        else
-        {
-            m_pD3DContext->RSSetState(NULL);
-        }
+
+        m_pipelineChanged = true;
     }
 }
 
-GPUDepthStencilState *D3D11GPUContext::GetDepthStencilState()
+GPUDepthStencilState *D3D12GPUContext::GetDepthStencilState()
 {
     return m_pCurrentDepthStencilState;
 }
 
-uint8 D3D11GPUContext::GetDepthStencilStateStencilRef()
+uint8 D3D12GPUContext::GetDepthStencilStateStencilRef()
 {
     return m_currentDepthStencilRef;
 }
 
-void D3D11GPUContext::SetDepthStencilState(GPUDepthStencilState *pDepthStencilState, uint8 stencilRef)
+void D3D12GPUContext::SetDepthStencilState(GPUDepthStencilState *pDepthStencilState, uint8 stencilRef)
 {
-    if (m_pCurrentDepthStencilState != pDepthStencilState || m_currentDepthStencilRef != stencilRef)
+    if (m_pCurrentDepthStencilState != pDepthStencilState)
     {
-        if (m_pCurrentDepthStencilState == pDepthStencilState)
-        {
-            // just changing ref value
-            m_pD3DContext->OMSetDepthStencilState(m_pCurrentDepthStencilState->GetD3DDepthStencilState(), stencilRef);
-        }
-        else
-        {
-            if (m_pCurrentDepthStencilState != NULL)
-                m_pCurrentDepthStencilState->Release();
+        if (m_pCurrentDepthStencilState != nullptr)
+            m_pCurrentDepthStencilState->Release();
 
-            if ((m_pCurrentDepthStencilState = static_cast<D3D11DepthStencilState *>(pDepthStencilState)) != NULL)
-            {
-                m_pCurrentDepthStencilState->AddRef();
-                m_pD3DContext->OMSetDepthStencilState(m_pCurrentDepthStencilState->GetD3DDepthStencilState(), stencilRef);
-            }
-            else
-            {
-                m_pD3DContext->OMSetDepthStencilState(NULL, stencilRef);
-            }
-        }
+        if ((m_pCurrentDepthStencilState = static_cast<D3D12GPUDepthStencilState *>(pDepthStencilState)) != nullptr)
+            m_pCurrentDepthStencilState->AddRef();
 
+        m_pipelineChanged = true;
+    }
+
+    if (m_currentDepthStencilRef != stencilRef)
+    {
+        m_pCurrentCommandList->OMSetStencilRef(stencilRef);
         m_currentDepthStencilRef = stencilRef;
     }
 }
 
-GPUBlendState *D3D11GPUContext::GetBlendState()
+GPUBlendState *D3D12GPUContext::GetBlendState()
 {
     return m_pCurrentBlendState;
 }
 
-const float4 &D3D11GPUContext::GetBlendStateBlendFactor()
+const float4 &D3D12GPUContext::GetBlendStateBlendFactor()
 {
     return m_currentBlendStateBlendFactors;
 };
 
-void D3D11GPUContext::SetBlendState(GPUBlendState *pBlendState, const float4 &blendFactor /* = float4::One */)
+void D3D12GPUContext::SetBlendState(GPUBlendState *pBlendState, const float4 &blendFactor /* = float4::One */)
 {
-    if (m_pCurrentBlendState != pBlendState || blendFactor != m_currentBlendStateBlendFactors)
+    if (m_pCurrentBlendState != pBlendState)
     {
-        if (m_pCurrentBlendState != NULL)
+        if (m_pCurrentBlendState != nullptr)
             m_pCurrentBlendState->Release();
 
-        if ((m_pCurrentBlendState = static_cast<D3D11BlendState *>(pBlendState)) != NULL)
-        {
+        if ((m_pCurrentBlendState = static_cast<D3D12GPUBlendState *>(pBlendState)) != nullptr)
             m_pCurrentBlendState->AddRef();
-            m_pD3DContext->OMSetBlendState(m_pCurrentBlendState->GetD3DBlendState(), blendFactor.ele, 0xFFFFFFFF);
-        }
-        else
-        {
-            m_pD3DContext->OMSetBlendState(NULL, blendFactor.ele, 0xFFFFFFFF);
-        }
 
+        m_pipelineChanged = true;
+    }
+
+    if (blendFactor != m_currentBlendStateBlendFactors)
+    {
+        m_pCurrentCommandList->OMSetBlendFactor(blendFactor.ele);
         m_currentBlendStateBlendFactors = blendFactor;
     }
 }
 
-const RENDERER_VIEWPORT *D3D11GPUContext::GetViewport()
+const RENDERER_VIEWPORT *D3D12GPUContext::GetViewport()
 {
     return &m_currentViewport;
 }
 
-void D3D11GPUContext::SetViewport(const RENDERER_VIEWPORT *pNewViewport)
+void D3D12GPUContext::SetViewport(const RENDERER_VIEWPORT *pNewViewport)
 {
     if (Y_memcmp(&m_currentViewport, pNewViewport, sizeof(RENDERER_VIEWPORT)) == 0)
         return;
 
     Y_memcpy(&m_currentViewport, pNewViewport, sizeof(m_currentViewport));
 
-    D3D11_VIEWPORT D3DViewport;
+    D3D12_VIEWPORT D3DViewport;
     D3DViewport.TopLeftX = (float)m_currentViewport.TopLeftX;
     D3DViewport.TopLeftY = (float)m_currentViewport.TopLeftY;
     D3DViewport.Width = (float)m_currentViewport.Width;
     D3DViewport.Height = (float)m_currentViewport.Height;
     D3DViewport.MinDepth = pNewViewport->MinDepth;
     D3DViewport.MaxDepth = pNewViewport->MaxDepth;
-    m_pD3DContext->RSSetViewports(1, &D3DViewport);
+    m_pCurrentCommandList->RSSetViewports(1, &D3DViewport);
 
     // update constants
     m_pConstants->SetViewportOffset((float)m_currentViewport.TopLeftX, (float)m_currentViewport.TopLeftY, false);
@@ -384,7 +343,7 @@ void D3D11GPUContext::SetViewport(const RENDERER_VIEWPORT *pNewViewport)
     m_pConstants->CommitChanges();
 }
 
-void D3D11GPUContext::SetFullViewport(GPUTexture *pForRenderTarget /* = NULL */)
+void D3D12GPUContext::SetFullViewport(GPUTexture *pForRenderTarget /* = NULL */)
 {
     RENDERER_VIEWPORT viewport;
     viewport.TopLeftX = 0;
@@ -419,41 +378,42 @@ void D3D11GPUContext::SetFullViewport(GPUTexture *pForRenderTarget /* = NULL */)
     SetViewport(&viewport);
 }
 
-const RENDERER_SCISSOR_RECT *D3D11GPUContext::GetScissorRect()
+const RENDERER_SCISSOR_RECT *D3D12GPUContext::GetScissorRect()
 {
     return &m_scissorRect;
 }
 
-void D3D11GPUContext::SetScissorRect(const RENDERER_SCISSOR_RECT *pScissorRect)
+void D3D12GPUContext::SetScissorRect(const RENDERER_SCISSOR_RECT *pScissorRect)
 {
     if (Y_memcmp(&m_scissorRect, pScissorRect, sizeof(m_scissorRect)) == 0)
         return;
 
     Y_memcpy(&m_scissorRect, pScissorRect, sizeof(m_scissorRect));
 
-    D3D11_RECT D3DRect;
+    D3D12_RECT D3DRect;
     D3DRect.left = pScissorRect->Left;
     D3DRect.top = pScissorRect->Top;
     D3DRect.right = pScissorRect->Right;
     D3DRect.bottom = pScissorRect->Bottom;
-    m_pD3DContext->RSSetScissorRects(1, &D3DRect);
+    m_pCurrentCommandList->RSSetScissorRects(1, &D3DRect);
 }
 
-void D3D11GPUContext::ClearTargets(bool clearColor /* = true */, bool clearDepth /* = true */, bool clearStencil /* = true */, const float4 &clearColorValue /* = float4::Zero */, float clearDepthValue /* = 1.0f */, uint8 clearStencilValue /* = 0 */)
+void D3D12GPUContext::ClearTargets(bool clearColor /* = true */, bool clearDepth /* = true */, bool clearStencil /* = true */, const float4 &clearColorValue /* = float4::Zero */, float clearDepthValue /* = 1.0f */, uint8 clearStencilValue /* = 0 */)
 {
+#if 0
     uint32 clearFlags = 0;
     if (clearDepth)
-        clearFlags |= D3D11_CLEAR_DEPTH;
+        clearFlags |= D3D12_CLEAR_DEPTH;
     if (clearStencil)
-        clearFlags |= D3D11_CLEAR_STENCIL;
+        clearFlags |= D3D12_CLEAR_STENCIL;
 
     if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
     {
         // on swapchain
         if (m_pCurrentSwapChain != nullptr)
         {
-            ID3D11RenderTargetView *pRTV = m_pCurrentSwapChain->GetRenderTargetView();
-            ID3D11DepthStencilView *pDSV = m_pCurrentSwapChain->GetDepthStencilView();
+            ID3D12RenderTargetView *pRTV = m_pCurrentSwapChain->GetRenderTargetView();
+            ID3D12DepthStencilView *pDSV = m_pCurrentSwapChain->GetDepthStencilView();
 
             if (clearColor)
                 m_pD3DContext->ClearRenderTargetView(pRTV, clearColorValue);
@@ -476,10 +436,12 @@ void D3D11GPUContext::ClearTargets(bool clearColor /* = true */, bool clearDepth
         if (clearFlags != 0 && m_pCurrentDepthBufferView != nullptr)
             m_pD3DContext->ClearDepthStencilView(m_pCurrentDepthBufferView->GetD3DDSV(), clearFlags, clearDepthValue, clearStencilValue);
     }
+#endif
 }
 
-void D3D11GPUContext::DiscardTargets(bool discardColor /* = true */, bool discardDepth /* = true */, bool discardStencil /* = true */)
+void D3D12GPUContext::DiscardTargets(bool discardColor /* = true */, bool discardDepth /* = true */, bool discardStencil /* = true */)
 {
+#if 0
     // only supported on 11.1+
     if (m_pD3DContext1 == nullptr)
         return;
@@ -509,52 +471,37 @@ void D3D11GPUContext::DiscardTargets(bool discardColor /* = true */, bool discar
         if (discardDepth && discardStencil && m_pCurrentDepthBufferView != nullptr)
             m_pD3DContext1->DiscardView(m_pCurrentDepthBufferView->GetD3DDSV());
     }
+#endif
 }
 
-GPUOutputBuffer *D3D11GPUContext::GetOutputBuffer()
+GPUOutputBuffer *D3D12GPUContext::GetOutputBuffer()
 {
     return m_pCurrentSwapChain;
 }
 
-void D3D11GPUContext::SetOutputBuffer(GPUOutputBuffer *pSwapChain)
+void D3D12GPUContext::SetOutputBuffer(GPUOutputBuffer *pSwapChain)
 {
     DebugAssert(pSwapChain != nullptr);
     if (m_pCurrentSwapChain == pSwapChain)
         return;
 
     // copy out old swap chain
-    D3D11GPUOutputBuffer *pOldSwapChain = m_pCurrentSwapChain;
+    D3D12GPUOutputBuffer *pOldSwapChain = m_pCurrentSwapChain;
 
     // copy in new swap chain
-    if ((m_pCurrentSwapChain = static_cast<D3D11GPUOutputBuffer *>(pSwapChain)) != nullptr)
-    {
-//         DebugAssert(m_pCurrentSwapChain->GetOwnerContext() == nullptr);
-//         if (m_pCurrentSwapChain->IsManaged())
-//             static_cast<D3D11RendererOutputWindow *>(m_pCurrentSwapChain)->SetOwnerContext(this);
-//         else
-//             static_cast<D3D11GPUOutputBuffer *>(m_pCurrentSwapChain)->SetOwnerContext(this);
-
+    if ((m_pCurrentSwapChain = static_cast<D3D12GPUOutputBuffer *>(pSwapChain)) != nullptr)
         m_pCurrentSwapChain->AddRef();
-    }
 
     // Currently rendering to window?
     if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
         SynchronizeRenderTargetsAndUAVs();
 
     // update references
-    if (pOldSwapChain != NULL)
-    {
-//         DebugAssert(pOldSwapChain->GetOwnerContext() == this);
-//         if (pOldSwapChain->IsManaged())
-//             static_cast<D3D11RendererOutputWindow *>(pOldSwapChain)->SetOwnerContext(nullptr);
-//         else
-//             static_cast<D3D11GPUOutputBuffer *>(pOldSwapChain)->SetOwnerContext(nullptr);
-
+    if (pOldSwapChain != nullptr)
         pOldSwapChain->Release();
-    }
 }
 
-bool D3D11GPUContext::GetExclusiveFullScreen()
+bool D3D12GPUContext::GetExclusiveFullScreen()
 {
     BOOL currentState;
     HRESULT hResult = m_pCurrentSwapChain->GetDXGISwapChain()->GetFullscreenState(&currentState, nullptr);
@@ -564,126 +511,13 @@ bool D3D11GPUContext::GetExclusiveFullScreen()
     return (currentState == TRUE);
 }
 
-bool D3D11GPUContext::SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate)
+bool D3D12GPUContext::SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate)
 {
-    HRESULT hResult;
-
-    // bound to pipeline? have to clear before switching modes
-    if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
-        m_pD3DContext->OMSetRenderTargets(0, nullptr, nullptr);
-
-    // switch successful? ie have to resize buffers
-    bool switchResult = true;
-    uint32 newWidth = width;
-    uint32 newHeight = height;
-
-    // get current fullscreen state
-    BOOL currentFullScreenState;
-    if (FAILED(m_pCurrentSwapChain->GetDXGISwapChain()->GetFullscreenState(&currentFullScreenState, nullptr)))
-        currentFullScreenState = FALSE;
-
-    // to fullscreen?
-    if (enabled)
-    {
-        // get output
-        IDXGIOutput *pOutput;
-        hResult = m_pDevice->GetDXGIAdapter()->EnumOutputs(0, &pOutput);
-        if (SUCCEEDED(hResult))
-        {
-            // fill in mode details with requested width/height
-            DXGI_MODE_DESC modeDesc;
-            Y_memzero(&modeDesc, sizeof(modeDesc));
-            modeDesc.Width = width;
-            modeDesc.Height = height;
-            modeDesc.RefreshRate.Numerator = refreshRate;
-            modeDesc.RefreshRate.Denominator = 1;
-            modeDesc.Format = m_pDevice->GetSwapChainBackBufferFormat();
-
-            // find the best mode match
-            DXGI_MODE_DESC closestMatch;
-            hResult = pOutput->FindClosestMatchingMode(&modeDesc, &closestMatch, m_pD3DDevice);
-            if (SUCCEEDED(hResult))
-            {
-                // update dimensions with closest match
-                Log_InfoPrintf("D3D11GPUContext::SetExclusiveFullScreen: Switching to closest mode match %ux%u RefreshRate %u/%u", closestMatch.Width, closestMatch.Height, closestMatch.RefreshRate.Numerator, closestMatch.RefreshRate.Denominator);
-                newWidth = closestMatch.Width;
-                newHeight = closestMatch.Height;
-
-                // switch to fullscreen state
-                if (!currentFullScreenState)
-                {
-                    hResult = m_pCurrentSwapChain->GetDXGISwapChain()->SetFullscreenState(TRUE, pOutput);
-                    if (FAILED(hResult))
-                    {
-                        Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGISwapChain::SetFullscreenState failed with hResult %08X.", hResult);
-                        switchResult = false;
-                    }
-                }
-
-                // resize the target
-                if (switchResult)
-                {
-                    // call ResizeTarget to fix up the window size
-                    hResult = m_pCurrentSwapChain->GetDXGISwapChain()->ResizeTarget(&closestMatch);
-                    if (FAILED(hResult))
-                    {
-                        Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGISwapChain::ResizeTarget failed with hResult %08X.", hResult);
-                        switchResult = false;
-                    }
-                }
-            }
-            else
-            {
-                Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGIOutput::FindClosestMatchingMode failed with hResult %08X.", hResult);
-                switchResult = false;
-            }
-
-            pOutput->Release();
-        }
-        else
-        {
-            Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGIAdapter::EnumOutputs failed with hResult %08X.", hResult);
-            switchResult = false;
-        }
-    }
-    else
-    {
-        // remove if currently set
-        if (currentFullScreenState)
-        {
-            hResult = m_pCurrentSwapChain->GetDXGISwapChain()->SetFullscreenState(FALSE, nullptr);
-            if (FAILED(hResult))
-            {
-                Log_ErrorPrintf("D3D11GPUContext::SetExclusiveFullScreen: IDXGISwapChain::SetFullscreenState failed with hResult %08X.", hResult);
-                switchResult = false;
-            }
-            else
-            {
-                // update dimensions
-                RECT clientRect;
-                GetClientRect(m_pCurrentSwapChain->GetHWND(), &clientRect);
-                newWidth = Max(clientRect.right - clientRect.left, (LONG)1);
-                newHeight = Max(clientRect.bottom - clientRect.top, (LONG)1);
-            }
-        }
-    }
-
-    // switch successful?
-    if (switchResult)
-    {
-        // resize buffers
-        m_pCurrentSwapChain->InternalResizeBuffers(newWidth, newHeight, m_pCurrentSwapChain->GetVSyncType());
-    }
-
-    // synchronize render targets if we were bound
-    if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
-        SynchronizeRenderTargetsAndUAVs();
-
-    // done
-    return true;
+    // @TODO
+    return false;
 }
 
-bool D3D11GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /* = 0 */)
+bool D3D12GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /* = 0 */)
 {
     if (width == 0 || height == 0)
     {
@@ -702,7 +536,7 @@ bool D3D11GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /
 
     // unbind if we're currently bound to the pipeline
     if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
-        m_pD3DContext->OMSetRenderTargets(0, nullptr, nullptr);
+        m_pCurrentCommandList->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
 
     // invoke the resize
     m_pCurrentSwapChain->InternalResizeBuffers(width, height, m_pCurrentSwapChain->GetVSyncType());
@@ -715,12 +549,12 @@ bool D3D11GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /
     return true;
 }
 
-void D3D11GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour)
+void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour)
 {
     m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
 }
 
-uint32 D3D11GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)
+uint32 D3D12GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)
 {
     uint32 i, j;
 
@@ -736,7 +570,7 @@ uint32 D3D11GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetV
     return i;
 }
 
-void D3D11GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargets, GPUDepthStencilBufferView *pDepthBufferView)
+void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargets, GPUDepthStencilBufferView *pDepthBufferView)
 {
     // to system framebuffer?
     if ((nRenderTargets == 0 || (nRenderTargets == 1 && ppRenderTargets[0] == nullptr)) && pDepthBufferView == nullptr)
@@ -777,7 +611,7 @@ void D3D11GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
                 if (m_pCurrentRenderTargetViews[slot] != nullptr)
                     m_pCurrentRenderTargetViews[slot]->Release();
 
-                if ((m_pCurrentRenderTargetViews[slot] = static_cast<D3D11GPURenderTargetView *>(ppRenderTargets[slot])) != nullptr)
+                if ((m_pCurrentRenderTargetViews[slot] = static_cast<D3D12GPURenderTargetView *>(ppRenderTargets[slot])) != nullptr)
                     m_pCurrentRenderTargetViews[slot]->AddRef();
 
                 doUpdate = true;
@@ -808,7 +642,7 @@ void D3D11GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
             if (m_pCurrentDepthBufferView != nullptr)
                 m_pCurrentDepthBufferView->Release();
 
-            if ((m_pCurrentDepthBufferView = static_cast<D3D11GPUDepthStencilBufferView *>(pDepthBufferView)) != nullptr)
+            if ((m_pCurrentDepthBufferView = static_cast<D3D12GPUDepthStencilBufferView *>(pDepthBufferView)) != nullptr)
                 m_pCurrentDepthBufferView->AddRef();
 
             doUpdate = true;
@@ -822,33 +656,34 @@ void D3D11GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
     }
 }
 
-DRAW_TOPOLOGY D3D11GPUContext::GetDrawTopology()
+DRAW_TOPOLOGY D3D12GPUContext::GetDrawTopology()
 {
     return m_currentTopology;
 }
 
-void D3D11GPUContext::SetDrawTopology(DRAW_TOPOLOGY topology)
+void D3D12GPUContext::SetDrawTopology(DRAW_TOPOLOGY topology)
 {
-    static const D3D11_PRIMITIVE_TOPOLOGY D3D11Topologies[DRAW_TOPOLOGY_COUNT] =
+    static const D3D12_PRIMITIVE_TOPOLOGY D3D12Topologies[DRAW_TOPOLOGY_COUNT] =
     {
-        D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,     // DRAW_TOPOLOGY_UNDEFINED
-        D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,     // DRAW_TOPOLOGY_POINTS
-        D3D11_PRIMITIVE_TOPOLOGY_LINELIST,      // DRAW_TOPOLOGY_LINE_LIST
-        D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,     // DRAW_TOPOLOGY_LINE_STRIP
-        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,  // DRAW_TOPOLOGY_TRIANGLE_LIST
-        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, // DRAW_TOPOLOGY_TRIANGLE_STRIP
+        D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,     // DRAW_TOPOLOGY_UNDEFINED
+        D3D_PRIMITIVE_TOPOLOGY_POINTLIST,     // DRAW_TOPOLOGY_POINTS
+        D3D_PRIMITIVE_TOPOLOGY_LINELIST,      // DRAW_TOPOLOGY_LINE_LIST
+        D3D_PRIMITIVE_TOPOLOGY_LINESTRIP,     // DRAW_TOPOLOGY_LINE_STRIP
+        D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,  // DRAW_TOPOLOGY_TRIANGLE_LIST
+        D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP, // DRAW_TOPOLOGY_TRIANGLE_STRIP
     };
 
     if (topology == m_currentTopology)
         return;
 
     DebugAssert(topology < DRAW_TOPOLOGY_COUNT);
-    m_pD3DContext->IASetPrimitiveTopology(D3D11Topologies[topology]);
+    m_pCurrentCommandList->IASetPrimitiveTopology(D3D12Topologies[topology]);
     m_currentTopology = topology;
 }
 
-uint32 D3D11GPUContext::GetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUBuffer **ppVertexBuffers, uint32 *pVertexBufferOffsets, uint32 *pVertexBufferStrides)
+uint32 D3D12GPUContext::GetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUBuffer **ppVertexBuffers, uint32 *pVertexBufferOffsets, uint32 *pVertexBufferStrides)
 {
+#if 0
     DebugAssert(firstBuffer + nBuffers < countof(m_pCurrentVertexBuffers));
 
     uint32 saveCount;
@@ -863,17 +698,20 @@ uint32 D3D11GPUContext::GetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GP
     }
 
     return saveCount;
+#endif
+    return 0;
 }
 
-void D3D11GPUContext::SetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUBuffer *const *ppVertexBuffers, const uint32 *pVertexBufferOffsets, const uint32 *pVertexBufferStrides)
+void D3D12GPUContext::SetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUBuffer *const *ppVertexBuffers, const uint32 *pVertexBufferOffsets, const uint32 *pVertexBufferStrides)
 {
-    ID3D11Buffer *pD3DBuffers[D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
-    UINT D3DBufferOffsets[D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
-    UINT D3DBufferStrides[D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
+#if 0
+    ID3D12Buffer *pD3DBuffers[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
+    UINT D3DBufferOffsets[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
+    UINT D3DBufferStrides[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
 
     for (uint32 i = 0; i < nBuffers; i++)
     {
-        D3D11GPUBuffer *pD3D11VertexBuffer = static_cast<D3D11GPUBuffer *>(ppVertexBuffers[i]);
+        D3D12GPUBuffer *pD3D12VertexBuffer = static_cast<D3D12GPUBuffer *>(ppVertexBuffers[i]);
         uint32 bufferIndex = firstBuffer + i;
 
         if (m_pCurrentVertexBuffers[bufferIndex] != nullptr)
@@ -882,13 +720,13 @@ void D3D11GPUContext::SetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUB
             m_pCurrentVertexBuffers[bufferIndex] = nullptr;
         }
 
-        if ((m_pCurrentVertexBuffers[bufferIndex] = pD3D11VertexBuffer) != nullptr)
+        if ((m_pCurrentVertexBuffers[bufferIndex] = pD3D12VertexBuffer) != nullptr)
         {
-            pD3D11VertexBuffer->AddRef();
+            pD3D12VertexBuffer->AddRef();
             m_currentVertexBufferOffsets[bufferIndex] = pVertexBufferOffsets[i];
             m_currentVertexBufferStrides[bufferIndex] = pVertexBufferStrides[i];
 
-            pD3DBuffers[i] = pD3D11VertexBuffer->GetD3DBuffer();
+            pD3DBuffers[i] = pD3D12VertexBuffer->GetD3DBuffer();
             D3DBufferOffsets[i] = pVertexBufferOffsets[i];
             D3DBufferStrides[i] = pVertexBufferStrides[i];
         }
@@ -915,10 +753,12 @@ void D3D11GPUContext::SetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUB
             bindCount = i + 1;
     }
     m_currentVertexBufferBindCount = bindCount;
+#endif
 }
 
-void D3D11GPUContext::SetVertexBuffer(uint32 bufferIndex, GPUBuffer *pVertexBuffer, uint32 offset, uint32 stride)
+void D3D12GPUContext::SetVertexBuffer(uint32 bufferIndex, GPUBuffer *pVertexBuffer, uint32 offset, uint32 stride)
 {
+#if 0
     if (m_pCurrentVertexBuffers[bufferIndex] == pVertexBuffer &&
         m_currentVertexBufferOffsets[bufferIndex] == offset &&
         m_currentVertexBufferStrides[bufferIndex] == stride)
@@ -931,7 +771,7 @@ void D3D11GPUContext::SetVertexBuffer(uint32 bufferIndex, GPUBuffer *pVertexBuff
         if (m_pCurrentVertexBuffers[bufferIndex] != nullptr)
             m_pCurrentVertexBuffers[bufferIndex]->Release();
 
-        if ((m_pCurrentVertexBuffers[bufferIndex] = static_cast<D3D11GPUBuffer *>(pVertexBuffer)) != nullptr)
+        if ((m_pCurrentVertexBuffers[bufferIndex] = static_cast<D3D12GPUBuffer *>(pVertexBuffer)) != nullptr)
             m_pCurrentVertexBuffers[bufferIndex]->AddRef();
     }
 
@@ -939,7 +779,7 @@ void D3D11GPUContext::SetVertexBuffer(uint32 bufferIndex, GPUBuffer *pVertexBuff
     m_currentVertexBufferStrides[bufferIndex] = stride;
 
     // todo: pending set
-    ID3D11Buffer *pD3DBuffer = (pVertexBuffer != nullptr) ? static_cast<D3D11GPUBuffer *>(pVertexBuffer)->GetD3DBuffer() : nullptr;
+    ID3D12Buffer *pD3DBuffer = (pVertexBuffer != nullptr) ? static_cast<D3D12GPUBuffer *>(pVertexBuffer)->GetD3DBuffer() : nullptr;
     UINT D3DOffset = (pVertexBuffer != nullptr) ? offset : 0;
     UINT D3DStride = (pVertexBuffer != nullptr) ? stride : 0;
     m_pD3DContext->IASetVertexBuffers(bufferIndex, 1, &pD3DBuffer, &D3DStride, &D3DOffset);
@@ -953,17 +793,21 @@ void D3D11GPUContext::SetVertexBuffer(uint32 bufferIndex, GPUBuffer *pVertexBuff
             bindCount = i + 1;
     }
     m_currentVertexBufferBindCount = bindCount;
+#endif
 }
 
-void D3D11GPUContext::GetIndexBuffer(GPUBuffer **ppBuffer, GPU_INDEX_FORMAT *pFormat, uint32 *pOffset)
+void D3D12GPUContext::GetIndexBuffer(GPUBuffer **ppBuffer, GPU_INDEX_FORMAT *pFormat, uint32 *pOffset)
 {
+#if 0
     *ppBuffer = m_pCurrentIndexBuffer;
     *pFormat = m_currentIndexFormat;
     *pOffset = m_currentIndexBufferOffset;
+#endif
 }
 
-void D3D11GPUContext::SetIndexBuffer(GPUBuffer *pBuffer, GPU_INDEX_FORMAT format, uint32 offset)
+void D3D12GPUContext::SetIndexBuffer(GPUBuffer *pBuffer, GPU_INDEX_FORMAT format, uint32 offset)
 {
+#if 0
     if (m_pCurrentIndexBuffer == pBuffer && m_currentIndexFormat == format && m_currentIndexBufferOffset == offset)
         return;
 
@@ -972,7 +816,7 @@ void D3D11GPUContext::SetIndexBuffer(GPUBuffer *pBuffer, GPU_INDEX_FORMAT format
         if (m_pCurrentIndexBuffer != NULL)
             m_pCurrentIndexBuffer->Release();
 
-        if ((m_pCurrentIndexBuffer = static_cast<D3D11GPUBuffer *>(pBuffer)) != NULL)
+        if ((m_pCurrentIndexBuffer = static_cast<D3D12GPUBuffer *>(pBuffer)) != NULL)
             m_pCurrentIndexBuffer->AddRef();
     }
 
@@ -983,14 +827,16 @@ void D3D11GPUContext::SetIndexBuffer(GPUBuffer *pBuffer, GPU_INDEX_FORMAT format
         m_pD3DContext->IASetIndexBuffer(m_pCurrentIndexBuffer->GetD3DBuffer(), (format == GPU_INDEX_FORMAT_UINT16) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, m_currentIndexBufferOffset);
     else
         m_pD3DContext->IASetIndexBuffer(NULL, DXGI_FORMAT_R16_UINT, 0);
+#endif
 }
 
-void D3D11GPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)
+void D3D12GPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)
 {
+#if 0
     if (m_pCurrentShaderProgram == pShaderProgram)
         return;
 
-    D3D11GPUShaderProgram *pNewShaderProgram = static_cast<D3D11GPUShaderProgram *>(pShaderProgram);
+    D3D12GPUShaderProgram *pNewShaderProgram = static_cast<D3D12GPUShaderProgram *>(pShaderProgram);
     if (m_pCurrentShaderProgram != nullptr && pNewShaderProgram != nullptr)
     {
         // have both so do fast switch
@@ -1013,9 +859,10 @@ void D3D11GPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)
             m_pCurrentShaderProgram->AddRef();
         }
     }
+#endif
 }
 
-bool D3D11GPUContext::CreateConstantBuffers()
+bool D3D12GPUContext::CreateConstantBuffers()
 {
     uint32 memoryUsage = 0;
     uint32 activeCount = 0;
@@ -1035,9 +882,9 @@ bool D3D11GPUContext::CreateConstantBuffers()
         const ShaderConstantBuffer *declaration = registry->GetTypeInfoByIndex(i);
         if (declaration == nullptr)
             continue;
-        if (declaration->GetPlatformRequirement() != RENDERER_PLATFORM_COUNT && declaration->GetPlatformRequirement() != RENDERER_PLATFORM_D3D11)
+        if (declaration->GetPlatformRequirement() != RENDERER_PLATFORM_COUNT && declaration->GetPlatformRequirement() != RENDERER_PLATFORM_D3D12)
             continue;
-        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > D3D11RenderBackend::GetInstance()->GetFeatureLevel())
+        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > D3D12RenderBackend::GetInstance()->GetFeatureLevel())
             continue;
 
         // set size so we know to allocate it later or on demand
@@ -1062,11 +909,11 @@ bool D3D11GPUContext::CreateConstantBuffers()
 
         // create the gpu buffer
         GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_WRITABLE, constantBuffer->Size);
-        constantBuffer->pGPUBuffer = static_cast<D3D11GPUBuffer *>(m_pDevice->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
+        //constantBuffer->pGPUBuffer = static_cast<D3D12GPUBuffer *>(m_pDevice->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
         if (constantBuffer->pGPUBuffer == nullptr)
         {
             const ShaderConstantBuffer *declaration = ShaderConstantBuffer::GetRegistry()->GetTypeInfoByIndex(i);
-            Log_ErrorPrintf("D3D11GPUContext::CreateResources: Failed to allocate constant buffer %u (%s)", i, declaration->GetBufferName());
+            Log_ErrorPrintf("D3D12GPUContext::CreateResources: Failed to allocate constant buffer %u (%s)", i, declaration->GetBufferName());
             return false;
         }
     }
@@ -1074,7 +921,57 @@ bool D3D11GPUContext::CreateConstantBuffers()
     return true;
 }
 
-D3D11GPUBuffer *D3D11GPUContext::GetConstantBuffer(uint32 index)
+bool D3D12GPUContext::CreateQueuedFrameData()
+{
+    uint32 frameLatency = m_pBackend->GetFrameLatency();
+    m_queuedFrameData.Resize(frameLatency);
+    m_queuedFrameData.ZeroContents();
+    return false;
+}
+
+bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress)
+{
+    uint32 offset;
+    if (!m_pCurrentScratchBuffer->Allocate(size, &offset))
+    {
+        // work out new buffer size
+        uint32 newBufferSize = Max(m_pCurrentScratchBuffer->GetSize() + size, m_pCurrentScratchBuffer->GetSize() * 2);
+        Log_PerfPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Scratch buffer (%u bytes) overflow, allocating new buffer of %u bytes.", m_pCurrentScratchBuffer->GetSize(), newBufferSize);
+
+        // allocate new buffer
+        D3D12ScratchBuffer *pNewScratchBuffer = D3D12ScratchBuffer::Create(m_pD3DDevice, newBufferSize);
+        if (pNewScratchBuffer == nullptr)
+        {
+            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Failed to allocate new scratch buffer of size %u", newBufferSize);
+            return false;
+        }
+
+        // nuke current scratch buffer (the internal buffer will be scheduled for deletion after the frame)
+        delete m_pCurrentScratchBuffer;
+        m_pCurrentScratchBuffer = pNewScratchBuffer;
+        m_queuedFrameData[m_currentQueuedFrameIndex].pScratchBuffer = pNewScratchBuffer;
+
+        // allocate from new scratch buffer
+        if (!m_pCurrentScratchBuffer->Allocate(size, &offset))
+        {
+            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Failed to allocate new scratch buffer (this shouldn't happen)");
+            return false;
+        }
+    }
+
+    if (ppScratchBufferResource != nullptr)
+        *ppScratchBufferResource = m_pCurrentScratchBuffer->GetResource();
+    if (pScratchBufferOffset != nullptr)
+        *pScratchBufferOffset = offset;
+    if (ppCPUPointer != nullptr)
+        *ppCPUPointer = m_pCurrentScratchBuffer->GetPointer(offset);
+    if (pGPUAddress != nullptr)
+        *pGPUAddress = m_pCurrentScratchBuffer->GetGPUAddress(offset);
+
+    return true;
+}
+
+D3D12GPUBuffer *D3D12GPUContext::GetConstantBuffer(uint32 index)
 {
     ConstantBuffer *constantBuffer = &m_constantBuffers[index];
     if (constantBuffer->Size == 0)
@@ -1088,11 +985,11 @@ D3D11GPUBuffer *D3D11GPUContext::GetConstantBuffer(uint32 index)
 
         // create the gpu buffer
         GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_WRITABLE, constantBuffer->Size);
-        constantBuffer->pGPUBuffer = static_cast<D3D11GPUBuffer *>(m_pDevice->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
+        //constantBuffer->pGPUBuffer = static_cast<D3D12GPUBuffer *>(m_pDevice->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
         if (constantBuffer->pGPUBuffer == nullptr)
         {
             const ShaderConstantBuffer *declaration = ShaderConstantBuffer::GetRegistry()->GetTypeInfoByIndex(index);
-            Log_ErrorPrintf("D3D11GPUContext::GetConstantBuffer: Failed to lazy-allocate constant buffer %u (%s)", index, declaration->GetBufferName());
+            Log_ErrorPrintf("D3D12GPUContext::GetConstantBuffer: Failed to lazy-allocate constant buffer %u (%s)", index, declaration->GetBufferName());
             return nullptr;
         }
     }
@@ -1100,7 +997,7 @@ D3D11GPUBuffer *D3D11GPUContext::GetConstantBuffer(uint32 index)
     return constantBuffer->pGPUBuffer;
 }
 
-void D3D11GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex, uint32 offset, uint32 count, const void *pData, bool commit /* = false */)
+void D3D12GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex, uint32 offset, uint32 count, const void *pData, bool commit /* = false */)
 {
     ConstantBuffer *cbInfo = &m_constantBuffers[bufferIndex];
     if (cbInfo->pGPUBuffer == nullptr)
@@ -1130,7 +1027,7 @@ void D3D11GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex,
     }
 }
 
-void D3D11GPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fieldIndex, uint32 offset, uint32 bufferStride, uint32 copySize, uint32 count, const void *pData, bool commit /*= false*/)
+void D3D12GPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fieldIndex, uint32 offset, uint32 bufferStride, uint32 copySize, uint32 count, const void *pData, bool commit /*= false*/)
 {
     ConstantBuffer *cbInfo = &m_constantBuffers[bufferIndex];
     if (cbInfo->pGPUBuffer == nullptr)
@@ -1162,28 +1059,33 @@ void D3D11GPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fiel
     }
 }
 
-void D3D11GPUContext::CommitConstantBuffer(uint32 bufferIndex)
+void D3D12GPUContext::CommitConstantBuffer(uint32 bufferIndex)
 {
     ConstantBuffer *cbInfo = &m_constantBuffers[bufferIndex];
     if (cbInfo->pGPUBuffer == nullptr || cbInfo->DirtyLowerBounds < 0)
         return;
 
+    // work out count to modify
+    uint32 modifySize = cbInfo->DirtyUpperBounds - cbInfo->DirtyLowerBounds + 1;
+
+    // allocate scratch buffer memory
+    ID3D12Resource *pScratchBufferResource;
+    uint32 scratchBufferOffset;
+    void *pCPUPointer;
+    if (!AllocateScratchBufferMemory(modifySize, &pScratchBufferResource, &scratchBufferOffset, &pCPUPointer, nullptr))
+    {
+        Log_ErrorPrintf("D3D12GPUContext::CommitConstantBuffer: Failed to allocate scratch buffer memory.");
+        return;
+    }
+
     // block predicates
     BypassPredication();
 
-    // d3d11.0 does not support partial constant buffer updates
-//     if (m_pD3DContext1 != nullptr)
-//     {
-//         // align the dirty bounds to 16 bytes
-//         int32 alignedDirtyLowerBounds = cbInfo->DirtyLowerBounds & (~15);
-//         int32 alignedDirtyUpperBounds = (cbInfo->DirtyUpperBounds + 15) & (~15);
-//         D3D11_BOX destinationBox = { static_cast<UINT>(alignedDirtyLowerBounds), 0, 0, static_cast<UINT>(alignedDirtyUpperBounds - alignedDirtyLowerBounds), 1, 1 };
-//         m_pD3DContext1->UpdateSubresource1(cbInfo->pGPUBuffer->GetD3DBuffer(), 0, &destinationBox, cbInfo->pLocalMemory + alignedDirtyLowerBounds, 0, 0, D3D11_COPY_NO_OVERWRITE);
-//     }
-//     else
-    {
-        m_pD3DContext->UpdateSubresource(cbInfo->pGPUBuffer->GetD3DBuffer(), 0, nullptr, cbInfo->pLocalMemory, 0, 0);
-    }
+    // copy from the constant memory store to the scratch buffer
+    Y_memcpy(pCPUPointer, cbInfo->pLocalMemory + cbInfo->DirtyLowerBounds, modifySize);
+
+    // queue a copy to the actual buffer
+    //m_pCurrentCommandList->CopyBufferRegion(cbInfo->pGPUBuffer, cbInfo->DirtyLowerBounds, m_pCurrentScratchBuffer->GetResource(), scratchBufferOffset, modifySize);
 
     // restore predicates
     RestorePredication();
@@ -1192,17 +1094,13 @@ void D3D11GPUContext::CommitConstantBuffer(uint32 bufferIndex)
     cbInfo->DirtyLowerBounds = cbInfo->DirtyUpperBounds = -1;
 }
 
-void D3D11GPUContext::SetShaderConstantBuffers(SHADER_PROGRAM_STAGE stage, uint32 index, ID3D11Buffer *pBuffer)
+void D3D12GPUContext::SetShaderConstantBuffers(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle)
 {
     ShaderStageState *state = &m_shaderStates[stage];
-    if (state->ConstantBuffers[index] == pBuffer)
+    if (state->ConstantBuffers[index].ptr == gpuHandle.ptr)
         return;
 
-    if (state->ConstantBuffers[index] != nullptr)
-        state->ConstantBuffers[index]->Release();
-    if ((state->ConstantBuffers[index] = pBuffer) != nullptr)
-        pBuffer->AddRef();
-
+    state->ConstantBuffers[index].ptr = gpuHandle.ptr;
     if (state->ConstantBufferDirtyLowerBounds < 0)
     {
         state->ConstantBufferDirtyLowerBounds = index;
@@ -1215,17 +1113,13 @@ void D3D11GPUContext::SetShaderConstantBuffers(SHADER_PROGRAM_STAGE stage, uint3
     }
 }
 
-void D3D11GPUContext::SetShaderResources(SHADER_PROGRAM_STAGE stage, uint32 index, ID3D11ShaderResourceView *pResource)
+void D3D12GPUContext::SetShaderResources(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle)
 {
     ShaderStageState *state = &m_shaderStates[stage];
-    if (state->Resources[index] == pResource)
+    if (state->Resources[index].ptr == gpuHandle.ptr)
         return;
 
-    if (state->Resources[index] != nullptr)
-        state->Resources[index]->Release();
-    if ((state->Resources[index] = pResource) != nullptr)
-        pResource->AddRef();
-
+    state->Resources[index].ptr = gpuHandle.ptr;
     if (state->ResourceDirtyLowerBounds < 0)
     {
         state->ResourceDirtyLowerBounds = index;
@@ -1238,17 +1132,13 @@ void D3D11GPUContext::SetShaderResources(SHADER_PROGRAM_STAGE stage, uint32 inde
     }
 }
 
-void D3D11GPUContext::SetShaderSamplers(SHADER_PROGRAM_STAGE stage, uint32 index, ID3D11SamplerState *pSampler)
+void D3D12GPUContext::SetShaderSamplers(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle)
 {
     ShaderStageState *state = &m_shaderStates[stage];
-    if (state->Samplers[index] == pSampler)
+    if (state->Samplers[index].ptr == gpuHandle.ptr)
         return;
 
-    if (state->Samplers[index] != nullptr)
-        state->Samplers[index]->Release();
-    if ((state->Samplers[index] = pSampler) != nullptr)
-        pSampler->AddRef();
-
+    state->Samplers[index].ptr = gpuHandle.ptr;
     if (state->SamplerDirtyLowerBounds < 0)
     {
         state->SamplerDirtyLowerBounds = index;
@@ -1261,17 +1151,13 @@ void D3D11GPUContext::SetShaderSamplers(SHADER_PROGRAM_STAGE stage, uint32 index
     }
 }
 
-void D3D11GPUContext::SetShaderUAVs(SHADER_PROGRAM_STAGE stage, uint32 index, ID3D11UnorderedAccessView *pResource)
+void D3D12GPUContext::SetShaderUAVs(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle)
 {
     ShaderStageState *state = &m_shaderStates[stage];
-    if (state->UAVs[index] == pResource)
+    if (state->UAVs[index].ptr == gpuHandle.ptr)
         return;
 
-    if (state->UAVs[index] != nullptr)
-        state->UAVs[index]->Release();
-    if ((state->UAVs[index] = pResource) != nullptr)
-        pResource->AddRef();
-
+    state->UAVs[index].ptr = gpuHandle.ptr;
     if (state->UAVDirtyLowerBounds < 0)
     {
         state->UAVDirtyLowerBounds = index;
@@ -1284,10 +1170,11 @@ void D3D11GPUContext::SetShaderUAVs(SHADER_PROGRAM_STAGE stage, uint32 index, ID
     }
 }
 
-void D3D11GPUContext::SynchronizeRenderTargetsAndUAVs()
+void D3D12GPUContext::SynchronizeRenderTargetsAndUAVs()
 {
-    ID3D11RenderTargetView *renderTargetViews[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT];
-    ID3D11DepthStencilView *depthStencilView = nullptr;
+#if 0
+    ID3D12RenderTargetView *renderTargetViews[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT];
+    ID3D12DepthStencilView *depthStencilView = nullptr;
     uint32 renderTargetCount = 0;
 
     // get render target views
@@ -1319,8 +1206,8 @@ void D3D11GPUContext::SynchronizeRenderTargetsAndUAVs()
     }
 
     // get unordered access views
-    ID3D11UnorderedAccessView *unorderedAccessViews[D3D11_PS_CS_UAV_REGISTER_COUNT];
-    UINT unorderedAccessViewInitialCounts[D3D11_PS_CS_UAV_REGISTER_COUNT];
+    ID3D12UnorderedAccessView *unorderedAccessViews[D3D12_PS_CS_UAV_REGISTER_COUNT];
+    UINT unorderedAccessViewInitialCounts[D3D12_PS_CS_UAV_REGISTER_COUNT];
     uint32 unorderedAccessCount = 0;
     if (m_shaderStates[SHADER_PROGRAM_STAGE_PIXEL_SHADER].UAVBindCount > 0)
     {
@@ -1336,10 +1223,12 @@ void D3D11GPUContext::SynchronizeRenderTargetsAndUAVs()
         m_pD3DContext->OMSetRenderTargetsAndUnorderedAccessViews(renderTargetCount, (renderTargetCount > 0) ? renderTargetViews : nullptr, depthStencilView, 0, unorderedAccessCount, unorderedAccessViews, unorderedAccessViewInitialCounts);
     else
         m_pD3DContext->OMSetRenderTargets(renderTargetCount, (renderTargetCount > 0) ? renderTargetViews : nullptr, depthStencilView);
+#endif
 }
 
-void D3D11GPUContext::SynchronizeShaderStates()
+void D3D12GPUContext::SynchronizeShaderStates()
 {
+#if 0
     // switch shader
 
     // update states
@@ -1463,9 +1352,10 @@ void D3D11GPUContext::SynchronizeShaderStates()
     // update the local constant buffer for the active program
     if (m_pCurrentShaderProgram != nullptr)
         m_pCurrentShaderProgram->CommitLocalConstantBuffers(this);
+#endif
 }
 
-void D3D11GPUContext::Draw(uint32 firstVertex, uint32 nVertices)
+void D3D12GPUContext::Draw(uint32 firstVertex, uint32 nVertices)
 {
     if (nVertices == 0)
         return;
@@ -1473,11 +1363,11 @@ void D3D11GPUContext::Draw(uint32 firstVertex, uint32 nVertices)
     DebugAssert(m_pCurrentShaderProgram != nullptr);
     SynchronizeShaderStates();
 
-    m_pD3DContext->Draw(nVertices, firstVertex);
-    //m_drawCallCounter++;
+    m_pCurrentCommandList->DrawInstanced(nVertices, 1, firstVertex, 0);
+    g_pRenderer->GetStats()->IncrementDrawCallCounter();
 }
 
-void D3D11GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32 nInstances)
+void D3D12GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32 nInstances)
 {
     if (nVertices == 0 || nInstances == 0)
         return;
@@ -1485,11 +1375,11 @@ void D3D11GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32
     DebugAssert(m_pCurrentShaderProgram != nullptr);
     SynchronizeShaderStates();
 
-    m_pD3DContext->DrawInstanced(nVertices, nInstances, firstVertex, 0);
-    //m_drawCallCounter++;
+    m_pCurrentCommandList->DrawInstanced(nVertices, nInstances, firstVertex, 0);
+    g_pRenderer->GetStats()->IncrementDrawCallCounter();
 }
 
-void D3D11GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 baseVertex)
+void D3D12GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 baseVertex)
 {
     if (nIndices == 0)
         return;
@@ -1497,11 +1387,11 @@ void D3D11GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 bas
     DebugAssert(m_pCurrentShaderProgram != nullptr);
     SynchronizeShaderStates();
 
-    m_pD3DContext->DrawIndexed(nIndices, startIndex, baseVertex);
-    //m_drawCallCounter++;
+    m_pCurrentCommandList->DrawIndexedInstanced(nIndices, 1, startIndex, baseVertex, 0);
+    g_pRenderer->GetStats()->IncrementDrawCallCounter();
 }
 
-void D3D11GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, uint32 baseVertex, uint32 nInstances)
+void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, uint32 baseVertex, uint32 nInstances)
 {
     if (nIndices == 0)
         return;
@@ -1509,23 +1399,33 @@ void D3D11GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, u
     DebugAssert(m_pCurrentShaderProgram != nullptr);
     SynchronizeShaderStates();
 
-    m_pD3DContext->DrawIndexedInstanced(nIndices, nInstances, startIndex, baseVertex, 0);
-    //m_drawCallCounter++;
+    m_pCurrentCommandList->DrawIndexedInstanced(nIndices, nInstances, startIndex, baseVertex, 0);
+    g_pRenderer->GetStats()->IncrementDrawCallCounter();
 }
 
-void D3D11GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ)
+void D3D12GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ)
 {
     DebugAssert(m_pCurrentShaderProgram != nullptr);
     SynchronizeShaderStates();
 
-    m_pD3DContext->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
-    //m_drawCallCounter++;
+    m_pCurrentCommandList->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+    g_pRenderer->GetStats()->IncrementDrawCallCounter();
 }
 
-void D3D11GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices)
+void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices)
 {
+    // can use scratch buffer directly. NOTE: needs a resource barrier
+#if 0
     const byte *pVerticesPtr = reinterpret_cast<const byte *>(pVertices);
     uint32 remainingVertices = nVertices;
+
+//     // we need to disable any currently bound vertex array, as we handle it manually
+//     if (m_currentVertexBufferBindCount > 0)
+//     {
+//         ID3D12Buffer *pNullD3DBuffers[GPU_MAX_SIMULTANEOUS_VERTEX_BUFFERS] = { NULL };
+//         UINT nullD3DOffsetStrides[GPU_MAX_SIMULTANEOUS_VERTEX_BUFFERS] = { 0 };
+//         m_pD3DContext->IASetVertexBuffers(0, m_currentVertexBufferBindCount, pNullD3DBuffers, nullD3DOffsetStrides, nullD3DOffsetStrides);
+//     }
 
     // setup draw
     DebugAssert(m_pCurrentShaderProgram != nullptr);
@@ -1534,54 +1434,47 @@ void D3D11GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     // while we still have vertices left to draw...
     while (remainingVertices > 0)
     {
-        uint32 maxVertices = Min(nVertices, (m_userVertexBufferSize / vertexSize));
-        uint32 requestedSpace = maxVertices * vertexSize;
-        DebugAssert(maxVertices > 0);
-
-        HRESULT hResult;
-        D3D11_MAPPED_SUBRESOURCE mappedSubResource;
-        if ((m_userVertexBufferPosition + requestedSpace) < m_userVertexBufferSize)
-        {
-            // fit into remaining space
-            hResult = m_pD3DContext->Map(m_pUserVertexBuffer, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &mappedSubResource);
-        }
-        else
-        {
-            // discard all of the buffer
-            m_userVertexBufferPosition = 0;
-            hResult = m_pD3DContext->Map(m_pUserVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubResource);
-        }
-
-        // should be valid
-        if (FAILED(hResult))
-        {
-            Log_ErrorPrintf("D3D11GPUContext::DrawUserPointer: Map failed with hResult %08X", hResult);
+        // map buffer
+        void *pMappedPointer;
+        uint32 bufferOffset;
+        uint32 mappedVertices;
+        if (!GetTempVertexBufferPointer(vertexSize, remainingVertices, &pMappedPointer, &bufferOffset, &mappedVertices))
             return;
-        }
 
         // fill buffer
-        Y_memcpy(reinterpret_cast<byte *>(mappedSubResource.pData) + m_userVertexBufferPosition, pVerticesPtr, vertexSize * maxVertices);
+        Y_memcpy(pMappedPointer, pVerticesPtr, vertexSize * mappedVertices);
 
         // unmap buffer
         m_pD3DContext->Unmap(m_pUserVertexBuffer, 0);
 
         // update vb
-        m_pD3DContext->IASetVertexBuffers(0, 1, &m_pUserVertexBuffer, &vertexSize, &m_userVertexBufferPosition);
+        m_pD3DContext->IASetVertexBuffers(0, 1, &m_pUserVertexBuffer, &vertexSize, &bufferOffset);
 
         // draw it
-        m_pD3DContext->Draw(maxVertices, 0);
-        g_pRenderer->GetStats()->IncrementDrawCallCounter();
+        m_pD3DContext->Draw(mappedVertices, 0);
+        //m_drawCallCounter++;
 
-        // increment positions
-        m_userVertexBufferPosition += requestedSpace;
-        pVerticesPtr += maxVertices * vertexSize;
-        remainingVertices -= maxVertices;
+        // reduce vertices
+        pVerticesPtr += mappedVertices * vertexSize;
+        remainingVertices -= mappedVertices;
     }
 
     // restore state
     if (m_currentVertexBufferBindCount > 0)
     {
-        ID3D11Buffer *pD3DBuffer = (m_pCurrentVertexBuffers[0] != nullptr) ? m_pCurrentVertexBuffers[0]->GetD3DBuffer() : nullptr;
+//         // re-bind old vertex buffers
+//         ID3D12Buffer *pD3DBuffers[GPU_MAX_SIMULTANEOUS_VERTEX_BUFFERS];
+//         UINT D3DOffsets[GPU_MAX_SIMULTANEOUS_VERTEX_BUFFERS];
+//         UINT D3DStrides[GPU_MAX_SIMULTANEOUS_VERTEX_BUFFERS];
+//         for (uint32 i = 0; i < m_currentVertexBufferBindCount; i++)
+//         {
+//             pD3DBuffers[i] = (m_pCurrentVertexBuffers[i] != NULL) ? m_pCurrentVertexBuffers[i]->GetD3DBuffer() : NULL;
+//             D3DOffsets[i] = m_currentVertexBufferOffsets[i];
+//             D3DStrides[i] = m_currentVertexBufferStrides[i];
+//         }
+//         m_pD3DContext->IASetVertexBuffers(0, m_currentVertexBufferBindCount, pD3DBuffers, D3DOffsets, D3DStrides);
+
+        ID3D12Buffer *pD3DBuffer = (m_pCurrentVertexBuffers[0] != nullptr) ? m_pCurrentVertexBuffers[0]->GetD3DBuffer() : nullptr;
         UINT D3DOffset = m_currentVertexBufferOffsets[0];
         UINT D3DStride = m_currentVertexBufferStrides[0];
         m_pD3DContext->IASetVertexBuffers(0, 1, &pD3DBuffer, &D3DStride, &D3DOffset);
@@ -1589,89 +1482,98 @@ void D3D11GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     else
     {
         // unbind the temp one
-        ID3D11Buffer *pNullD3DBuffer = NULL;
+        ID3D12Buffer *pNullD3DBuffer = NULL;
         UINT nullD3DOffsetStride = 0;
         m_pD3DContext->IASetVertexBuffers(0, 1, &pNullD3DBuffer, &nullD3DOffsetStride, &nullD3DOffsetStride);
     }
+#endif
 }
 
-bool D3D11GPUContext::CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pDestinationTexture)
+
+bool D3D12GPUContext::CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pDestinationTexture)
 {
+#if 0
     // textures have to be compatible, for now this means same texture format
-    D3D11GPUTexture2D *pD3D11SourceTexture = static_cast<D3D11GPUTexture2D *>(pSourceTexture);
-    D3D11GPUTexture2D *pD3D11DestinationTexture = static_cast<D3D11GPUTexture2D *>(pDestinationTexture);
-    if (pD3D11SourceTexture->GetDesc()->Width != pD3D11DestinationTexture->GetDesc()->Width ||
-        pD3D11SourceTexture->GetDesc()->Height != pD3D11DestinationTexture->GetDesc()->Height ||
-        pD3D11SourceTexture->GetDesc()->Format != pD3D11DestinationTexture->GetDesc()->Format ||
-        pD3D11SourceTexture->GetDesc()->MipLevels != pD3D11DestinationTexture->GetDesc()->MipLevels)
+    D3D12GPUTexture2D *pD3D12SourceTexture = static_cast<D3D12GPUTexture2D *>(pSourceTexture);
+    D3D12GPUTexture2D *pD3D12DestinationTexture = static_cast<D3D12GPUTexture2D *>(pDestinationTexture);
+    if (pD3D12SourceTexture->GetDesc()->Width != pD3D12DestinationTexture->GetDesc()->Width ||
+        pD3D12SourceTexture->GetDesc()->Height != pD3D12DestinationTexture->GetDesc()->Height ||
+        pD3D12SourceTexture->GetDesc()->Format != pD3D12DestinationTexture->GetDesc()->Format ||
+        pD3D12SourceTexture->GetDesc()->MipLevels != pD3D12DestinationTexture->GetDesc()->MipLevels)
     {
         return false;
     }
 
     // copy it
-    m_pD3DContext->CopyResource(pD3D11DestinationTexture->GetD3DTexture(), pD3D11SourceTexture->GetD3DTexture());
+    m_pCurrentCommandList->CopyResource(pD3D12DestinationTexture->GetD3DTexture(), pD3D12SourceTexture->GetD3DTexture());
     return true;
+#endif
+    return false;
 }
 
-bool D3D11GPUContext::CopyTextureRegion(GPUTexture2D *pSourceTexture, uint32 sourceX, uint32 sourceY, uint32 width, uint32 height, uint32 sourceMipLevel, GPUTexture2D *pDestinationTexture, uint32 destX, uint32 destY, uint32 destMipLevel)
+bool D3D12GPUContext::CopyTextureRegion(GPUTexture2D *pSourceTexture, uint32 sourceX, uint32 sourceY, uint32 width, uint32 height, uint32 sourceMipLevel, GPUTexture2D *pDestinationTexture, uint32 destX, uint32 destY, uint32 destMipLevel)
 {
+#if 0
     // textures have to be compatible, for now this means same texture format
-    D3D11GPUTexture2D *pD3D11SourceTexture = static_cast<D3D11GPUTexture2D *>(pSourceTexture);
-    D3D11GPUTexture2D *pD3D11DestinationTexture = static_cast<D3D11GPUTexture2D *>(pDestinationTexture);
-    if (pD3D11SourceTexture->GetDesc()->Format != pD3D11DestinationTexture->GetDesc()->Format ||
-        pD3D11SourceTexture->GetDesc()->MipLevels != pD3D11DestinationTexture->GetDesc()->MipLevels)
+    D3D12GPUTexture2D *pD3D12SourceTexture = static_cast<D3D12GPUTexture2D *>(pSourceTexture);
+    D3D12GPUTexture2D *pD3D12DestinationTexture = static_cast<D3D12GPUTexture2D *>(pDestinationTexture);
+    if (pD3D12SourceTexture->GetDesc()->Format != pD3D12DestinationTexture->GetDesc()->Format ||
+        pD3D12SourceTexture->GetDesc()->MipLevels != pD3D12DestinationTexture->GetDesc()->MipLevels)
     {
         return false;
     }
 
     // create source box, copy it
-    D3D11_BOX sourceBox = { sourceX, sourceY, 0, sourceX + width, sourceY + height, 1 };
-    m_pD3DContext->CopySubresourceRegion(pD3D11DestinationTexture->GetD3DTexture(), D3D11CalcSubresource(destMipLevel, 0, pD3D11DestinationTexture->GetDesc()->MipLevels), destX, destY, 0,
-                                         pD3D11SourceTexture->GetD3DTexture(), D3D11CalcSubresource(sourceMipLevel, 0, pD3D11SourceTexture->GetDesc()->MipLevels), &sourceBox);
+    D3D12_BOX sourceBox = { sourceX, sourceY, 0, sourceX + width, sourceY + height, 1 };
+    m_pD3DContext->CopySubresourceRegion(pD3D12DestinationTexture->GetD3DTexture(), D3D12CalcSubresource(destMipLevel, 0, pD3D12DestinationTexture->GetDesc()->MipLevels), destX, destY, 0,
+                                         pD3D12SourceTexture->GetD3DTexture(), D3D12CalcSubresource(sourceMipLevel, 0, pD3D12SourceTexture->GetDesc()->MipLevels), &sourceBox);
 
     return true;
+#endif
+    return false;
 }
 
-void D3D11GPUContext::BlitFrameBuffer(GPUTexture2D *pTexture, uint32 sourceX, uint32 sourceY, uint32 sourceWidth, uint32 sourceHeight, uint32 destX, uint32 destY, uint32 destWidth, uint32 destHeight, RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER resizeFilter /*= RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER_NEAREST*/)
+void D3D12GPUContext::BlitFrameBuffer(GPUTexture2D *pTexture, uint32 sourceX, uint32 sourceY, uint32 sourceWidth, uint32 sourceHeight, uint32 destX, uint32 destY, uint32 destWidth, uint32 destHeight, RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER resizeFilter /*= RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER_NEAREST*/)
 {
+#if 0
     DebugAssert(m_nCurrentRenderTargets <= 1);
 
     // read source formats
-    DebugAssert(static_cast<D3D11GPUTexture2D *>(pTexture)->GetDesc()->Flags & GPU_TEXTURE_FLAG_SHADER_BINDABLE);
-    DXGI_FORMAT sourceTextureFormat = D3D11TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D11GPUTexture2D *>(pTexture)->GetDesc()->Format);
-    ID3D11Resource *pSourceResource = static_cast<D3D11GPUTexture2D *>(pTexture)->GetD3DTexture();
-    uint32 sourceTextureWidth = static_cast<D3D11GPUTexture2D *>(pTexture)->GetDesc()->Width;
-    uint32 sourceTextureHeight = static_cast<D3D11GPUTexture2D *>(pTexture)->GetDesc()->Height;
+    DebugAssert(static_cast<D3D12GPUTexture2D *>(pTexture)->GetDesc()->Flags & GPU_TEXTURE_FLAG_SHADER_BINDABLE);
+    DXGI_FORMAT sourceTextureFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2D *>(pTexture)->GetDesc()->Format);
+    ID3D12Resource *pSourceResource = static_cast<D3D12GPUTexture2D *>(pTexture)->GetD3DTexture();
+    uint32 sourceTextureWidth = static_cast<D3D12GPUTexture2D *>(pTexture)->GetDesc()->Width;
+    uint32 sourceTextureHeight = static_cast<D3D12GPUTexture2D *>(pTexture)->GetDesc()->Height;
 
     // read destination format
     DXGI_FORMAT destinationTextureFormat = DXGI_FORMAT_UNKNOWN;
-    ID3D11Resource *pDestinationResource = NULL;
+    ID3D12Resource *pDestinationResource = NULL;
     uint32 destinationTextureWidth = 0, destinationTextureHeight = 0;
     if (m_nCurrentRenderTargets == 0)
     {
-        destinationTextureFormat = static_cast<D3D11GPUOutputBuffer *>(m_pCurrentSwapChain)->GetBackBufferFormat();
-        pDestinationResource = static_cast<D3D11GPUOutputBuffer *>(m_pCurrentSwapChain)->GetBackBufferTexture();
-        destinationTextureWidth = static_cast<D3D11GPUOutputBuffer *>(m_pCurrentSwapChain)->GetWidth();
-        destinationTextureHeight = static_cast<D3D11GPUOutputBuffer *>(m_pCurrentSwapChain)->GetHeight();
+        destinationTextureFormat = static_cast<D3D12GPUOutputBuffer *>(m_pCurrentSwapChain)->GetBackBufferFormat();
+        pDestinationResource = static_cast<D3D12GPUOutputBuffer *>(m_pCurrentSwapChain)->GetBackBufferTexture();
+        destinationTextureWidth = static_cast<D3D12GPUOutputBuffer *>(m_pCurrentSwapChain)->GetWidth();
+        destinationTextureHeight = static_cast<D3D12GPUOutputBuffer *>(m_pCurrentSwapChain)->GetHeight();
     }
     else
     {
         switch (m_pCurrentRenderTargetViews[0]->GetTargetTexture()->GetTextureType())
         {
         case TEXTURE_TYPE_2D:
-            destinationTextureFormat = D3D11TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D11GPUTexture2D *>(m_pCurrentRenderTargetViews[0]->GetTargetTexture())->GetDesc()->Format);
-            pDestinationResource = static_cast<D3D11GPUTexture2D *>(m_pCurrentRenderTargetViews[0]->GetTargetTexture())->GetD3DTexture();
-            destinationTextureWidth = static_cast<D3D11GPUTexture2D *>(m_pCurrentRenderTargetViews[0]->GetTargetTexture())->GetDesc()->Width;
-            destinationTextureHeight = static_cast<D3D11GPUTexture2D *>(m_pCurrentRenderTargetViews[0]->GetTargetTexture())->GetDesc()->Height;
+            destinationTextureFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2D *>(m_pCurrentRenderTargetViews[0]->GetTargetTexture())->GetDesc()->Format);
+            pDestinationResource = static_cast<D3D12GPUTexture2D *>(m_pCurrentRenderTargetViews[0]->GetTargetTexture())->GetD3DTexture();
+            destinationTextureWidth = static_cast<D3D12GPUTexture2D *>(m_pCurrentRenderTargetViews[0]->GetTargetTexture())->GetDesc()->Width;
+            destinationTextureHeight = static_cast<D3D12GPUTexture2D *>(m_pCurrentRenderTargetViews[0]->GetTargetTexture())->GetDesc()->Height;
             break;
 
         default:
-            Panic("D3D11GPUContext::BlitFrameBuffer: Destination is an unsupported texture type");
+            Panic("D3D12GPUContext::BlitFrameBuffer: Destination is an unsupported texture type");
             return;
         }
     }
 
-    // d3d11 can do a direct copy between identical types
+    // D3D12 can do a direct copy between identical types
     if (sourceTextureFormat == destinationTextureFormat && sourceWidth == destWidth && sourceHeight == destHeight)
     {
         // whole texture?
@@ -1684,7 +1586,7 @@ void D3D11GPUContext::BlitFrameBuffer(GPUTexture2D *pTexture, uint32 sourceX, ui
         else
         {
             // use CopySubResourceRegion
-            D3D11_BOX sourceBox = { sourceX, sourceY, 0, sourceX + sourceWidth, sourceY + sourceHeight, 1 };
+            D3D12_BOX sourceBox = { sourceX, sourceY, 0, sourceX + sourceWidth, sourceY + sourceHeight, 1 };
             m_pD3DContext->CopySubresourceRegion(pDestinationResource, 0, destX, destY, 0, pSourceResource, 0, &sourceBox);
             return;
         }
@@ -1692,55 +1594,58 @@ void D3D11GPUContext::BlitFrameBuffer(GPUTexture2D *pTexture, uint32 sourceX, ui
 
     // use shader
     g_pRenderer->BlitTextureUsingShader(this, pTexture, sourceX, sourceY, sourceWidth, sourceHeight, 0, destX, destY, destWidth, destHeight, resizeFilter, RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE_NONE);
+#endif
 }
 
-void D3D11GPUContext::GenerateMips(GPUTexture *pTexture)
+void D3D12GPUContext::GenerateMips(GPUTexture *pTexture)
 {
-    ID3D11ShaderResourceView *pSRV = nullptr;
+#if 0
+    ID3D12ShaderResourceView *pSRV = nullptr;
     uint32 flags = 0;
     switch (pTexture->GetTextureType())
     {
     case TEXTURE_TYPE_1D:
-        pSRV = static_cast<D3D11GPUTexture1D *>(pTexture)->GetD3DSRV();
-        flags = static_cast<D3D11GPUTexture1D *>(pTexture)->GetDesc()->Flags;
+        pSRV = static_cast<D3D12GPUTexture1D *>(pTexture)->GetD3DSRV();
+        flags = static_cast<D3D12GPUTexture1D *>(pTexture)->GetDesc()->Flags;
         break;
 
     case TEXTURE_TYPE_1D_ARRAY:
-        pSRV = static_cast<D3D11GPUTexture1DArray *>(pTexture)->GetD3DSRV();
-        flags = static_cast<D3D11GPUTexture1DArray *>(pTexture)->GetDesc()->Flags;
+        pSRV = static_cast<D3D12GPUTexture1DArray *>(pTexture)->GetD3DSRV();
+        flags = static_cast<D3D12GPUTexture1DArray *>(pTexture)->GetDesc()->Flags;
         break;
 
     case TEXTURE_TYPE_2D:
-        pSRV = static_cast<D3D11GPUTexture2D *>(pTexture)->GetD3DSRV();
-        flags = static_cast<D3D11GPUTexture2D *>(pTexture)->GetDesc()->Flags;
+        pSRV = static_cast<D3D12GPUTexture2D *>(pTexture)->GetD3DSRV();
+        flags = static_cast<D3D12GPUTexture2D *>(pTexture)->GetDesc()->Flags;
         break;
 
     case TEXTURE_TYPE_2D_ARRAY:
-        pSRV = static_cast<D3D11GPUTexture2DArray *>(pTexture)->GetD3DSRV();
-        flags = static_cast<D3D11GPUTexture2DArray *>(pTexture)->GetDesc()->Flags;
+        pSRV = static_cast<D3D12GPUTexture2DArray *>(pTexture)->GetD3DSRV();
+        flags = static_cast<D3D12GPUTexture2DArray *>(pTexture)->GetDesc()->Flags;
         break;
 
     case TEXTURE_TYPE_3D:
-        pSRV = static_cast<D3D11GPUTexture3D *>(pTexture)->GetD3DSRV();
-        flags = static_cast<D3D11GPUTexture3D *>(pTexture)->GetDesc()->Flags;
+        pSRV = static_cast<D3D12GPUTexture3D *>(pTexture)->GetD3DSRV();
+        flags = static_cast<D3D12GPUTexture3D *>(pTexture)->GetDesc()->Flags;
         break;
 
     case TEXTURE_TYPE_CUBE:
-        pSRV = static_cast<D3D11GPUTextureCube *>(pTexture)->GetD3DSRV();
-        flags = static_cast<D3D11GPUTextureCube *>(pTexture)->GetDesc()->Flags;
+        pSRV = static_cast<D3D12GPUTextureCube *>(pTexture)->GetD3DSRV();
+        flags = static_cast<D3D12GPUTextureCube *>(pTexture)->GetDesc()->Flags;
         break;
 
     case TEXTURE_TYPE_CUBE_ARRAY:
-        pSRV = static_cast<D3D11GPUTextureCubeArray *>(pTexture)->GetD3DSRV();
-        flags = static_cast<D3D11GPUTextureCubeArray *>(pTexture)->GetDesc()->Flags;
+        pSRV = static_cast<D3D12GPUTextureCubeArray *>(pTexture)->GetD3DSRV();
+        flags = static_cast<D3D12GPUTextureCubeArray *>(pTexture)->GetDesc()->Flags;
         break;
     }
 
     if (pSRV == nullptr || !(flags & GPU_TEXTURE_FLAG_GENERATE_MIPS))
     {
-        Log_ErrorPrintf("D3D11GPUContext::GenerateMips: Texture not created with GPU_TEXTURE_FLAG_GENERATE_MIPS.");
+        Log_ErrorPrintf("D3D12GPUContext::GenerateMips: Texture not created with GPU_TEXTURE_FLAG_GENERATE_MIPS.");
         return;
     }
 
     m_pD3DContext->GenerateMips(pSRV);
+#endif
 }

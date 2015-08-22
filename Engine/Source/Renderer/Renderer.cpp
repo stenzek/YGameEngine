@@ -232,7 +232,7 @@ bool Renderer::Create(const RendererInitializationParameters *pCreateParameters)
     Log_DevPrintf("Implicit window dimensions: %ux%u", pCreateParameters->ImplicitSwapChainWidth, pCreateParameters->ImplicitSwapChainHeight);
 
     // create render thread
-    StartRenderThread(pCreateParameters->EnableThreadedRendering && CVars::r_use_render_thread.GetBool());
+    StartRenderThread(pCreateParameters->EnableThreadedRendering);
 
     // event that gets triggered once the renderer is created, or creation fails
     s_renderCommandQueue.QueueBlockingLambdaCommand([pCreateParameters]()

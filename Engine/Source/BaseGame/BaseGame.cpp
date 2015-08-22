@@ -618,6 +618,7 @@ bool BaseGame::RendererStart()
     initParameters.BackBufferFormat = PIXEL_FORMAT_R8G8B8A8_UNORM;
     initParameters.DepthStencilBufferFormat = PIXEL_FORMAT_D24_UNORM_S8_UINT;
     initParameters.HideImplicitSwapChain = false;
+    initParameters.GPUFrameLatency = CVars::r_gpu_latency.GetUInt();
 
     // fill platform
     if (!NameTable_TranslateType(NameTables::RendererPlatform, CVars::r_platform.GetString(), &initParameters.Platform, true))

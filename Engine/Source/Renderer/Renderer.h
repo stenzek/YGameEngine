@@ -699,10 +699,11 @@ public:
 struct RendererInitializationParameters
 {
     RendererInitializationParameters() 
-        : Platform(RENDERER_PLATFORM_D3D11), EnableThreadedRendering(true),
-          BackBufferFormat(PIXEL_FORMAT_R8G8B8A8_UNORM), DepthStencilBufferFormat(PIXEL_FORMAT_D24_UNORM_S8_UINT),
-          HideImplicitSwapChain(false), ImplicitSwapChainCaption("Renderer"), ImplicitSwapChainWidth(800), ImplicitSwapChainHeight(600),
-          ImplicitSwapChainFullScreen(RENDERER_FULLSCREEN_STATE_WINDOWED), ImplicitSwapChainVSyncType(RENDERER_VSYNC_TYPE_NONE)          
+        : Platform(RENDERER_PLATFORM_D3D11), EnableThreadedRendering(true)
+        , BackBufferFormat(PIXEL_FORMAT_R8G8B8A8_UNORM), DepthStencilBufferFormat(PIXEL_FORMAT_D24_UNORM_S8_UINT)
+        , HideImplicitSwapChain(false), ImplicitSwapChainCaption("Renderer"), ImplicitSwapChainWidth(800), ImplicitSwapChainHeight(600)
+        , ImplicitSwapChainFullScreen(RENDERER_FULLSCREEN_STATE_WINDOWED), ImplicitSwapChainVSyncType(RENDERER_VSYNC_TYPE_NONE)
+        , GPUFrameLatency(3)
     {
     }
 
@@ -733,6 +734,9 @@ struct RendererInitializationParameters
 
     // Implicit swap chain vsync behaviour
     RENDERER_VSYNC_TYPE ImplicitSwapChainVSyncType;
+
+    // Frame latency
+    uint32 GPUFrameLatency;
 };
 
 struct RendererStats

@@ -19,8 +19,8 @@ public:
         void Clear() { Y_memzero(this, sizeof(*this)); }
 
         // Helper functions
-        D3D12_CPU_DESCRIPTOR_HANDLE GetOffsetCPUHandle(uint32 index);
-        D3D12_GPU_DESCRIPTOR_HANDLE GetOffsetGPUHandle(uint32 index);
+        D3D12_CPU_DESCRIPTOR_HANDLE GetOffsetCPUHandle(uint32 index) const;
+        D3D12_GPU_DESCRIPTOR_HANDLE GetOffsetGPUHandle(uint32 index) const;
 
         // Get this handle
         operator D3D12_CPU_DESCRIPTOR_HANDLE () const { return CPUHandle; }
@@ -45,4 +45,6 @@ private:
     ID3D12DescriptorHeap *m_pD3DDescriptorHeap;
     BitSet32 m_allocationMap;
     uint32 m_incrementSize;
+
+    Mutex m_mutex;
 };

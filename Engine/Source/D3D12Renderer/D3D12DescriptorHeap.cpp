@@ -39,10 +39,19 @@ D3D12DescriptorHeap *D3D12DescriptorHeap::Create(ID3D12Device *pDevice, D3D12_DE
 
 bool D3D12DescriptorHeap::Allocate(Handle *handle)
 {
+    m_mutex.Lock();
+
     // find a free index
     size_t index;
     if (!m_allocationMap.FindFirstClearBit(&index))
+    {
+        m_mutex.Unlock();
         return false;
+    }
+
+    // flag as allocated
+    m_allocationMap.SetBit(index);
+    m_mutex.Unlock();
 
     // create handle
     handle->StartIndex = (uint32)index;
@@ -51,15 +60,25 @@ bool D3D12DescriptorHeap::Allocate(Handle *handle)
     handle->CPUHandle.ptr += index * m_incrementSize;
     handle->GPUHandle = m_pD3DDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
     handle->GPUHandle.ptr += index * m_incrementSize;
-    m_allocationMap.SetBit(index);
     return true;
 }
 
 bool D3D12DescriptorHeap::AllocateRange(uint32 count, Handle *handle)
 {
+    m_mutex.Lock();
+
+    // find a free index
     size_t startIndex;
     if (!m_allocationMap.FindContiguousClearBits(count, &startIndex))
+    {
+        m_mutex.Unlock();
         return false;
+    }
+
+    // flag as allocated
+    for (uint32 i = 0; i < count; i++)
+        m_allocationMap.SetBit(startIndex + i);
+    m_mutex.Unlock();
 
     // create handle
     handle->StartIndex = (uint32)startIndex;
@@ -68,9 +87,6 @@ bool D3D12DescriptorHeap::AllocateRange(uint32 count, Handle *handle)
     handle->CPUHandle.ptr += startIndex * m_incrementSize;
     handle->GPUHandle = m_pD3DDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
     handle->GPUHandle.ptr += startIndex * m_incrementSize;
-    for (uint32 i = 0; i < count; i++)
-        m_allocationMap.SetBit(startIndex + i);
-
     return true;
 }
 
@@ -84,12 +100,28 @@ void D3D12DescriptorHeap::Free(Handle *handle)
     uint32 startIndex = handle->StartIndex;
     DebugAssert(startIndex < m_descriptorCount);
 
+    m_mutex.Lock();
     for (uint32 i = 0; i < handle->DescriptorCount; i++)
     {
         DebugAssert(m_allocationMap.TestBit(handle->StartIndex + i));
         m_allocationMap.UnsetBit(handle->StartIndex + i);
     }
+    m_mutex.Unlock();
 
     // wipe handle
     handle->Clear();
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::Handle::GetOffsetCPUHandle(uint32 index) const
+{
+    D3D12_CPU_DESCRIPTOR_HANDLE handle = CPUHandle;
+    handle.ptr += IncrementSize * index;
+    return handle;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::Handle::GetOffsetGPUHandle(uint32 index) const
+{
+    D3D12_GPU_DESCRIPTOR_HANDLE handle = GPUHandle;
+    handle.ptr += IncrementSize * index;
+    return handle;
 }

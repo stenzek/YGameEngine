@@ -510,21 +510,15 @@ public:
     virtual void EndResourceBatchUpload() = 0;
 };
 
-class GPUCommandList
+class GPUCommandList : public ReferenceCounted
 {
+    DeclareNonCopyable(GPUCommandList);
+
 public:
+    GPUCommandList() {}
     virtual ~GPUCommandList() {}
-};
 
-class GPUContext : public ReferenceCounted
-{
-    DeclareNonCopyable(GPUContext);
-
-public:
-    GPUContext() {}
-    virtual ~GPUContext() {}
-
-    // State clearing
+        // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) = 0;
 
     // Retrieve RendererVariables interface.
@@ -598,10 +592,6 @@ public:
     // Swap chain changing
     virtual GPUOutputBuffer *GetOutputBuffer() = 0;
     virtual void SetOutputBuffer(GPUOutputBuffer *pOutputBuffer) = 0;
-    virtual bool GetExclusiveFullScreen() = 0;
-    virtual bool SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate) = 0;
-    virtual bool ResizeOutputBuffer(uint32 width = 0, uint32 height = 0) = 0;
-    virtual void PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour) = 0;
 
     // Render target changing
     virtual uint32 GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView) = 0;
@@ -644,6 +634,24 @@ public:
 
     // Compute shaders
     virtual void Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ) = 0;
+};
+
+class GPUContext : public GPUCommandList
+{
+    DeclareNonCopyable(GPUContext);
+
+public:
+    GPUContext() {}
+    virtual ~GPUContext() {}
+
+    // Swap chain manipulation
+    virtual bool GetExclusiveFullScreen() = 0;
+    virtual bool SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate) = 0;
+    virtual bool ResizeOutputBuffer(uint32 width = 0, uint32 height = 0) = 0;
+    virtual void PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour) = 0;
+
+    // Command list execution
+    //virtual void ExecuteCommandList(GPUCommandList *pCommandList) = 0;
 };
 
 struct RendererCapabilities

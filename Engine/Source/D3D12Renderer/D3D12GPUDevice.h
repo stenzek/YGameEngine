@@ -1,81 +1,77 @@
 #pragma once
-#include "D3D11Renderer/D3D11Common.h"
-#include "D3D11Renderer/D3D11GPUContext.h"
-#include "D3D11Renderer/D3D11GPUOutputBuffer.h"
+#include "D3D12Renderer/D3D12Common.h"
 
-class D3D11SamplerState : public GPUSamplerState
+class D3D12GPUSamplerState : public GPUSamplerState
 {
 public:
-    D3D11SamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, ID3D11SamplerState *pD3DSamplerState);
-    virtual ~D3D11SamplerState();
+    D3D12GPUSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const D3D12_SAMPLER_DESC *pD3DSamplerDesc);
+    virtual ~D3D12GPUSamplerState();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
     virtual void SetDebugName(const char *name) override;
 
-    ID3D11SamplerState *GetD3DSamplerState() { return m_pD3DSamplerState; }
+    const D3D12_SAMPLER_DESC *GetD3DSamplerStateDesc() { return &m_D3DSamplerStateDesc; }
 
 private:
-    ID3D11SamplerState *m_pD3DSamplerState;
+    D3D12_SAMPLER_DESC m_D3DSamplerStateDesc;
 };
 
-class D3D11RasterizerState : public GPURasterizerState
+class D3D12RasterizerState : public GPURasterizerState
 {
 public:
-    D3D11RasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc, ID3D11RasterizerState *pD3DRasterizerState);
-    virtual ~D3D11RasterizerState();
+    D3D12RasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc, const D3D12_RASTERIZER_DESC *pD3DRasterizerDesc);
+    virtual ~D3D12RasterizerState();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
     virtual void SetDebugName(const char *name) override;
 
-    ID3D11RasterizerState *GetD3DRasterizerState() { return m_pD3DRasterizerState; }
+    const D3D12_RASTERIZER_DESC *GetD3DRasterizerStateDesc() { return &m_D3DRasterizerDesc; }
 
 private:
-    ID3D11RasterizerState *m_pD3DRasterizerState;
+    D3D12_RASTERIZER_DESC m_D3DRasterizerDesc;
 };
 
-class D3D11DepthStencilState : public GPUDepthStencilState
+class D3D12DepthStencilState : public GPUDepthStencilState
 {
 public:
-    D3D11DepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc, ID3D11DepthStencilState *pD3DDepthStencilState);
-    virtual ~D3D11DepthStencilState();
+    D3D12DepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc, const D3D12_DEPTH_STENCIL_DESC *pD3DDepthStencilDesc);
+    virtual ~D3D12DepthStencilState();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
     virtual void SetDebugName(const char *name) override;
 
-    ID3D11DepthStencilState *GetD3DDepthStencilState() { return m_pD3DDepthStencilState; }
+    const D3D12_DEPTH_STENCIL_DESC *GetD3DDepthStencilDesc() { return &m_D3DDepthStencilDesc; }
 
 private:
-    ID3D11DepthStencilState *m_pD3DDepthStencilState;
+    D3D12_DEPTH_STENCIL_DESC m_D3DDepthStencilDesc;
 };
 
-class D3D11BlendState : public GPUBlendState
+class D3D12BlendState : public GPUBlendState
 {
 public:
-    D3D11BlendState(const RENDERER_BLEND_STATE_DESC *pBlendStateDesc, ID3D11BlendState *pD3DBlendState);
-    virtual ~D3D11BlendState();
+    D3D12BlendState(const RENDERER_BLEND_STATE_DESC *pBlendStateDesc, const D3D12_BLEND_DESC *pD3DBlendDesc);
+    virtual ~D3D12BlendState();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
     virtual void SetDebugName(const char *name) override;
 
-    ID3D11BlendState *GetD3DBlendState() { return m_pD3DBlendState; }
+    const D3D12_BLEND_DESC *GetD3DBlendDesc() { return &m_D3DBlendDesc; }
 
 private:
-    ID3D11BlendState *m_pD3DBlendState;
+    D3D12_BLEND_DESC m_D3DBlendDesc;
 };
 
-class D3D11GPUDevice : public GPUDevice
+class D3D12GPUDevice : public GPUDevice
 {
 public:
-    D3D11GPUDevice(IDXGIFactory *pDXGIFactory, IDXGIAdapter *pDXGIAdapter, ID3D11Device *pD3DDevice, ID3D11Device1 *pD3DDevice1, DXGI_FORMAT windowBackBufferFormat, DXGI_FORMAT windowDepthStencilFormat);
-    virtual ~D3D11GPUDevice();
+    D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory3 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice, DXGI_FORMAT outputBackBufferFormat, DXGI_FORMAT outputDepthStencilFormat);
+    virtual ~D3D12GPUDevice();
 
     // private methods
-    IDXGIFactory *GetDXGIFactory() const { return m_pDXGIFactory; }
-    IDXGIAdapter *GetDXGIAdapter() const { return m_pDXGIAdapter; }
-    ID3D11Device *GetD3DDevice() const { return m_pD3DDevice; }
-    ID3D11Device1 *GetD3DDevice1() const { return m_pD3DDevice1; }
-    DXGI_FORMAT GetSwapChainBackBufferFormat() const { return m_swapChainBackBufferFormat; }
-    DXGI_FORMAT GetSwapChainDepthStencilBufferFormat() const { return m_swapChainDepthStencilBufferFormat; }
+    IDXGIFactory3 *GetDXGIFactory() const { return m_pDXGIFactory; }
+    IDXGIAdapter3 *GetDXGIAdapter() const { return m_pDXGIAdapter; }
+    ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
+    D3D12RenderBackend *GetBackend() const { return m_pBackend; }
 
     // Creates a swap chain on an existing window.
     virtual GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) override final;
@@ -102,12 +98,17 @@ public:
     virtual GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream) override final;
     virtual GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream) override final;
 
-private:
-    IDXGIFactory *m_pDXGIFactory;
-    IDXGIAdapter *m_pDXGIAdapter;
-    ID3D11Device *m_pD3DDevice;
-    ID3D11Device1 *m_pD3DDevice1;
+    // helper methods
+    D3D12GPUContext *GetGPUContext() const { return m_pGPUContext; }
+    void SetGPUContext(D3D12GPUContext *pContext) { m_pGPUContext = pContext; }
 
-    DXGI_FORMAT m_swapChainBackBufferFormat;
-    DXGI_FORMAT m_swapChainDepthStencilBufferFormat;
+private:
+    D3D12RenderBackend *m_pBackend;
+    IDXGIFactory3 *m_pDXGIFactory;
+    IDXGIAdapter3 *m_pDXGIAdapter;
+    ID3D12Device *m_pD3DDevice;
+    D3D12GPUContext *m_pGPUContext;
+
+    DXGI_FORMAT m_outputBackBufferFormat;
+    DXGI_FORMAT m_outputDepthStencilFormat;
 };

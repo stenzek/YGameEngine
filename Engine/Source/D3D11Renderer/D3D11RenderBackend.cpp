@@ -258,6 +258,9 @@ void D3D11RenderBackend::Shutdown()
         }
     }
 #endif
+
+    // done
+    delete this;
 }
 
 bool D3D11RenderBackend::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat /*= NULL*/) const

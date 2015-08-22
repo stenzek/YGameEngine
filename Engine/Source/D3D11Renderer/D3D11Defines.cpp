@@ -11,6 +11,9 @@ Y_Define_NameTable(NameTables::D3DFeatureLevels)
     Y_NameTable_VEntry(D3D_FEATURE_LEVEL_10_0,   "D3D_FEATURE_LEVEL_10_0")
     Y_NameTable_VEntry(D3D_FEATURE_LEVEL_10_1,   "D3D_FEATURE_LEVEL_10_1")
     Y_NameTable_VEntry(D3D_FEATURE_LEVEL_11_0,   "D3D_FEATURE_LEVEL_11_0")
+    Y_NameTable_VEntry(D3D_FEATURE_LEVEL_11_1,   "D3D_FEATURE_LEVEL_11_0")
+    Y_NameTable_VEntry(D3D_FEATURE_LEVEL_12_0,   "D3D_FEATURE_LEVEL_12_0")
+    Y_NameTable_VEntry(D3D_FEATURE_LEVEL_12_1,   "D3D_FEATURE_LEVEL_12_1")
 Y_NameTable_End()
 
 static const DXGI_FORMAT s_PixelFormatToDXGIFormat[PIXEL_FORMAT_COUNT] =

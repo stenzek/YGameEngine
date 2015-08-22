@@ -1,8 +1,8 @@
 #include "D3D12Renderer/PrecompiledHeader.h"
 #include "D3D12Renderer/D3D12Common.h"
-#include "D3D12Renderer/D3D12Renderer.h"
+#include "D3D12Renderer/D3D12GPUDevice.h"
 //#include "D3D12Renderer/D3D12GPUTexture.h"
-Log_SetChannel(D3D12Renderer);
+Log_SetChannel(D3D12GPUDevice);
 
 // Conflicts with D3D11
 // Y_Define_NameTable(NameTables::D3DFeatureLevels)

@@ -437,9 +437,12 @@ bool OpenGLRenderBackend::Create(const RendererInitializationParameters *pCreate
 void OpenGLRenderBackend::Shutdown()
 {
     // cleanup our objects
-    m_pImplicitOutputBuffer->Release();
-    m_pGPUContext->Release();
-    m_pGPUDevice->Release();
+    SAFE_RELEASE(m_pImplicitOutputBuffer);
+    SAFE_RELEASE(m_pGPUContext);
+    SAFE_RELEASE(m_pGPUDevice);
+
+    // done
+    delete this;
 }
 
 // Since we have multiple threads, the last GL error has to be thread-local
@@ -567,7 +570,7 @@ bool OpenGLRenderBackend_Create(const RendererInitializationParameters *pCreateP
     OpenGLRenderBackend *pBackend = new OpenGLRenderBackend();
     if (!pBackend->Create(pCreateParameters, pSDLWindow, ppBackend, ppDevice, ppContext, ppOutputBuffer))
     {
-        delete pBackend;
+        pBackend->Shutdown();
         return false;
     }
 

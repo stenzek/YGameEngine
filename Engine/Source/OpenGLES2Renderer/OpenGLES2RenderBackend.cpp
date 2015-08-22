@@ -224,8 +224,11 @@ bool OpenGLES2RenderBackend::Create(const RendererInitializationParameters *pCre
 void OpenGLES2RenderBackend::Shutdown()
 {
     // cleanup our objects
-    m_pGPUContext->Release();
-    m_pGPUDevice->Release();
+    SAFE_RELEASE(m_pGPUContext);
+    SAFE_RELEASE(m_pGPUDevice);
+
+    // done
+    delete this;
 }
 
 bool OpenGLES2RenderBackend::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat /*= NULL*/) const
@@ -291,7 +294,7 @@ bool OpenGLES2RenderBackend_Create(const RendererInitializationParameters *pCrea
     OpenGLES2RenderBackend *pBackend = new OpenGLES2RenderBackend();
     if (!pBackend->Create(pCreateParameters, pSDLWindow, ppBackend, ppDevice, ppContext, ppOutputBuffer))
     {
-        delete pBackend;
+        pBackend->Shutdown();
         return false;
     }
 

@@ -4,6 +4,7 @@
 #include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12GPUOutputBuffer.h"
 #include "Engine/EngineCVars.h"
+#include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(D3D12GPUDevice);
 
 D3D12RenderBackend *D3D12RenderBackend::s_pInstance = nullptr;
@@ -22,6 +23,9 @@ D3D12RenderBackend::D3D12RenderBackend()
     , m_pGPUContext(nullptr)
 {
     Y_memzero(m_pDescriptorHeaps, sizeof(m_pDescriptorHeaps));
+
+    DebugAssert(s_pInstance == nullptr);
+    s_pInstance = this;
 }
 
 D3D12RenderBackend::~D3D12RenderBackend()
@@ -179,6 +183,14 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
     // other vars
     m_frameLatency = pCreateParameters->GPUFrameLatency;
 
+    // create descriptor heaps
+    if (!CreateDescriptorHeaps())
+        return false;
+
+    // create constant buffers
+    if (!CreateConstantStorage())
+        return false;
+
     // create device wrapper class
     m_pGPUDevice = new D3D12GPUDevice(this, m_pDXGIFactory, m_pDXGIAdapter, m_pD3DDevice, m_outputBackBufferFormat, m_outputDepthStencilFormat);
 
@@ -212,6 +224,95 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
 
     Log_InfoPrint("D3D12RenderBackend::Create: Creation successful.");
     return true;
+}
+
+bool D3D12RenderBackend::CreateDescriptorHeaps()
+{
+    static const uint32 initialDescriptorHeapSize[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
+    {
+        16384,          // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+        1024,           // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+        1024,           // D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+        1024            // D3D12_DESCRIPTOR_HEAP_TYPE_DSV
+    };
+
+    static_assert(countof(initialDescriptorHeapSize) == countof(m_pDescriptorHeaps));
+    for (uint32 i = 0; i < countof(initialDescriptorHeapSize); i++)
+    {
+        m_pDescriptorHeaps[i] = D3D12DescriptorHeap::Create(m_pD3DDevice, (D3D12_DESCRIPTOR_HEAP_TYPE)i, initialDescriptorHeapSize[i]);
+        if (m_pDescriptorHeaps[i] == nullptr)
+        {
+            Log_ErrorPrintf("Failed to allocate descriptor heap type %u", i);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool D3D12RenderBackend::CreateConstantStorage()
+{
+    HRESULT hResult;
+    uint32 memoryUsage = 0;
+    uint32 activeCount = 0;
+
+    // allocate constant buffer storage
+    const ShaderConstantBuffer::RegistryType *registry = ShaderConstantBuffer::GetRegistry();
+    m_constantBufferStorage.Resize(registry->GetNumTypes());
+    m_constantBufferStorage.ZeroContents();
+    for (ConstantBufferStorage &constantBufferStorage : m_constantBufferStorage)
+    {
+        // applicable to us?
+        const ShaderConstantBuffer *declaration = registry->GetTypeInfoByIndex(i);
+        if (declaration == nullptr)
+            continue;
+        if (declaration->GetPlatformRequirement() != RENDERER_PLATFORM_COUNT && declaration->GetPlatformRequirement() != RENDERER_PLATFORM_D3D12)
+            continue;
+        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > D3D12RenderBackend::GetInstance()->GetFeatureLevel())
+            continue;
+
+        // set size so we know to allocate it later or on demand
+        constantBufferStorage.Size = declaration->GetBufferSize();
+
+        // stats
+        memoryUsage += constantBufferStorage.Size;
+        activeCount++;
+    }
+
+    // create a heap for the constant buffers
+    D3D12_HEAP_DESC heapDesc = {
+        memoryUsage,
+        { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 },
+        16,
+        D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS
+    };
+    hResult = m_pD3DDevice->CreateHeap(&heapDesc, __uuidof(ID3D12Heap), (void **)&m_pConstantBufferStorageHeap);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("Failed to create constant buffer heap: CreateHeap failed with hResult %08X", hResult);
+        return false;
+    }
+
+    // preallocate constant buffers, todo lazy allocation
+    Log_DevPrintf("Preallocating %u constant buffers, total VRAM usage: %u bytes", activeCount, memoryUsage);
+    uint32 currentOffset = 0;
+    for (ConstantBufferStorage &constantBufferStorage : m_constantBufferStorage)
+    {
+        if (constantBufferStorage.Size == 0)
+            continue;
+
+        /*
+        // create the gpu buffer
+        GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_WRITABLE, constantBuffer->Size);
+        //constantBuffer->pGPUBuffer = static_cast<D3D12GPUBuffer *>(m_pDevice->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
+        if (constantBuffer->pGPUBuffer == nullptr)
+        {
+            const ShaderConstantBuffer *declaration = ShaderConstantBuffer::GetRegistry()->GetTypeInfoByIndex(i);
+            Log_ErrorPrintf("D3D12GPUContext::CreateResources: Failed to allocate constant buffer %u (%s)", i, declaration->GetBufferName());
+            return false;
+        }
+        */
+    }
 }
 
 void D3D12RenderBackend::Shutdown()

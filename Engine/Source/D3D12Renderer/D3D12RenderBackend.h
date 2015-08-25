@@ -5,6 +5,13 @@
 class D3D12RenderBackend : public RenderBackend
 {
 public:
+    struct ConstantBufferStorage
+    {
+        ID3D12Resource *pResource;
+        uint32 Size;
+    };
+
+public:
     D3D12RenderBackend();
     virtual ~D3D12RenderBackend();
 
@@ -39,6 +46,9 @@ private:
     // create descriptor heaps
     bool CreateDescriptorHeaps();
 
+    // create constant buffers
+    bool CreateConstantStorage();
+
     // vars
     IDXGIFactory3 *m_pDXGIFactory;
     IDXGIAdapter3 *m_pDXGIAdapter;
@@ -60,6 +70,10 @@ private:
 
     // descriptor heaps
     D3D12DescriptorHeap *m_pDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+
+    // constant buffer storage
+    MemArray<ConstantBufferStorage> m_constantBufferStorage;
+    ID3D12Heap *m_pConstantBufferStorageHeap;
 
     // object scheduled for deletion
     struct PendingDeletionResource

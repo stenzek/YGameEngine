@@ -61,7 +61,7 @@
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUTexture.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUDevice.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11RenderBackend.h" />
-    <ClInclude Include="Source\D3D11Renderer\D3D11ShaderCacheEntry.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3DShaderCacheEntry.h" />
     <ClInclude Include="Source\D3D11Renderer\PrecompiledHeader.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

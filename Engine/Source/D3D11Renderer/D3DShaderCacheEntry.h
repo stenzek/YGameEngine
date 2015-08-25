@@ -1,20 +1,20 @@
 #pragma once
 
-enum D3D11_SHADER_BIND_TARGET
+enum D3D_SHADER_BIND_TARGET
 {
-    D3D11_SHADER_BIND_TARGET_CONSTANT_BUFFER,
-    D3D11_SHADER_BIND_TARGET_RESOURCE,
-    D3D11_SHADER_BIND_TARGET_SAMPLER,
-    D3D11_SHADER_BIND_TARGET_UNORDERED_ACCESS_VIEW,
-    D3D11_SHADER_BIND_TARGET_COUNT,
+    D3D_SHADER_BIND_TARGET_CONSTANT_BUFFER,
+    D3D_SHADER_BIND_TARGET_RESOURCE,
+    D3D_SHADER_BIND_TARGET_SAMPLER,
+    D3D_SHADER_BIND_TARGET_UNORDERED_ACCESS_VIEW,
+    D3D_SHADER_BIND_TARGET_COUNT,
 };
 
 #pragma pack(push, 1)
 
-#define D3D11_SHADER_CACHE_ENTRY_HEADER ((uint32)'D11E')
-#define D3D11_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH 256
+#define D3D_SHADER_CACHE_ENTRY_HEADER ((uint32)'D11E')
+#define D3D_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH 256
 
-struct D3D11ShaderCacheEntryHeader
+struct D3DShaderCacheEntryHeader
 {
     uint32 Signature;
     uint32 FeatureLevel;
@@ -26,23 +26,23 @@ struct D3D11ShaderCacheEntryHeader
     uint32 ParameterCount;
 };
 
-struct D3D11ShaderCacheEntryVertexAttribute
+struct D3DShaderCacheEntryVertexAttribute
 {
     uint32 SemanticName;
     uint32 SemanticIndex;
 };
 
-struct D3D11ShaderCacheEntryConstantBuffer
+struct D3DShaderCacheEntryConstantBuffer
 {
-    char Name[D3D11_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
+    char Name[D3D_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
     uint32 Size;
     uint32 ParameterIndex;
     bool IsLocal;
 };
 
-struct D3D11ShaderCacheEntryParameter
+struct D3DShaderCacheEntryParameter
 {
-    char Name[D3D11_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
+    char Name[D3D_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
     SHADER_PARAMETER_TYPE Type;
     int32 ConstantBufferIndex;
     uint32 ConstantBufferOffset;

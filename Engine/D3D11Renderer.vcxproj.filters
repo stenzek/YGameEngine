@@ -18,7 +18,6 @@
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUQuery.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUShaderProgram.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUTexture.h" />
-    <ClInclude Include="Source\D3D11Renderer\D3D11ShaderCacheEntry.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11Common.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11CVars.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11Defines.h" />
@@ -27,5 +26,6 @@
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUDevice.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUOutputBuffer.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11RenderBackend.h" />
+    <ClInclude Include="Source\D3D11Renderer\D3DShaderCacheEntry.h" />
   </ItemGroup>
 </Project>

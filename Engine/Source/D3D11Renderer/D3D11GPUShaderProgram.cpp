@@ -77,9 +77,9 @@ bool D3D11GPUShaderProgram::Create(D3D11GPUDevice *pDevice, const GPU_VERTEX_ELE
     BinaryReader binaryReader(pByteCodeStream);
 
     // get the header of the shader cache entry
-    D3D11ShaderCacheEntryHeader header;
+    D3DShaderCacheEntryHeader header;
     if (!binaryReader.SafeReadBytes(&header, sizeof(header)) ||
-        header.Signature != D3D11_SHADER_CACHE_ENTRY_HEADER)
+        header.Signature != D3D_SHADER_CACHE_ENTRY_HEADER)
     {
         Log_ErrorPrintf("D3D11GPUShaderProgram::Create: Shader cache entry header corrupted.");
         return false;
@@ -226,7 +226,7 @@ bool D3D11GPUShaderProgram::Create(D3D11GPUDevice *pDevice, const GPU_VERTEX_ELE
         uint32 nUsedVertexAttributes = 0;
         for (uint32 i = 0; i < header.VertexAttributeCount; i++)
         {
-            D3D11ShaderCacheEntryVertexAttribute attribute;
+            D3DShaderCacheEntryVertexAttribute attribute;
             if (!binaryReader.SafeReadBytes(&attribute, sizeof(attribute)))
             {
                 delete[] pVertexShaderByteCode;
@@ -283,7 +283,7 @@ bool D3D11GPUShaderProgram::Create(D3D11GPUDevice *pDevice, const GPU_VERTEX_ELE
         m_constantBuffers.ZeroContents();
         for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
         {
-            D3D11ShaderCacheEntryConstantBuffer srcConstantBufferInfo;
+            D3DShaderCacheEntryConstantBuffer srcConstantBufferInfo;
             ShaderLocalConstantBuffer *pDstConstantBuffer = &m_constantBuffers[i];
             if (!binaryReader.SafeReadBytes(&srcConstantBufferInfo, sizeof(srcConstantBufferInfo)))
                 return false;
@@ -335,7 +335,7 @@ bool D3D11GPUShaderProgram::Create(D3D11GPUDevice *pDevice, const GPU_VERTEX_ELE
         m_parameters.Resize(header.ParameterCount);
         for (uint32 i = 0; i < m_parameters.GetSize(); i++)
         {
-            D3D11ShaderCacheEntryParameter srcParameter;
+            D3DShaderCacheEntryParameter srcParameter;
             ShaderParameter *pDstParameterInfo = &m_parameters[i];
             if (!binaryReader.SafeReadBytes(&srcParameter, sizeof(srcParameter)))
                 return false;
@@ -346,7 +346,7 @@ bool D3D11GPUShaderProgram::Create(D3D11GPUDevice *pDevice, const GPU_VERTEX_ELE
             pDstParameterInfo->ConstantBufferOffset = srcParameter.ConstantBufferOffset;
             pDstParameterInfo->ArraySize = srcParameter.ArraySize;
             pDstParameterInfo->ArrayStride = srcParameter.ArrayStride;
-            pDstParameterInfo->BindTarget = (D3D11_SHADER_BIND_TARGET)srcParameter.BindTarget;
+            pDstParameterInfo->BindTarget = (D3D_SHADER_BIND_TARGET)srcParameter.BindTarget;
             Y_memcpy(pDstParameterInfo->BindPoint, srcParameter.BindPoint, sizeof(pDstParameterInfo->BindPoint));
             pDstParameterInfo->LinkedSamplerIndex = srcParameter.LinkedSamplerIndex;
         }
@@ -503,15 +503,15 @@ void D3D11GPUShaderProgram::Unbind(D3D11GPUContext *pContext)
 
             switch (parameter->BindTarget)
             {
-            case D3D11_SHADER_BIND_TARGET_CONSTANT_BUFFER:
+            case D3D_SHADER_BIND_TARGET_CONSTANT_BUFFER:
                 pContext->SetShaderConstantBuffers((SHADER_PROGRAM_STAGE)i, parameter->BindPoint[i], nullptr);
                 break;
 
-            case D3D11_SHADER_BIND_TARGET_RESOURCE:
+            case D3D_SHADER_BIND_TARGET_RESOURCE:
                 pContext->SetShaderResources((SHADER_PROGRAM_STAGE)i, parameter->BindPoint[i], nullptr);
                 break;
 
-            case D3D11_SHADER_BIND_TARGET_SAMPLER:
+            case D3D_SHADER_BIND_TARGET_SAMPLER:
                 pContext->SetShaderSamplers((SHADER_PROGRAM_STAGE)i, parameter->BindPoint[i], nullptr);
                 break;
             }
@@ -759,7 +759,7 @@ void D3D11GPUShaderProgram::InternalSetParameterResource(D3D11GPUContext *pConte
     // branch out according to target
     switch (parameterInfo->BindTarget)
     {
-    case D3D11_SHADER_BIND_TARGET_CONSTANT_BUFFER:
+    case D3D_SHADER_BIND_TARGET_CONSTANT_BUFFER:
         {
             ID3D11Buffer *pD3DBuffer = (pResource != nullptr) ? static_cast<D3D11GPUBuffer *>(pResource)->GetD3DBuffer() : nullptr;
             for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
@@ -771,7 +771,7 @@ void D3D11GPUShaderProgram::InternalSetParameterResource(D3D11GPUContext *pConte
         }
         break;
 
-    case D3D11_SHADER_BIND_TARGET_RESOURCE:
+    case D3D_SHADER_BIND_TARGET_RESOURCE:
         {
             ID3D11ShaderResourceView *pD3DSRV = (pResource != nullptr) ? D3D11Helpers::GetResourceShaderResourceView(pResource) : nullptr;
             for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
@@ -783,7 +783,7 @@ void D3D11GPUShaderProgram::InternalSetParameterResource(D3D11GPUContext *pConte
         }
         break;
 
-    case D3D11_SHADER_BIND_TARGET_SAMPLER:
+    case D3D_SHADER_BIND_TARGET_SAMPLER:
         {
             ID3D11SamplerState *pD3DSamplerState = (pResource != nullptr) ? D3D11Helpers::GetResourceSamplerState(pResource) : nullptr;
             for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
@@ -795,7 +795,7 @@ void D3D11GPUShaderProgram::InternalSetParameterResource(D3D11GPUContext *pConte
         }
         break;
 
-    case D3D11_SHADER_BIND_TARGET_UNORDERED_ACCESS_VIEW:
+    case D3D_SHADER_BIND_TARGET_UNORDERED_ACCESS_VIEW:
         {
             ID3D11UnorderedAccessView *pD3DUAV = (pResource != nullptr && pResource->GetResourceType() == GPU_RESOURCE_TYPE_COMPUTE_VIEW) ? static_cast<D3D11GPUComputeView *>(pResource)->GetD3DUAV() : nullptr;
             for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
@@ -812,7 +812,7 @@ void D3D11GPUShaderProgram::InternalSetParameterResource(D3D11GPUContext *pConte
     if (parameterInfo->LinkedSamplerIndex >= 0)
     {
         const ShaderParameter *samplerParameterInfo = &m_parameters[parameterInfo->LinkedSamplerIndex];
-        DebugAssert(samplerParameterInfo->Type == SHADER_PARAMETER_TYPE_SAMPLER_STATE && samplerParameterInfo->BindTarget == D3D11_SHADER_BIND_TARGET_SAMPLER);
+        DebugAssert(samplerParameterInfo->Type == SHADER_PARAMETER_TYPE_SAMPLER_STATE && samplerParameterInfo->BindTarget == D3D_SHADER_BIND_TARGET_SAMPLER);
 
         // write to stages
         ID3D11SamplerState *pD3DSamplerState = (pResource != nullptr) ? D3D11Helpers::GetResourceSamplerState((pLinkedSamplerState != nullptr) ? pLinkedSamplerState : pResource) : nullptr;

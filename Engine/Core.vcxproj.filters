@@ -32,6 +32,9 @@
     <ClCompile Include="Source\Core\ChunkFileReader.cpp" />
     <ClCompile Include="Source\Core\Console.cpp" />
     <ClCompile Include="Source\Core\PrecompiledHeader.cpp" />
+    <ClCompile Include="Source\Core\ThirdParty\MurmurHash3.cpp">
+      <Filter>ThirdParty</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Core\ChunkFileWriter.h" />
@@ -66,5 +69,13 @@
     <ClInclude Include="Source\Core\ClassTableDataFormat.h" />
     <ClInclude Include="Source\Core\Console.h" />
     <ClInclude Include="Source\Core\PrecompiledHeader.h" />
+    <ClInclude Include="Source\Core\ThirdParty\MurmurHash3.h">
+      <Filter>ThirdParty</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="ThirdParty">
+      <UniqueIdentifier>{eceaa0d0-c2ae-4f16-8947-ada2566243a4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

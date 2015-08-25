@@ -7,7 +7,7 @@
 Log_SetChannel(ShaderCompilerD3D);
 
 #include <d3d11.h>
-#include "D3D11Renderer/D3D11ShaderCacheEntry.h"
+#include "D3D11Renderer/D3DShaderCacheEntry.h"
 #include "D3D11Renderer/D3D11Defines.h"
 #pragma comment(lib, "d3dcompiler.lib")
 
@@ -296,20 +296,20 @@ static bool MapD3D11ShaderTypeDescToParameterType(const D3D11_SHADER_TYPE_DESC *
     return false;
 }
 
-static bool MapD3D11ShaderInputBindDescToParameterType(const D3D11_SHADER_INPUT_BIND_DESC *pInputBindDesc, SHADER_PARAMETER_TYPE *pParameterType, D3D11_SHADER_BIND_TARGET *pBindTarget)
+static bool MapD3D11ShaderInputBindDescToParameterType(const D3D11_SHADER_INPUT_BIND_DESC *pInputBindDesc, SHADER_PARAMETER_TYPE *pParameterType, D3D_SHADER_BIND_TARGET *pBindTarget)
 {
     if (pInputBindDesc->Type == D3D_SIT_CBUFFER)
     {
         // map to constant buffer
         *pParameterType = SHADER_PARAMETER_TYPE_CONSTANT_BUFFER;
-        *pBindTarget = D3D11_SHADER_BIND_TARGET_CONSTANT_BUFFER;
+        *pBindTarget = D3D_SHADER_BIND_TARGET_CONSTANT_BUFFER;
         return true;
     }
     else if (pInputBindDesc->Type == D3D_SIT_SAMPLER)
     {
         // map to sampler state
         *pParameterType = SHADER_PARAMETER_TYPE_SAMPLER_STATE;
-        *pBindTarget = D3D11_SHADER_BIND_TARGET_SAMPLER;
+        *pBindTarget = D3D_SHADER_BIND_TARGET_SAMPLER;
         return true;
     }
     else
@@ -334,9 +334,9 @@ static bool MapD3D11ShaderInputBindDescToParameterType(const D3D11_SHADER_INPUT_
 
         // work out the binding type
         if (pInputBindDesc->Type == D3D_SIT_TEXTURE)
-            *pBindTarget = D3D11_SHADER_BIND_TARGET_RESOURCE;
+            *pBindTarget = D3D_SHADER_BIND_TARGET_RESOURCE;
         else if (pInputBindDesc->Type >= D3D_SIT_UAV_RWTYPED && pInputBindDesc->Type <= D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER)
-            *pBindTarget = D3D11_SHADER_BIND_TARGET_UNORDERED_ACCESS_VIEW;
+            *pBindTarget = D3D_SHADER_BIND_TARGET_UNORDERED_ACCESS_VIEW;
         else
             return false;
 
@@ -347,9 +347,9 @@ static bool MapD3D11ShaderInputBindDescToParameterType(const D3D11_SHADER_INPUT_
 
 // TODO move into class
 static bool ReflectShader(SHADER_PROGRAM_STAGE stage,
-                          MemArray<D3D11ShaderCacheEntryVertexAttribute> &outVertexAttributes,
-                          MemArray<D3D11ShaderCacheEntryConstantBuffer> &outConstantBuffers,
-                          MemArray<D3D11ShaderCacheEntryParameter> &outParameters,
+                          MemArray<D3DShaderCacheEntryVertexAttribute> &outVertexAttributes,
+                          MemArray<D3DShaderCacheEntryConstantBuffer> &outConstantBuffers,
+                          MemArray<D3DShaderCacheEntryParameter> &outParameters,
                           const byte *pByteCode, uint32 byteCodeSize)
 {
     ID3D11ShaderReflection *pReflectionPointer;
@@ -388,7 +388,7 @@ static bool ReflectShader(SHADER_PROGRAM_STAGE stage,
             if (signatureParameterDesc.SystemValueType != D3D_NAME_UNDEFINED)
                 continue;
 
-            D3D11ShaderCacheEntryVertexAttribute vertexAttribute;
+            D3DShaderCacheEntryVertexAttribute vertexAttribute;
             if (!NameTable_TranslateType(NameTables::GPUVertexElementSemantic, signatureParameterDesc.SemanticName, &vertexAttribute.SemanticName, true))
             {
                 Log_ErrorPrintf("ReflectShader: failed to find mapping of semantic name '%s'", signatureParameterDesc.SemanticName);
@@ -436,7 +436,7 @@ static bool ReflectShader(SHADER_PROGRAM_STAGE stage,
             if (outConstantBufferIndex == outConstantBuffers.GetSize())
             {
                 // add the constant buffer entry
-                D3D11ShaderCacheEntryConstantBuffer cbDecl;
+                D3DShaderCacheEntryConstantBuffer cbDecl;
                 Y_strncpy(cbDecl.Name, countof(cbDecl.Name), constantBufferDesc.Name);
                 cbDecl.Size = constantBufferDesc.Size;
                 cbDecl.ParameterIndex = 0xFFFFFFFF;
@@ -539,14 +539,14 @@ static bool ReflectShader(SHADER_PROGRAM_STAGE stage,
                     }
 
                     // create parameter
-                    D3D11ShaderCacheEntryParameter paramDecl;
+                    D3DShaderCacheEntryParameter paramDecl;
                     Y_strncpy(paramDecl.Name, countof(paramDecl.Name), variableDesc.Name);
                     paramDecl.Type = parameterType;
                     paramDecl.ConstantBufferIndex = outConstantBufferIndex;
                     paramDecl.ConstantBufferOffset = variableDesc.StartOffset;
                     paramDecl.ArraySize = uniformArraySize;
                     paramDecl.ArrayStride = uniformArrayStride;
-                    paramDecl.BindTarget = D3D11_SHADER_BIND_TARGET_COUNT;
+                    paramDecl.BindTarget = D3D_SHADER_BIND_TARGET_COUNT;
                     for (uint32 i = 0; i < SHADER_PROGRAM_STAGE_COUNT; i++)
                         paramDecl.BindPoint[i] = -1;
                     paramDecl.LinkedSamplerIndex = -1;
@@ -568,7 +568,7 @@ static bool ReflectShader(SHADER_PROGRAM_STAGE stage,
 
             // map to parameter info
             SHADER_PARAMETER_TYPE parameterType;
-            D3D11_SHADER_BIND_TARGET bindTarget;
+            D3D_SHADER_BIND_TARGET bindTarget;
             if (!MapD3D11ShaderInputBindDescToParameterType(&inputBindDesc, &parameterType, &bindTarget))
             {
                 Log_ErrorPrintf("ReflectShader: Failed to map resource input type");
@@ -586,7 +586,7 @@ static bool ReflectShader(SHADER_PROGRAM_STAGE stage,
             // if not, create it
             if (outParameterIndex == outParameters.GetSize())
             {
-                D3D11ShaderCacheEntryParameter paramDecl;
+                D3DShaderCacheEntryParameter paramDecl;
                 Y_strncpy(paramDecl.Name, countof(paramDecl.Name), inputBindDesc.Name);
                 paramDecl.Type = parameterType;
                 paramDecl.ConstantBufferIndex = -1;
@@ -613,15 +613,15 @@ static bool ReflectShader(SHADER_PROGRAM_STAGE stage,
     return true;
 }
 
-static bool LinkResourceSamplerParameters(MemArray<D3D11ShaderCacheEntryParameter> &parameters)
+static bool LinkResourceSamplerParameters(MemArray<D3DShaderCacheEntryParameter> &parameters)
 {
     SmallString samplerParameterName;
 
     // find any resources with a matching _SamplerState suffix sampler
     for (uint32 parameterIndex = 0; parameterIndex < parameters.GetSize(); parameterIndex++)
     {
-        D3D11ShaderCacheEntryParameter *parameter = &parameters[parameterIndex];
-        if (parameter->BindTarget == D3D11_SHADER_BIND_TARGET_RESOURCE && 
+        D3DShaderCacheEntryParameter *parameter = &parameters[parameterIndex];
+        if (parameter->BindTarget == D3D_SHADER_BIND_TARGET_RESOURCE && 
             parameter->Type >= SHADER_PARAMETER_TYPE_TEXTURE1D && parameter->Type <= SHADER_PARAMETER_TYPE_TEXTURECUBEARRAY)
         {
             samplerParameterName.Clear();
@@ -633,7 +633,7 @@ static bool LinkResourceSamplerParameters(MemArray<D3D11ShaderCacheEntryParamete
                 if (samplerParameterIndex == parameterIndex)
                     continue;
 
-                const D3D11ShaderCacheEntryParameter *samplerParameter = &parameters[samplerParameterIndex];
+                const D3DShaderCacheEntryParameter *samplerParameter = &parameters[samplerParameterIndex];
                 if (samplerParameter->Type == SHADER_PARAMETER_TYPE_SAMPLER_STATE && samplerParameterName.Compare(samplerParameter->Name))
                 {
                     // found a match
@@ -648,17 +648,17 @@ static bool LinkResourceSamplerParameters(MemArray<D3D11ShaderCacheEntryParamete
     return true;
 }
 
-static bool LinkLocalConstantBuffersToParameters(MemArray<D3D11ShaderCacheEntryConstantBuffer> &constantBuffers, const MemArray<D3D11ShaderCacheEntryParameter> &parameters)
+static bool LinkLocalConstantBuffersToParameters(MemArray<D3DShaderCacheEntryConstantBuffer> &constantBuffers, const MemArray<D3DShaderCacheEntryParameter> &parameters)
 {
     // match the constant buffers to parameters
     for (uint32 constantBufferIndex = 0; constantBufferIndex < constantBuffers.GetSize();)
     {
-        D3D11ShaderCacheEntryConstantBuffer *constantBuffer = &constantBuffers[constantBufferIndex];
+        D3DShaderCacheEntryConstantBuffer *constantBuffer = &constantBuffers[constantBufferIndex];
 
         uint32 parameterIndex;
         for (parameterIndex = 0; parameterIndex < parameters.GetSize(); parameterIndex++)
         {
-            const D3D11ShaderCacheEntryParameter *parameter = &parameters[parameterIndex];
+            const D3DShaderCacheEntryParameter *parameter = &parameters[parameterIndex];
             if (parameter->Type == SHADER_PARAMETER_TYPE_CONSTANT_BUFFER && Y_strcmp(constantBuffer->Name, parameter->Name) == 0)
                 break;
         }
@@ -681,9 +681,9 @@ static bool LinkLocalConstantBuffersToParameters(MemArray<D3D11ShaderCacheEntryC
 
 bool ShaderCompilerD3D::InternalCompile(ByteStream *pByteCodeStream, ByteStream *pInfoLogStream)
 {
-    MemArray<D3D11ShaderCacheEntryVertexAttribute> vertexAttributes;
-    MemArray<D3D11ShaderCacheEntryConstantBuffer> constantBuffers;
-    MemArray<D3D11ShaderCacheEntryParameter> parameters;
+    MemArray<D3DShaderCacheEntryVertexAttribute> vertexAttributes;
+    MemArray<D3DShaderCacheEntryConstantBuffer> constantBuffers;
+    MemArray<D3DShaderCacheEntryParameter> parameters;
     SmallString tempString;
     Timer compileTimer, stageCompileTimer;
     float compileTimeCompile, compileTimeReflect;
@@ -736,9 +736,9 @@ bool ShaderCompilerD3D::InternalCompile(ByteStream *pByteCodeStream, ByteStream 
 
     // Create the header of the shader data.
     // The zeros on the strings prevent stack memory getting dropped into the output.
-    D3D11ShaderCacheEntryHeader cacheEntryHeader;
+    D3DShaderCacheEntryHeader cacheEntryHeader;
     Y_memzero(&cacheEntryHeader, sizeof(cacheEntryHeader));
-    cacheEntryHeader.Signature = D3D11_SHADER_CACHE_ENTRY_HEADER;
+    cacheEntryHeader.Signature = D3D_SHADER_CACHE_ENTRY_HEADER;
     cacheEntryHeader.FeatureLevel = m_eRendererFeatureLevel;
 
     // Store shader stage sizes.
@@ -765,11 +765,11 @@ bool ShaderCompilerD3D::InternalCompile(ByteStream *pByteCodeStream, ByteStream 
 
     // Write out declarations.
     if (vertexAttributes.GetSize() > 0)
-        pByteCodeStream->Write(vertexAttributes.GetBasePointer(), sizeof(D3D11ShaderCacheEntryVertexAttribute) * vertexAttributes.GetSize());
+        pByteCodeStream->Write(vertexAttributes.GetBasePointer(), sizeof(D3DShaderCacheEntryVertexAttribute) * vertexAttributes.GetSize());
     if (constantBuffers.GetSize() > 0)
-        pByteCodeStream->Write(constantBuffers.GetBasePointer(), sizeof(D3D11ShaderCacheEntryConstantBuffer) * constantBuffers.GetSize());
+        pByteCodeStream->Write(constantBuffers.GetBasePointer(), sizeof(D3DShaderCacheEntryConstantBuffer) * constantBuffers.GetSize());
     if (parameters.GetSize() > 0)
-        pByteCodeStream->Write(parameters.GetBasePointer(), sizeof(D3D11ShaderCacheEntryParameter) * parameters.GetSize());
+        pByteCodeStream->Write(parameters.GetBasePointer(), sizeof(D3DShaderCacheEntryParameter) * parameters.GetSize());
 
     // update timer
     compileTimeReflect = (float)stageCompileTimer.GetTimeMilliseconds();

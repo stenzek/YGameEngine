@@ -33,7 +33,7 @@ public:
     const D3D12DescriptorHeap::Handle *GetConstantBufferDescriptor(uint32 index) const;
 
     // resource cleanup
-    void ScheduleResourceForDeletion(ID3D12Resource *pResource, uint32 frameNumber = g_pRenderer->GetFrameNumber());
+    void ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint32 frameNumber = g_pRenderer->GetFrameNumber());
     void ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle *pHandle, uint32 frameNumber = g_pRenderer->GetFrameNumber());
     void DeletePendingResources(uint32 frameNumber);
 
@@ -85,7 +85,7 @@ private:
     // object scheduled for deletion
     struct PendingDeletionResource
     {
-        ID3D12Resource *pResource;
+        ID3D12Pageable *pResource;
         uint32 FrameNumber;
     };
     struct PendingDeletionDescriptor

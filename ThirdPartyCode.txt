@@ -1,0 +1,5 @@
+https://code.google.com/p/smhasher/
+
+MurmurHash3.h
+MurmurHash3.cpp
+

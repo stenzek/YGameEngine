@@ -80,6 +80,7 @@
     <ClCompile Include="Source\Core\Resource.cpp" />
     <ClCompile Include="Source\Core\ResourceTypeInfo.cpp" />
     <ClCompile Include="Source\Core\TexturePacker.cpp" />
+    <ClCompile Include="Source\Core\ThirdParty\MurmurHash3.cpp" />
     <ClCompile Include="Source\Core\VirtualFileSystem.cpp" />
     <ClCompile Include="Source\Core\XDisplay.cpp" />
   </ItemGroup>
@@ -113,6 +114,7 @@
     <ClInclude Include="Source\Core\Resource.h" />
     <ClInclude Include="Source\Core\ResourceTypeInfo.h" />
     <ClInclude Include="Source\Core\TexturePacker.h" />
+    <ClInclude Include="Source\Core\ThirdParty\MurmurHash3.h" />
     <ClInclude Include="Source\Core\TypeRegistry.h" />
     <ClInclude Include="Source\Core\VirtualFileSystem.h" />
     <ClInclude Include="Source\Core\XDisplay.h" />

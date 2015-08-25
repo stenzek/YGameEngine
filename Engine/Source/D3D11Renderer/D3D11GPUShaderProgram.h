@@ -1,13 +1,13 @@
 #pragma once
 #include "D3D11Renderer/D3D11Common.h"
-#include "D3D11Renderer/D3D11ShaderCacheEntry.h"
+#include "D3D11Renderer/D3DShaderCacheEntry.h"
 
 class D3D11GPUShaderProgram : public GPUShaderProgram
 {
 public:
     struct ShaderLocalConstantBuffer
     {
-        char Name[D3D11_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
+        char Name[D3D_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
         uint32 ParameterIndex;
         uint32 Size;
         uint32 EngineConstantBufferIndex;
@@ -20,13 +20,13 @@ public:
 
     struct ShaderParameter
     {
-        char Name[D3D11_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
+        char Name[D3D_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
         SHADER_PARAMETER_TYPE Type;
         int32 ConstantBufferIndex;
         uint32 ConstantBufferOffset;
         uint32 ArraySize;
         uint32 ArrayStride;
-        D3D11_SHADER_BIND_TARGET BindTarget;
+        D3D_SHADER_BIND_TARGET BindTarget;
         int32 BindPoint[SHADER_PROGRAM_STAGE_COUNT];
         int32 LinkedSamplerIndex;
     };

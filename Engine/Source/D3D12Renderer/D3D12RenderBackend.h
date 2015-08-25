@@ -8,6 +8,7 @@ public:
     struct ConstantBufferStorage
     {
         ID3D12Resource *pResource;
+        D3D12DescriptorHeap::Handle DescriptorHandle;
         uint32 Size;
     };
 
@@ -26,6 +27,12 @@ public:
     D3D12GPUContext *GetGPUContext() const { return m_pGPUContext; }
     D3D12DescriptorHeap *GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) { return m_pDescriptorHeaps[type]; }
     uint32 GetFrameLatency() const { return m_frameLatency; }
+
+    // constant buffer management
+    ID3D12Resource *GetConstantBufferResource(uint32 index);
+    const D3D12DescriptorHeap::Handle *GetConstantBufferDescriptor(uint32 index) const;
+
+    // resource cleanup
     void ScheduleResourceForDeletion(ID3D12Resource *pResource, uint32 frameNumber = g_pRenderer->GetFrameNumber());
     void ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle *pHandle, uint32 frameNumber = g_pRenderer->GetFrameNumber());
     void DeletePendingResources(uint32 frameNumber);

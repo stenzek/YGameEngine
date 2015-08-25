@@ -132,9 +132,6 @@ public:
     // create device
     bool Create();
 
-    // constant resource management
-    D3D12GPUBuffer *GetConstantBuffer(uint32 index);
-
     // access to shader states for the shader mutators to modify
     void SetShaderConstantBuffers(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
     void SetShaderResources(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
@@ -149,9 +146,13 @@ public:
     void BypassPredication();
     void RestorePredication();
 
+    // create a resource barrier on the current command list
+    void ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
+    void ResourceBarrier(ID3D12Resource *pResource, uint32 subResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
+
 private:
     // preallocate constant buffers
-    bool CreateConstantBuffers();
+    void CreateConstantBuffers();
     bool CreateQueuedFrameData();
 
     // allocate from scratch buffer
@@ -197,10 +198,8 @@ private:
     // constant buffers
     struct ConstantBuffer
     {
-        D3D12GPUBuffer *pGPUBuffer;
-        uint32 Size;
-
         byte *pLocalMemory;
+        uint32 Size;
         int32 DirtyLowerBounds;
         int32 DirtyUpperBounds;
     };

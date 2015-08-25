@@ -236,7 +236,7 @@ bool D3D12RenderBackend::CreateDescriptorHeaps()
         1024            // D3D12_DESCRIPTOR_HEAP_TYPE_DSV
     };
 
-    static_assert(countof(initialDescriptorHeapSize) == countof(m_pDescriptorHeaps));
+    static_assert(countof(initialDescriptorHeapSize) == countof(m_pDescriptorHeaps), "descriptor heap type count");
     for (uint32 i = 0; i < countof(initialDescriptorHeapSize); i++)
     {
         m_pDescriptorHeaps[i] = D3D12DescriptorHeap::Create(m_pD3DDevice, (D3D12_DESCRIPTOR_HEAP_TYPE)i, initialDescriptorHeapSize[i]);
@@ -260,7 +260,7 @@ bool D3D12RenderBackend::CreateConstantStorage()
     const ShaderConstantBuffer::RegistryType *registry = ShaderConstantBuffer::GetRegistry();
     m_constantBufferStorage.Resize(registry->GetNumTypes());
     m_constantBufferStorage.ZeroContents();
-    for (ConstantBufferStorage &constantBufferStorage : m_constantBufferStorage)
+    for (uint32 i = 0; i < m_constantBufferStorage.GetSize(); i++)
     {
         // applicable to us?
         const ShaderConstantBuffer *declaration = registry->GetTypeInfoByIndex(i);
@@ -272,18 +272,21 @@ bool D3D12RenderBackend::CreateConstantStorage()
             continue;
 
         // set size so we know to allocate it later or on demand
-        constantBufferStorage.Size = declaration->GetBufferSize();
+        ConstantBufferStorage *constantBufferStorage = &m_constantBufferStorage[i];
+        constantBufferStorage->Size = declaration->GetBufferSize();
 
-        // stats
-        memoryUsage += constantBufferStorage.Size;
+        // align next buffer to 64kb
+        memoryUsage = (memoryUsage > 0) ? ALIGNED_SIZE(memoryUsage, D3D12_CONSTANT_BUFFER_ALIGNMENT) : 0;
+        memoryUsage += constantBufferStorage->Size;
         activeCount++;
     }
 
     // create a heap for the constant buffers
-    D3D12_HEAP_DESC heapDesc = {
+    D3D12_HEAP_DESC heapDesc =
+    {
         memoryUsage,
         { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 },
-        16,
+        D3D12_CONSTANT_BUFFER_ALIGNMENT,
         D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS
     };
     hResult = m_pD3DDevice->CreateHeap(&heapDesc, __uuidof(ID3D12Heap), (void **)&m_pConstantBufferStorageHeap);
@@ -293,26 +296,33 @@ bool D3D12RenderBackend::CreateConstantStorage()
         return false;
     }
 
-    // preallocate constant buffers, todo lazy allocation
+    // preallocate constant buffers
     Log_DevPrintf("Preallocating %u constant buffers, total VRAM usage: %u bytes", activeCount, memoryUsage);
     uint32 currentOffset = 0;
-    for (ConstantBufferStorage &constantBufferStorage : m_constantBufferStorage)
+    for (uint32 i = 0; i < m_constantBufferStorage.GetSize(); i++)
     {
-        if (constantBufferStorage.Size == 0)
+        ConstantBufferStorage *constantBufferStorage = &m_constantBufferStorage[i];
+        if (constantBufferStorage->Size == 0)
             continue;
 
-        /*
-        // create the gpu buffer
-        GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_WRITABLE, constantBuffer->Size);
-        //constantBuffer->pGPUBuffer = static_cast<D3D12GPUBuffer *>(m_pDevice->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
-        if (constantBuffer->pGPUBuffer == nullptr)
+        // align buffer to 64kb
+        currentOffset = (currentOffset > 0) ? ALIGNED_SIZE(currentOffset, D3D12_CONSTANT_BUFFER_ALIGNMENT) : 0;
+
+        // allocate resource in heap
+        D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, D3D12_CONSTANT_BUFFER_ALIGNMENT, constantBufferStorage->Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+        hResult = m_pD3DDevice->CreatePlacedResource(m_pConstantBufferStorageHeap, currentOffset, &resourceDesc, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr, __uuidof(ID3D12Resource), (void **)&constantBufferStorage->pResource);
+        if (FAILED(hResult))
         {
             const ShaderConstantBuffer *declaration = ShaderConstantBuffer::GetRegistry()->GetTypeInfoByIndex(i);
-            Log_ErrorPrintf("D3D12GPUContext::CreateResources: Failed to allocate constant buffer %u (%s)", i, declaration->GetBufferName());
+            Log_ErrorPrintf("Failed to allocate constant buffer %u (%s)", i, declaration->GetBufferName());
             return false;
         }
-        */
+
+        // move buffer forward
+        currentOffset += constantBufferStorage->Size;
     }
+
+    return true;
 }
 
 void D3D12RenderBackend::Shutdown()
@@ -320,6 +330,14 @@ void D3D12RenderBackend::Shutdown()
     // cleanup our objects
     SAFE_RELEASE(m_pGPUContext);
     SAFE_RELEASE(m_pGPUDevice);
+
+    // cleanup constant buffers
+    for (ConstantBufferStorage &constantBufferStorage : m_constantBufferStorage)
+    {
+        if (constantBufferStorage.pResource != nullptr)
+            constantBufferStorage.pResource->Release();
+    }
+    m_pConstantBufferStorageHeap->Release();
 
     // remove descriptor heaps
     for (uint32 i = 0; i < countof(m_pDescriptorHeaps); i++)
@@ -422,6 +440,18 @@ GPUDevice *D3D12RenderBackend::CreateDeviceInterface()
 {
     // @TODO
     return nullptr;
+}
+
+ID3D12Resource *D3D12RenderBackend::GetConstantBufferResource(uint32 index)
+{
+    DebugAssert(index < m_constantBufferStorage.GetSize());
+    return m_constantBufferStorage[index].pResource;
+}
+
+const D3D12DescriptorHeap::Handle *D3D12RenderBackend::GetConstantBufferDescriptor(uint32 index) const
+{
+    DebugAssert(index < m_constantBufferStorage.GetSize());
+    return (m_constantBufferStorage[index].pResource != nullptr) ? &m_constantBufferStorage[index].DescriptorHandle : nullptr;
 }
 
 void D3D12RenderBackend::ScheduleResourceForDeletion(ID3D12Resource *pResource, uint32 frameNumber /*= g_pRenderer->GetFrameNumber()*/)

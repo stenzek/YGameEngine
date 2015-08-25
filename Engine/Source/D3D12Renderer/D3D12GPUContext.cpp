@@ -136,14 +136,33 @@ D3D12GPUContext::~D3D12GPUContext()
     m_pDevice->Release();
 }
 
+void D3D12GPUContext::ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState)
+{
+    D3D12_RESOURCE_BARRIER resourceBarrier =
+    {
+        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE,
+        { pResource, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, beforeState, afterState }
+    };
+
+    m_pCurrentCommandList->ResourceBarrier(1, &resourceBarrier);
+}
+
+void D3D12GPUContext::ResourceBarrier(ID3D12Resource *pResource, uint32 subResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState)
+{
+    D3D12_RESOURCE_BARRIER resourceBarrier =
+    {
+        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE,
+        { pResource, subResource, beforeState, afterState }
+    };
+
+    m_pCurrentCommandList->ResourceBarrier(1, &resourceBarrier);
+}
+
 bool D3D12GPUContext::Create()
 {
     // allocate constants
     m_pConstants = new GPUContextConstants(this);
-
-    // create constant buffers
-    if (!CreateConstantBuffers())
-        return false;
+    CreateConstantBuffers();
 
     // create queued frame data
     if (!CreateQueuedFrameData())
@@ -865,21 +884,15 @@ void D3D12GPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)
 #endif
 }
 
-bool D3D12GPUContext::CreateConstantBuffers()
+void D3D12GPUContext::CreateConstantBuffers()
 {
-    uint32 memoryUsage = 0;
-    uint32 activeCount = 0;
-
     // allocate constant buffer storage
     const ShaderConstantBuffer::RegistryType *registry = ShaderConstantBuffer::GetRegistry();
     m_constantBuffers.Resize(registry->GetNumTypes());
+    m_constantBuffers.ZeroContents();
     for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
     {
         ConstantBuffer *constantBuffer = &m_constantBuffers[i];
-        constantBuffer->pGPUBuffer = nullptr;
-        constantBuffer->Size = 0;
-        constantBuffer->pLocalMemory = nullptr;
-        constantBuffer->DirtyLowerBounds = constantBuffer->DirtyUpperBounds = -1;
 
         // applicable to us?
         const ShaderConstantBuffer *declaration = registry->GetTypeInfoByIndex(i);
@@ -892,36 +905,10 @@ bool D3D12GPUContext::CreateConstantBuffers()
 
         // set size so we know to allocate it later or on demand
         constantBuffer->Size = declaration->GetBufferSize();
-
-        // stats
-        memoryUsage += constantBuffer->Size;
-        activeCount++;
-    }
-
-    // preallocate constant buffers, todo lazy allocation
-    Log_DevPrintf("Preallocating %u constant buffers, total VRAM usage: %u bytes", activeCount, memoryUsage);
-    for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
-    {
-        ConstantBuffer *constantBuffer = &m_constantBuffers[i];
-        if (constantBuffer->Size == 0)
-            continue;
-
-        // allocate local memory first (so we can use it as initialization data)
+        constantBuffer->DirtyLowerBounds = constantBuffer->DirtyUpperBounds = -1;
         constantBuffer->pLocalMemory = new byte[constantBuffer->Size];
         Y_memzero(constantBuffer->pLocalMemory, constantBuffer->Size);
-
-        // create the gpu buffer
-        GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_WRITABLE, constantBuffer->Size);
-        //constantBuffer->pGPUBuffer = static_cast<D3D12GPUBuffer *>(m_pDevice->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
-        if (constantBuffer->pGPUBuffer == nullptr)
-        {
-            const ShaderConstantBuffer *declaration = ShaderConstantBuffer::GetRegistry()->GetTypeInfoByIndex(i);
-            Log_ErrorPrintf("D3D12GPUContext::CreateResources: Failed to allocate constant buffer %u (%s)", i, declaration->GetBufferName());
-            return false;
-        }
     }
-
-    return true;
 }
 
 bool D3D12GPUContext::CreateQueuedFrameData()
@@ -974,36 +961,10 @@ bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **
     return true;
 }
 
-D3D12GPUBuffer *D3D12GPUContext::GetConstantBuffer(uint32 index)
-{
-    ConstantBuffer *constantBuffer = &m_constantBuffers[index];
-    if (constantBuffer->Size == 0)
-        return nullptr;
-
-    if (constantBuffer->pGPUBuffer == nullptr)
-    {
-        // lazy create?
-        if (constantBuffer->pLocalMemory == nullptr)
-            constantBuffer->pLocalMemory = new byte[constantBuffer->Size];
-
-        // create the gpu buffer
-        GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_WRITABLE, constantBuffer->Size);
-        //constantBuffer->pGPUBuffer = static_cast<D3D12GPUBuffer *>(m_pDevice->CreateBuffer(&bufferDesc, constantBuffer->pLocalMemory));
-        if (constantBuffer->pGPUBuffer == nullptr)
-        {
-            const ShaderConstantBuffer *declaration = ShaderConstantBuffer::GetRegistry()->GetTypeInfoByIndex(index);
-            Log_ErrorPrintf("D3D12GPUContext::GetConstantBuffer: Failed to lazy-allocate constant buffer %u (%s)", index, declaration->GetBufferName());
-            return nullptr;
-        }
-    }
-
-    return constantBuffer->pGPUBuffer;
-}
-
 void D3D12GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex, uint32 offset, uint32 count, const void *pData, bool commit /* = false */)
 {
     ConstantBuffer *cbInfo = &m_constantBuffers[bufferIndex];
-    if (cbInfo->pGPUBuffer == nullptr)
+    if (cbInfo->pLocalMemory == nullptr)
     {
         Log_WarningPrintf("Skipping write of %u bytes to non-existant constant buffer %u", count, bufferIndex);
         return;
@@ -1033,7 +994,7 @@ void D3D12GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex,
 void D3D12GPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fieldIndex, uint32 offset, uint32 bufferStride, uint32 copySize, uint32 count, const void *pData, bool commit /*= false*/)
 {
     ConstantBuffer *cbInfo = &m_constantBuffers[bufferIndex];
-    if (cbInfo->pGPUBuffer == nullptr)
+    if (cbInfo->pLocalMemory == nullptr)
     {
         Log_WarningPrintf("Skipping write of %u bytes to non-existant constant buffer %u", count, bufferIndex);
         return;
@@ -1065,7 +1026,7 @@ void D3D12GPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fiel
 void D3D12GPUContext::CommitConstantBuffer(uint32 bufferIndex)
 {
     ConstantBuffer *cbInfo = &m_constantBuffers[bufferIndex];
-    if (cbInfo->pGPUBuffer == nullptr || cbInfo->DirtyLowerBounds < 0)
+    if (cbInfo->pLocalMemory == nullptr || cbInfo->DirtyLowerBounds < 0)
         return;
 
     // work out count to modify
@@ -1087,8 +1048,14 @@ void D3D12GPUContext::CommitConstantBuffer(uint32 bufferIndex)
     // copy from the constant memory store to the scratch buffer
     Y_memcpy(pCPUPointer, cbInfo->pLocalMemory + cbInfo->DirtyLowerBounds, modifySize);
 
+    // get constant buffer pointer
+    ID3D12Resource *pConstantBufferResource = m_pBackend->GetConstantBufferResource(bufferIndex);
+    DebugAssert(pConstantBufferResource != nullptr);
+
     // queue a copy to the actual buffer
-    //m_pCurrentCommandList->CopyBufferRegion(cbInfo->pGPUBuffer, cbInfo->DirtyLowerBounds, m_pCurrentScratchBuffer->GetResource(), scratchBufferOffset, modifySize);
+    ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
+    m_pCurrentCommandList->CopyBufferRegion(pConstantBufferResource, cbInfo->DirtyLowerBounds, pScratchBufferResource, scratchBufferOffset, modifySize);
+    ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
     // restore predicates
     RestorePredication();

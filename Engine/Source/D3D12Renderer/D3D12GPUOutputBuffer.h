@@ -52,6 +52,7 @@ private:
     DXGI_FORMAT m_depthStencilFormat;
 
     uint32 m_currentBackBufferIndex;
+    PODArray<ID3D12Resource *> m_backBuffers;
     ID3D12Resource *m_pDepthStencilBuffer;
 
     D3D12DescriptorHeap::Handle m_renderTargetViewsDescriptorStart;

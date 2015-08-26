@@ -106,6 +106,23 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     return pOutputBuffer;
 }
 
+ID3D12Resource *D3D12GPUOutputBuffer::GetCurrentBackBuffer() const
+{
+    DebugAssert(m_currentBackBufferIndex < m_backBuffers.GetSize());
+    return m_backBuffers[m_currentBackBufferIndex];
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12GPUOutputBuffer::GetCurrentBackBufferViewDescriptor() const
+{
+    return m_renderTargetViewsDescriptorStart.GetOffsetCPUHandle(m_currentBackBufferIndex);
+}
+
+void D3D12GPUOutputBuffer::UpdateCurrentBackBuffer()
+{
+    m_currentBackBufferIndex = m_pDXGISwapChain->GetCurrentBackBufferIndex();
+    DebugAssert(m_currentBackBufferIndex < m_backBuffers.GetSize());
+}
+
 void D3D12GPUOutputBuffer::InternalResizeBuffers(uint32 width, uint32 height, RENDERER_VSYNC_TYPE vsyncType)
 {
     HRESULT hResult;
@@ -148,6 +165,7 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
 
     // find the current backbuffer index
     m_currentBackBufferIndex = m_pDXGISwapChain->GetCurrentBackBufferIndex();
+    m_backBuffers.Reserve(swapChainDesc.BufferCount);
 
     // allocate RTV descriptors
     if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->AllocateRange(swapChainDesc.BufferCount, &m_renderTargetViewsDescriptorStart))
@@ -176,7 +194,7 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
 
         // pass through
         m_pD3DDevice->CreateRenderTargetView(pBackBuffer, &rtvDesc, m_renderTargetViewsDescriptorStart.GetOffsetCPUHandle(i));
-        pBackBuffer->Release();
+        m_backBuffers.Add(pBackBuffer);
     }
 
     // allocate depth stencil buffer
@@ -218,6 +236,10 @@ void D3D12GPUOutputBuffer::InternalReleaseBuffers()
 {
     D3D12RenderBackend::GetInstance()->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(&m_renderTargetViewsDescriptorStart);
     D3D12RenderBackend::GetInstance()->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Free(&m_depthStencilViewDescriptor);
+
+    for (uint32 i = 0; i < m_backBuffers.GetSize(); i++)
+        m_backBuffers[i]->Release();
+    m_backBuffers.Clear();
 
     SAFE_RELEASE(m_pDepthStencilBuffer);
 }

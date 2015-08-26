@@ -106,6 +106,7 @@ public:
     D3D12GPUContext *GetGPUContext() const { return m_pGPUContext; }
     void SetGPUContext(D3D12GPUContext *pContext) { m_pGPUContext = pContext; }
     ID3D12GraphicsCommandList *GetCommandList();
+    void ScheduleUploadResourceDeletion(ID3D12Pageable *pResource);
     bool CreateOffThreadResources();
     void FlushCopyQueue();
 
@@ -120,12 +121,12 @@ private:
     ID3D12CommandQueue *m_pOffThreadCommandQueue;
     ID3D12GraphicsCommandList *m_pOffThreadCommandList;
     ID3D12Fence *m_pOffThreadFence;
-    HANDLE m_hFenceReachedEvent;
-    uint64 m_fenceValue;
+    HANDLE m_offThreadFenceReachedEvent;
+    PODArray<ID3D12Pageable *> m_offThreadUploadResources;
+    uint64 m_offThreadFenceValue;
+    uint32 m_offThreadCopyQueueLength;
+    uint32 m_offThreadCopyQueueEnabled;
 
     DXGI_FORMAT m_outputBackBufferFormat;
     DXGI_FORMAT m_outputDepthStencilFormat;
-
-    uint32 m_copyQueueLength;
-    uint32 m_copyQueueEnabled;
 };

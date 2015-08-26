@@ -16,8 +16,8 @@ D3D12GPUDevice::D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory3 *pDXG
     , m_pOffThreadCommandQueue(nullptr)
     , m_pOffThreadCommandList(nullptr)
     , m_pOffThreadFence(nullptr)
-    , m_hFenceReachedEvent(nullptr)
-    , m_fenceValue(0)
+    , m_offThreadFenceReachedEvent(nullptr)
+    , m_offThreadFenceValue(0)
     , m_outputBackBufferFormat(outputBackBufferFormat)
     , m_outputDepthStencilFormat(outputDepthStencilFormat)
 {
@@ -31,8 +31,11 @@ D3D12GPUDevice::D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory3 *pDXG
 
 D3D12GPUDevice::~D3D12GPUDevice()
 {
-    if (m_hFenceReachedEvent != nullptr)
-        CloseHandle(m_hFenceReachedEvent);
+    if (m_offThreadCopyQueueLength > 0)
+        FlushCopyQueue();
+
+    if (m_offThreadFenceReachedEvent != nullptr)
+        CloseHandle(m_offThreadFenceReachedEvent);
     SAFE_RELEASE(m_pOffThreadFence);
     SAFE_RELEASE(m_pOffThreadCommandList);
     SAFE_RELEASE(m_pOffThreadCommandQueue);
@@ -74,7 +77,7 @@ bool D3D12GPUDevice::CreateOffThreadResources()
     }
 
     // create fence
-    hResult = m_pD3DDevice->CreateFence(m_fenceValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_pOffThreadFence));
+    hResult = m_pD3DDevice->CreateFence(m_offThreadFenceValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_pOffThreadFence));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateFence failed with hResult %08X", hResult);
@@ -82,8 +85,8 @@ bool D3D12GPUDevice::CreateOffThreadResources()
     }
 
     // create event
-    m_hFenceReachedEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    if (m_hFenceReachedEvent == INVALID_HANDLE_VALUE)
+    m_offThreadFenceReachedEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    if (m_offThreadFenceReachedEvent == INVALID_HANDLE_VALUE)
     {
         Log_ErrorPrintf("CreateEvent failed (%u)", GetLastError());
         return false;
@@ -98,7 +101,7 @@ void D3D12GPUDevice::BeginResourceBatchUpload()
     if (m_pGPUContext != nullptr)
         return;
 
-    m_copyQueueEnabled++;
+    m_offThreadCopyQueueEnabled++;
 }
 
 void D3D12GPUDevice::EndResourceBatchUpload()
@@ -106,9 +109,9 @@ void D3D12GPUDevice::EndResourceBatchUpload()
     if (m_pGPUContext != nullptr)
         return;
 
-    DebugAssert(m_copyQueueEnabled > 0);
-    m_copyQueueEnabled--;
-    if (m_copyQueueEnabled == 0 && m_copyQueueLength > 0)
+    DebugAssert(m_offThreadCopyQueueEnabled > 0);
+    m_offThreadCopyQueueEnabled--;
+    if (m_offThreadCopyQueueEnabled == 0 && m_offThreadCopyQueueLength > 0)
         FlushCopyQueue();
 }
 
@@ -117,12 +120,13 @@ void D3D12GPUDevice::FlushCopyQueue()
     if (m_pGPUContext != nullptr)
         return;
 
-    if (m_copyQueueEnabled > 0)
+    if (m_offThreadCopyQueueEnabled > 0)
     {
-        m_copyQueueLength++;
+        m_offThreadCopyQueueLength++;
         return;
     }
 
+    m_pOffThreadCommandList->Close();
     m_pOffThreadCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pOffThreadCommandList);
 
     // @TODO other way around??? 
@@ -130,9 +134,9 @@ void D3D12GPUDevice::FlushCopyQueue()
     if (SUCCEEDED(hResult))
     {
         // wait until the fence is reached
-        hResult = m_pOffThreadFence->SetEventOnCompletion(++m_fenceValue, m_hFenceReachedEvent);
+        hResult = m_pOffThreadFence->SetEventOnCompletion(++m_offThreadFenceValue, m_offThreadFenceReachedEvent);
         if (SUCCEEDED(hResult))
-            WaitForSingleObject(m_hFenceReachedEvent, INFINITE);
+            WaitForSingleObject(m_offThreadFenceReachedEvent, INFINITE);
         else
             Log_ErrorPrintf("ID3D12Fence::SetEventOnCompletion failed with hResult %08X", hResult);
     }
@@ -144,11 +148,37 @@ void D3D12GPUDevice::FlushCopyQueue()
     // reset the command allocator/list
     m_pOffThreadCommandAllocator->Reset();
     m_pOffThreadCommandList->Reset(m_pOffThreadCommandAllocator, nullptr);
+
+    // reset vars
+    m_offThreadCopyQueueLength = 0;
+
+    // release resources
+    for (ID3D12Pageable *pResource : m_offThreadUploadResources)
+        pResource->Release();
+    m_offThreadUploadResources.Clear();
 }
 
 ID3D12GraphicsCommandList *D3D12GPUDevice::GetCommandList()
 {
     return (m_pGPUContext != nullptr) ? m_pGPUContext->GetCurrentCommandList() : m_pOffThreadCommandList;
+}
+
+void D3D12GPUDevice::ScheduleUploadResourceDeletion(ID3D12Pageable *pResource)
+{
+    if (m_pGPUContext != nullptr)
+    {
+        m_pBackend->ScheduleResourceForDeletion(pResource);
+        return;
+    }
+
+    if (m_offThreadCopyQueueEnabled)
+    {
+        m_offThreadUploadResources.Add(pResource);
+        return;
+    }
+
+    // should have already completed the command by here
+    pResource->Release();
 }
 
 static const D3D12_COMPARISON_FUNC s_D3D12ComparisonFuncs[GPU_COMPARISON_FUNC_COUNT] =

@@ -713,6 +713,16 @@ void OpenGLGPUContext::BeginFrame()
     g_pRenderer->BeginFrame();
 }
 
+void OpenGLGPUContext::Flush()
+{
+    glFlush();
+}
+
+void OpenGLGPUContext::Finish()
+{
+    glFinish();
+}
+
 uint32 OpenGLGPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)
 {
     uint32 i;

@@ -1,6 +1,6 @@
 #include "D3D12Renderer/PrecompiledHeader.h"
 #include "D3D12Renderer/D3D12GPUDevice.h"
-//#include "D3D12Renderer/D3D12GPUContext.h"
+#include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12GPUOutputBuffer.h"
 #include "Engine/EngineCVars.h"
@@ -12,6 +12,12 @@ D3D12GPUDevice::D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory3 *pDXG
     , m_pDXGIAdapter(pDXGIAdapter)
     , m_pD3DDevice(pD3DDevice)
     , m_pGPUContext(nullptr)
+    , m_pOffThreadCommandAllocator(nullptr)
+    , m_pOffThreadCommandQueue(nullptr)
+    , m_pOffThreadCommandList(nullptr)
+    , m_pOffThreadFence(nullptr)
+    , m_hFenceReachedEvent(nullptr)
+    , m_fenceValue(0)
     , m_outputBackBufferFormat(outputBackBufferFormat)
     , m_outputDepthStencilFormat(outputDepthStencilFormat)
 {
@@ -25,20 +31,124 @@ D3D12GPUDevice::D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory3 *pDXG
 
 D3D12GPUDevice::~D3D12GPUDevice()
 {
+    if (m_hFenceReachedEvent != nullptr)
+        CloseHandle(m_hFenceReachedEvent);
+    SAFE_RELEASE(m_pOffThreadFence);
+    SAFE_RELEASE(m_pOffThreadCommandList);
+    SAFE_RELEASE(m_pOffThreadCommandQueue);
+    SAFE_RELEASE(m_pOffThreadCommandAllocator);
+
     SAFE_RELEASE(m_pD3DDevice);
 
     SAFE_RELEASE(m_pDXGIAdapter);
     SAFE_RELEASE(m_pDXGIFactory);
 }
 
+bool D3D12GPUDevice::CreateOffThreadResources()
+{
+    HRESULT hResult;
+
+    // create allocator
+    hResult = m_pD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&m_pOffThreadCommandAllocator));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateCommandAllocator failed with hResult %08X", hResult);
+        return false;
+    }
+
+    // create queue
+    D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_COPY, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 0 };
+    hResult = m_pD3DDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_pOffThreadCommandQueue));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateCommandAllocator failed with hResult %08X", hResult);
+        return false;
+    }
+
+    // create command list
+    hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, m_pOffThreadCommandAllocator, nullptr, IID_PPV_ARGS(&m_pOffThreadCommandList));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateCommandList failed with hResult %08X", hResult);
+        return false;
+    }
+
+    // create fence
+    hResult = m_pD3DDevice->CreateFence(m_fenceValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_pOffThreadFence));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateFence failed with hResult %08X", hResult);
+        return false;
+    }
+
+    // create event
+    m_hFenceReachedEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    if (m_hFenceReachedEvent == INVALID_HANDLE_VALUE)
+    {
+        Log_ErrorPrintf("CreateEvent failed (%u)", GetLastError());
+        return false;
+    }
+
+    // done
+    return true;
+}
+
 void D3D12GPUDevice::BeginResourceBatchUpload()
 {
+    if (m_pGPUContext != nullptr)
+        return;
 
+    m_copyQueueEnabled++;
 }
 
 void D3D12GPUDevice::EndResourceBatchUpload()
 {
+    if (m_pGPUContext != nullptr)
+        return;
 
+    DebugAssert(m_copyQueueEnabled > 0);
+    m_copyQueueEnabled--;
+    if (m_copyQueueEnabled == 0 && m_copyQueueLength > 0)
+        FlushCopyQueue();
+}
+
+void D3D12GPUDevice::FlushCopyQueue()
+{
+    if (m_pGPUContext != nullptr)
+        return;
+
+    if (m_copyQueueEnabled > 0)
+    {
+        m_copyQueueLength++;
+        return;
+    }
+
+    m_pOffThreadCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pOffThreadCommandList);
+
+    // @TODO other way around??? 
+    HRESULT hResult = m_pOffThreadCommandQueue->Signal(m_pOffThreadFence, 1);
+    if (SUCCEEDED(hResult))
+    {
+        // wait until the fence is reached
+        hResult = m_pOffThreadFence->SetEventOnCompletion(++m_fenceValue, m_hFenceReachedEvent);
+        if (SUCCEEDED(hResult))
+            WaitForSingleObject(m_hFenceReachedEvent, INFINITE);
+        else
+            Log_ErrorPrintf("ID3D12Fence::SetEventOnCompletion failed with hResult %08X", hResult);
+    }
+    else
+    {
+        Log_ErrorPrintf("ID3D12Fence::Signal failed with hResult %08X", hResult);
+    }
+
+    // reset the command allocator/list
+    m_pOffThreadCommandAllocator->Reset();
+    m_pOffThreadCommandList->Reset(m_pOffThreadCommandAllocator, nullptr);
+}
+
+ID3D12GraphicsCommandList *D3D12GPUDevice::GetCommandList()
+{
+    return (m_pGPUContext != nullptr) ? m_pGPUContext->GetCurrentCommandList() : m_pOffThreadCommandList;
 }
 
 static const D3D12_COMPARISON_FUNC s_D3D12ComparisonFuncs[GPU_COMPARISON_FUNC_COUNT] =

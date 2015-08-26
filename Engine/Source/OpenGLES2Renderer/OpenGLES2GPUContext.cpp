@@ -618,6 +618,16 @@ void OpenGLES2GPUContext::BeginFrame()
     g_pRenderer->BeginFrame();
 }
 
+void OpenGLES2GPUContext::Flush()
+{
+    glFlush();
+}
+
+void OpenGLES2GPUContext::Finish()
+{
+    glFinish();
+}
+
 uint32 OpenGLES2GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)
 {
     if (nRenderTargets >= 1)

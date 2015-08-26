@@ -725,6 +725,16 @@ void D3D11GPUContext::BeginFrame()
     g_pRenderer->BeginFrame();
 }
 
+void D3D11GPUContext::Flush()
+{
+    m_pD3DContext->Flush();
+}
+
+void D3D11GPUContext::Finish()
+{
+    // Doesn't exist in D3D11?
+}
+
 uint32 D3D11GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)
 {
     uint32 i, j;

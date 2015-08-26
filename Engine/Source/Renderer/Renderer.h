@@ -650,6 +650,12 @@ public:
     // Start of frame
     virtual void BeginFrame() = 0;
 
+    // Ensure all queued commands are sent to the GPU.
+    virtual void Flush() = 0;
+
+    // Ensure all commands have been completed by the GPU.
+    virtual void Finish() = 0;
+
     // Swap chain manipulation
     virtual bool GetExclusiveFullScreen() = 0;
     virtual bool SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate) = 0;

@@ -105,6 +105,9 @@ public:
     // helper methods
     D3D12GPUContext *GetGPUContext() const { return m_pGPUContext; }
     void SetGPUContext(D3D12GPUContext *pContext) { m_pGPUContext = pContext; }
+    ID3D12GraphicsCommandList *GetCommandList();
+    bool CreateOffThreadResources();
+    void FlushCopyQueue();
 
 private:
     D3D12RenderBackend *m_pBackend;
@@ -113,6 +116,16 @@ private:
     ID3D12Device *m_pD3DDevice;
     D3D12GPUContext *m_pGPUContext;
 
+    ID3D12CommandAllocator *m_pOffThreadCommandAllocator;
+    ID3D12CommandQueue *m_pOffThreadCommandQueue;
+    ID3D12GraphicsCommandList *m_pOffThreadCommandList;
+    ID3D12Fence *m_pOffThreadFence;
+    HANDLE m_hFenceReachedEvent;
+    uint64 m_fenceValue;
+
     DXGI_FORMAT m_outputBackBufferFormat;
     DXGI_FORMAT m_outputDepthStencilFormat;
+
+    uint32 m_copyQueueLength;
+    uint32 m_copyQueueEnabled;
 };

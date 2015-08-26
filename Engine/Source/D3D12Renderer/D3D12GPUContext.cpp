@@ -66,6 +66,12 @@ D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *p
 
 D3D12GPUContext::~D3D12GPUContext()
 {
+    // move to next frame, executing all commands
+    MoveToNextFrameCommandList();
+
+    // ensure everything is finished
+    D3D12GPUContext::Finish();
+
 #if 0
     // clear any state
     ClearState(true, true, true, true);
@@ -160,28 +166,9 @@ void D3D12GPUContext::ResourceBarrier(ID3D12Resource *pResource, uint32 subResou
 
 bool D3D12GPUContext::Create()
 {
-    HRESULT hResult;
-
     // allocate constants
     m_pConstants = new GPUContextConstants(this);
     CreateConstantBuffers();
-
-    // allocate command allocator
-    hResult = m_pD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void **)&m_pCommandAllocator);
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("CreateCommandAllocator failed with hResult %08X", hResult);
-        return false;
-    }
-
-    // allocate command queue
-    D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 0 };
-    hResult = m_pD3DDevice->CreateCommandQueue(&queueDesc, __uuidof(ID3D12CommandQueue), (void **)&m_pCommandQueue);
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("CreateCommandQueue failed with hResult %08X", hResult);
-        return false;
-    }
 
     // create queued frame data
     if (!CreateQueuedFrameData())
@@ -226,47 +213,156 @@ bool D3D12GPUContext::CreateQueuedFrameData()
 
     for (uint32 i = 0; i < frameLatency; i++)
     {
-        QueuedFrameData &qfd = m_queuedFrameData[i];
-        hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCommandAllocator, nullptr, __uuidof(ID3D12CommandList), (void **)&qfd.pCommandList);
+        QueuedFrameData *pFrameData = &m_queuedFrameData[i];
+        pFrameData->FenceValue = 0;
+        pFrameData->FrameNumber = 0;
+        pFrameData->Pending = false;
+
+        // allocate command allocator
+        hResult = m_pD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&pFrameData->pCommandAllocator));
+        if (FAILED(hResult))
+        {
+            Log_ErrorPrintf("CreateCommandAllocator failed with hResult %08X", hResult);
+            return false;
+        }
+
+        // allocate command queue
+        D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 0 };
+        hResult = m_pD3DDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pFrameData->pCommandQueue));
+        if (FAILED(hResult))
+        {
+            Log_ErrorPrintf("CreateCommandQueue failed with hResult %08X", hResult);
+            return false;
+        }
+
+        // allocate command list
+        hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pFrameData->pCommandAllocator, nullptr, IID_PPV_ARGS(&pFrameData->pCommandList));
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("CreateCommandList failed with hResult %08X", hResult);
             return false;
         }
 
-        qfd.pScratchBuffer = D3D12ScratchBuffer::Create(m_pD3DDevice, 16 * 1024 * 1024);
-        if (qfd.pScratchBuffer == nullptr)
+        // allocate fence
+        hResult = m_pD3DDevice->CreateFence(pFrameData->FenceValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&pFrameData->pFence));
+        if (FAILED(hResult))
+        {
+            Log_ErrorPrintf("CreateFence failed with hResult %08X", hResult);
             return false;
+        }
 
-        qfd.FenceValue = 0;
-        qfd.FrameNumber = 0;
+        // allocate scratch buffer
+        pFrameData->pScratchBuffer = D3D12ScratchBuffer::Create(m_pD3DDevice, 16 * 1024 * 1024);
+        if (pFrameData->pScratchBuffer == nullptr)
+        {
+            Log_ErrorPrintf("Failed to allocate scratch buffer.");
+            return false;
+        }
+
+        // allocate reached event
+        pFrameData->FenceReachedEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+        if (pFrameData->FenceReachedEvent == INVALID_HANDLE_VALUE)
+        {
+            Log_ErrorPrintf("CreateEvent failed (%u).", GetLastError());
+            return false;
+        }
     }
 
     // set current frame
     m_currentQueuedFrameIndex = 0;
     m_pCurrentScratchBuffer = m_queuedFrameData[m_currentQueuedFrameIndex].pScratchBuffer;
     m_pCurrentCommandList = m_queuedFrameData[m_currentQueuedFrameIndex].pCommandList;
+    m_pCurrentCommandQueue = m_queuedFrameData[m_currentQueuedFrameIndex].pCommandQueue;
     return true;
 }
 
-void D3D12GPUContext::MoveToNextFrameList()
+void D3D12GPUContext::BeginFrame()
 {
+    g_pRenderer->BeginFrame();
+    MoveToNextFrameCommandList();
+}
+
+void D3D12GPUContext::Flush()
+{
+    ExecuteImmediateCommandList();
+}
+
+void D3D12GPUContext::Finish()
+{
+    // move to the next frame's command list, creating an event for this one
+    MoveToNextFrameCommandList();
+
+    // ensure all other frames have been reached
+    uint32 frameLatency = m_pBackend->GetFrameLatency();
+    for (uint32 queuedFrameIndex = (m_currentQueuedFrameIndex + 1) % frameLatency; queuedFrameIndex != m_currentQueuedFrameIndex; queuedFrameIndex = (queuedFrameIndex + 1) % frameLatency)
+    {
+        if (m_queuedFrameData[queuedFrameIndex].Pending)
+            WaitForQueuedFrame(queuedFrameIndex);
+    }
+}
+
+void D3D12GPUContext::ExecuteImmediateCommandList()
+{
+    HRESULT hResult = m_pCurrentCommandList->Close();
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("ID3D12CommandList::Close failed with hResult %08X", hResult);
+        return;
+    }
+
+    m_pCurrentCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pCurrentCommandList);
+}
+
+void D3D12GPUContext::MoveToNextFrameCommandList()
+{
+    // ensure any queued commands have been executed (Between Present+BeginFrame)
+    ExecuteImmediateCommandList();
+
+    // set up fence for the next time round (for the current command list)
+    QueuedFrameData *pFrameData = &m_queuedFrameData[m_currentQueuedFrameIndex];
+    ResetEvent(pFrameData->FenceReachedEvent);
+    pFrameData->pFence->SetEventOnCompletion(++pFrameData->FenceValue, pFrameData->FenceReachedEvent);
+    pFrameData->pCommandQueue->Signal(pFrameData->pFence, pFrameData->FenceValue);
+    pFrameData->Pending = true;
+
+    // next frame
     m_currentQueuedFrameIndex++;
     m_currentQueuedFrameIndex %= D3D12RenderBackend::GetInstance()->GetFrameLatency();
 
-    // current frame is queued?
-    QueuedFrameData &qfd = m_queuedFrameData[m_currentQueuedFrameIndex];
-    if (qfd.FrameNumber != 0)
-    {
-        // @TODO wait on fence
-        qfd.pScratchBuffer->Reset();
-        qfd.FrameNumber = 0;
-        qfd.FenceValue = 0;
-    }
+    // wait for these operations to finish
+    pFrameData = &m_queuedFrameData[m_currentQueuedFrameIndex];
+    if (pFrameData->Pending)
+        WaitForQueuedFrame(m_currentQueuedFrameIndex);
+
+    // set up this frame details
+    pFrameData->FrameNumber = g_pRenderer->GetFrameNumber();
 
     // update pointers
-    m_pCurrentCommandList = qfd.pCommandList;
-    m_pCurrentScratchBuffer = qfd.pScratchBuffer;
+    m_pCurrentCommandQueue = pFrameData->pCommandQueue;
+    m_pCurrentCommandList = pFrameData->pCommandList;
+    m_pCurrentScratchBuffer = pFrameData->pScratchBuffer;
+}
+
+void D3D12GPUContext::WaitForQueuedFrame(uint32 index)
+{
+    QueuedFrameData *pFrameData = &m_queuedFrameData[m_currentQueuedFrameIndex];
+    DebugAssert(pFrameData->Pending);
+
+    WaitForSingleObject(pFrameData->FenceReachedEvent, INFINITE);
+    ResetEvent(pFrameData->FenceReachedEvent);
+
+    // reset list
+    pFrameData->pCommandAllocator->Reset();
+    pFrameData->pCommandList->Reset(pFrameData->pCommandAllocator, nullptr);
+
+    // reset scratch buffer
+    pFrameData->pScratchBuffer->Reset();
+
+    // release resources
+    m_pBackend->DeletePendingResources(pFrameData->FrameNumber);
+
+    // no longer active
+    pFrameData->Pending = false;
 }
 
 bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress)
@@ -309,12 +405,6 @@ bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **
         *pGPUAddress = m_pCurrentScratchBuffer->GetGPUAddress(offset);
 
     return true;
-}
-
-void D3D12GPUContext::BeginFrame()
-{
-    MoveToNextFrameList();
-    g_pRenderer->BeginFrame();
 }
 
 void D3D12GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffers /* = true */, bool clearStates /* = true */, bool clearRenderTargets /* = true */)
@@ -714,9 +804,17 @@ bool D3D12GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /
 
 void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour)
 {
+    // the barrier *to* present state has to be queued
+    ResourceBarrier(m_pCurrentSwapChain->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
+    // ensure all commands have been queued
+    ExecuteImmediateCommandList();
+
+    // present the image
     m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
-    // @TODO exec command list
-    // @TODO set up fences
+
+    // the transition back can happen later (as long as it happens before the command list is re-used...)
+    ResourceBarrier(m_pCurrentSwapChain->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
 
 uint32 D3D12GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)

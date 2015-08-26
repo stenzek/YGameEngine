@@ -37,6 +37,12 @@ public:
     // Start of frame
     virtual void BeginFrame() override final;
 
+    // Ensure all queued commands are sent to the GPU.
+    virtual void Flush() override final;
+
+    // Ensure all commands have been completed by the GPU.
+    virtual void Finish() override final;
+
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) override final;
 

@@ -11,6 +11,12 @@ public:
     // Start of frame
     virtual void BeginFrame() override final;
 
+    // Ensure all queued commands are sent to the GPU.
+    virtual void Flush() override final;
+
+    // Ensure all commands have been completed by the GPU.
+    virtual void Finish() override final;
+
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) override final;
 
@@ -129,7 +135,7 @@ public:
 
     // accessors
     ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
-    ID3D12CommandList *GetCurrentCommandList() const { return m_pCurrentCommandList; }
+    ID3D12GraphicsCommandList *GetCurrentCommandList() const { return m_pCurrentCommandList; }
     D3D12GPUShaderProgram *GetD3D12ShaderProgram() const { return m_pCurrentShaderProgram; }
 
     // create device
@@ -156,7 +162,9 @@ private:
     // preallocate constant buffers
     void CreateConstantBuffers();
     bool CreateQueuedFrameData();
-    void MoveToNextFrameList();
+    void ExecuteImmediateCommandList();
+    void MoveToNextFrameCommandList();
+    void WaitForQueuedFrame(uint32 index);
     bool UpdatePipelineState();
 
     // allocate from scratch buffer
@@ -168,21 +176,23 @@ private:
 
     GPUContextConstants *m_pConstants;
 
-    // command allocator/command queue
-    ID3D12CommandAllocator *m_pCommandAllocator;
-    ID3D12CommandQueue *m_pCommandQueue;
-
     // Current command list
+    ID3D12CommandQueue *m_pCurrentCommandQueue;
     ID3D12GraphicsCommandList *m_pCurrentCommandList;
     D3D12ScratchBuffer *m_pCurrentScratchBuffer;
 
     // Pool of command lists
     struct QueuedFrameData
     {
+        ID3D12CommandAllocator *pCommandAllocator;
+        ID3D12CommandQueue *pCommandQueue;
         ID3D12GraphicsCommandList *pCommandList;
+        ID3D12Fence *pFence;
         D3D12ScratchBuffer *pScratchBuffer;
+        HANDLE FenceReachedEvent;
         uint64 FenceValue;
         uint32 FrameNumber;
+        bool Pending;
     };
     MemArray<QueuedFrameData> m_queuedFrameData;
     uint32 m_currentQueuedFrameIndex;

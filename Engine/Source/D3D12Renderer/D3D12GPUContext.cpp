@@ -160,15 +160,161 @@ void D3D12GPUContext::ResourceBarrier(ID3D12Resource *pResource, uint32 subResou
 
 bool D3D12GPUContext::Create()
 {
+    HRESULT hResult;
+
     // allocate constants
     m_pConstants = new GPUContextConstants(this);
     CreateConstantBuffers();
+
+    // allocate command allocator
+    hResult = m_pD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void **)&m_pCommandAllocator);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateCommandAllocator failed with hResult %08X", hResult);
+        return false;
+    }
+
+    // allocate command queue
+    D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 0 };
+    hResult = m_pD3DDevice->CreateCommandQueue(&queueDesc, __uuidof(ID3D12CommandQueue), (void **)&m_pCommandQueue);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateCommandQueue failed with hResult %08X", hResult);
+        return false;
+    }
 
     // create queued frame data
     if (!CreateQueuedFrameData())
         return false;
 
     return true;
+}
+
+void D3D12GPUContext::CreateConstantBuffers()
+{
+    // allocate constant buffer storage
+    const ShaderConstantBuffer::RegistryType *registry = ShaderConstantBuffer::GetRegistry();
+    m_constantBuffers.Resize(registry->GetNumTypes());
+    m_constantBuffers.ZeroContents();
+    for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
+    {
+        ConstantBuffer *constantBuffer = &m_constantBuffers[i];
+
+        // applicable to us?
+        const ShaderConstantBuffer *declaration = registry->GetTypeInfoByIndex(i);
+        if (declaration == nullptr)
+            continue;
+        if (declaration->GetPlatformRequirement() != RENDERER_PLATFORM_COUNT && declaration->GetPlatformRequirement() != RENDERER_PLATFORM_D3D12)
+            continue;
+        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > D3D12RenderBackend::GetInstance()->GetFeatureLevel())
+            continue;
+
+        // set size so we know to allocate it later or on demand
+        constantBuffer->Size = declaration->GetBufferSize();
+        constantBuffer->DirtyLowerBounds = constantBuffer->DirtyUpperBounds = -1;
+        constantBuffer->pLocalMemory = new byte[constantBuffer->Size];
+        Y_memzero(constantBuffer->pLocalMemory, constantBuffer->Size);
+    }
+}
+
+bool D3D12GPUContext::CreateQueuedFrameData()
+{
+    HRESULT hResult;
+    uint32 frameLatency = m_pBackend->GetFrameLatency();
+    m_queuedFrameData.Resize(frameLatency);
+    m_queuedFrameData.ZeroContents();
+
+    for (uint32 i = 0; i < frameLatency; i++)
+    {
+        QueuedFrameData &qfd = m_queuedFrameData[i];
+        hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCommandAllocator, nullptr, __uuidof(ID3D12CommandList), (void **)&qfd.pCommandList);
+        if (FAILED(hResult))
+        {
+            Log_ErrorPrintf("CreateCommandList failed with hResult %08X", hResult);
+            return false;
+        }
+
+        qfd.pScratchBuffer = D3D12ScratchBuffer::Create(m_pD3DDevice, 16 * 1024 * 1024);
+        if (qfd.pScratchBuffer == nullptr)
+            return false;
+
+        qfd.FenceValue = 0;
+        qfd.FrameNumber = 0;
+    }
+
+    // set current frame
+    m_currentQueuedFrameIndex = 0;
+    m_pCurrentScratchBuffer = m_queuedFrameData[m_currentQueuedFrameIndex].pScratchBuffer;
+    m_pCurrentCommandList = m_queuedFrameData[m_currentQueuedFrameIndex].pCommandList;
+    return true;
+}
+
+void D3D12GPUContext::MoveToNextFrameList()
+{
+    m_currentQueuedFrameIndex++;
+    m_currentQueuedFrameIndex %= D3D12RenderBackend::GetInstance()->GetFrameLatency();
+
+    // current frame is queued?
+    QueuedFrameData &qfd = m_queuedFrameData[m_currentQueuedFrameIndex];
+    if (qfd.FrameNumber != 0)
+    {
+        // @TODO wait on fence
+        qfd.pScratchBuffer->Reset();
+        qfd.FrameNumber = 0;
+        qfd.FenceValue = 0;
+    }
+
+    // update pointers
+    m_pCurrentCommandList = qfd.pCommandList;
+    m_pCurrentScratchBuffer = qfd.pScratchBuffer;
+}
+
+bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress)
+{
+    uint32 offset;
+    if (!m_pCurrentScratchBuffer->Allocate(size, &offset))
+    {
+        // work out new buffer size
+        uint32 newBufferSize = Max(m_pCurrentScratchBuffer->GetSize() + size, m_pCurrentScratchBuffer->GetSize() * 2);
+        Log_PerfPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Scratch buffer (%u bytes) overflow, allocating new buffer of %u bytes.", m_pCurrentScratchBuffer->GetSize(), newBufferSize);
+
+        // allocate new buffer
+        D3D12ScratchBuffer *pNewScratchBuffer = D3D12ScratchBuffer::Create(m_pD3DDevice, newBufferSize);
+        if (pNewScratchBuffer == nullptr)
+        {
+            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Failed to allocate new scratch buffer of size %u", newBufferSize);
+            return false;
+        }
+
+        // nuke current scratch buffer (the internal buffer will be scheduled for deletion after the frame)
+        delete m_pCurrentScratchBuffer;
+        m_pCurrentScratchBuffer = pNewScratchBuffer;
+        m_queuedFrameData[m_currentQueuedFrameIndex].pScratchBuffer = pNewScratchBuffer;
+
+        // allocate from new scratch buffer
+        if (!m_pCurrentScratchBuffer->Allocate(size, &offset))
+        {
+            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Failed to allocate new scratch buffer (this shouldn't happen)");
+            return false;
+        }
+    }
+
+    if (ppScratchBufferResource != nullptr)
+        *ppScratchBufferResource = m_pCurrentScratchBuffer->GetResource();
+    if (pScratchBufferOffset != nullptr)
+        *pScratchBufferOffset = offset;
+    if (ppCPUPointer != nullptr)
+        *ppCPUPointer = m_pCurrentScratchBuffer->GetPointer(offset);
+    if (pGPUAddress != nullptr)
+        *pGPUAddress = m_pCurrentScratchBuffer->GetGPUAddress(offset);
+
+    return true;
+}
+
+void D3D12GPUContext::BeginFrame()
+{
+    MoveToNextFrameList();
+    g_pRenderer->BeginFrame();
 }
 
 void D3D12GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffers /* = true */, bool clearStates /* = true */, bool clearRenderTargets /* = true */)
@@ -219,8 +365,6 @@ void D3D12GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffe
             }
         }
 #endif
-
-        SynchronizeShaderStates();
     }
 
     if (clearBuffers)
@@ -571,7 +715,6 @@ bool D3D12GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /
 void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour)
 {
     m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
-    g_pRenderer->EndFrame();
     // @TODO exec command list
     // @TODO set up fences
 }
@@ -594,6 +737,8 @@ uint32 D3D12GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetV
 
 void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargets, GPUDepthStencilBufferView *pDepthBufferView)
 {
+    // @TODO only update pipeline on format change / # targets change
+
     // to system framebuffer?
     if ((nRenderTargets == 0 || (nRenderTargets == 1 && ppRenderTargets[0] == nullptr)) && pDepthBufferView == nullptr)
     {
@@ -614,8 +759,8 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
         }
 
         m_nCurrentRenderTargets = 0;
-        SynchronizeShaderStates();
         SynchronizeRenderTargetsAndUAVs();
+        m_pipelineChanged = true;
     }
     else
     {
@@ -672,8 +817,8 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
 
         if (doUpdate)
         {
-            SynchronizeShaderStates();
             SynchronizeRenderTargetsAndUAVs();
+            m_pipelineChanged = true;
         }
     }
 }
@@ -854,111 +999,15 @@ void D3D12GPUContext::SetIndexBuffer(GPUBuffer *pBuffer, GPU_INDEX_FORMAT format
 
 void D3D12GPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)
 {
-#if 0
     if (m_pCurrentShaderProgram == pShaderProgram)
         return;
 
-    D3D12GPUShaderProgram *pNewShaderProgram = static_cast<D3D12GPUShaderProgram *>(pShaderProgram);
-    if (m_pCurrentShaderProgram != nullptr && pNewShaderProgram != nullptr)
-    {
-        // have both so do fast switch
-        pNewShaderProgram->Switch(this, m_pCurrentShaderProgram);
+    if (m_pCurrentShaderProgram != nullptr)
         m_pCurrentShaderProgram->Release();
-        m_pCurrentShaderProgram = pNewShaderProgram;
+    if ((m_pCurrentShaderProgram = static_cast<D3D12GPUShaderProgram *>(pShaderProgram)) != nullptr)
         m_pCurrentShaderProgram->AddRef();
-    }
-    else
-    {
-        // one or the other isn't present, so take the slow path
-        if (m_pCurrentShaderProgram != nullptr)
-        {
-            m_pCurrentShaderProgram->Unbind(this);
-            m_pCurrentShaderProgram->Release();
-        }
-        if ((m_pCurrentShaderProgram = pNewShaderProgram) != nullptr)
-        {
-            m_pCurrentShaderProgram->Bind(this);
-            m_pCurrentShaderProgram->AddRef();
-        }
-    }
-#endif
-}
 
-void D3D12GPUContext::CreateConstantBuffers()
-{
-    // allocate constant buffer storage
-    const ShaderConstantBuffer::RegistryType *registry = ShaderConstantBuffer::GetRegistry();
-    m_constantBuffers.Resize(registry->GetNumTypes());
-    m_constantBuffers.ZeroContents();
-    for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
-    {
-        ConstantBuffer *constantBuffer = &m_constantBuffers[i];
-
-        // applicable to us?
-        const ShaderConstantBuffer *declaration = registry->GetTypeInfoByIndex(i);
-        if (declaration == nullptr)
-            continue;
-        if (declaration->GetPlatformRequirement() != RENDERER_PLATFORM_COUNT && declaration->GetPlatformRequirement() != RENDERER_PLATFORM_D3D12)
-            continue;
-        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > D3D12RenderBackend::GetInstance()->GetFeatureLevel())
-            continue;
-
-        // set size so we know to allocate it later or on demand
-        constantBuffer->Size = declaration->GetBufferSize();
-        constantBuffer->DirtyLowerBounds = constantBuffer->DirtyUpperBounds = -1;
-        constantBuffer->pLocalMemory = new byte[constantBuffer->Size];
-        Y_memzero(constantBuffer->pLocalMemory, constantBuffer->Size);
-    }
-}
-
-bool D3D12GPUContext::CreateQueuedFrameData()
-{
-    uint32 frameLatency = m_pBackend->GetFrameLatency();
-    m_queuedFrameData.Resize(frameLatency);
-    m_queuedFrameData.ZeroContents();
-    return false;
-}
-
-bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress)
-{
-    uint32 offset;
-    if (!m_pCurrentScratchBuffer->Allocate(size, &offset))
-    {
-        // work out new buffer size
-        uint32 newBufferSize = Max(m_pCurrentScratchBuffer->GetSize() + size, m_pCurrentScratchBuffer->GetSize() * 2);
-        Log_PerfPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Scratch buffer (%u bytes) overflow, allocating new buffer of %u bytes.", m_pCurrentScratchBuffer->GetSize(), newBufferSize);
-
-        // allocate new buffer
-        D3D12ScratchBuffer *pNewScratchBuffer = D3D12ScratchBuffer::Create(m_pD3DDevice, newBufferSize);
-        if (pNewScratchBuffer == nullptr)
-        {
-            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Failed to allocate new scratch buffer of size %u", newBufferSize);
-            return false;
-        }
-
-        // nuke current scratch buffer (the internal buffer will be scheduled for deletion after the frame)
-        delete m_pCurrentScratchBuffer;
-        m_pCurrentScratchBuffer = pNewScratchBuffer;
-        m_queuedFrameData[m_currentQueuedFrameIndex].pScratchBuffer = pNewScratchBuffer;
-
-        // allocate from new scratch buffer
-        if (!m_pCurrentScratchBuffer->Allocate(size, &offset))
-        {
-            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Failed to allocate new scratch buffer (this shouldn't happen)");
-            return false;
-        }
-    }
-
-    if (ppScratchBufferResource != nullptr)
-        *ppScratchBufferResource = m_pCurrentScratchBuffer->GetResource();
-    if (pScratchBufferOffset != nullptr)
-        *pScratchBufferOffset = offset;
-    if (ppCPUPointer != nullptr)
-        *ppCPUPointer = m_pCurrentScratchBuffer->GetPointer(offset);
-    if (pGPUAddress != nullptr)
-        *pGPUAddress = m_pCurrentScratchBuffer->GetGPUAddress(offset);
-
-    return true;
+    m_pipelineChanged = true;
 }
 
 void D3D12GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex, uint32 offset, uint32 count, const void *pData, bool commit /* = false */)
@@ -1196,8 +1245,23 @@ void D3D12GPUContext::SynchronizeRenderTargetsAndUAVs()
 #endif
 }
 
-void D3D12GPUContext::SynchronizeShaderStates()
+bool D3D12GPUContext::UpdatePipelineState()
 {
+    // new pipeline state required?
+    if (m_pipelineChanged)
+    {
+        if (m_pCurrentShaderProgram == nullptr)
+            return false;
+
+        // @TODO fill pipeline state key
+        D3D12GPUShaderProgram::PipelineStateKey key;
+        if (!m_pCurrentShaderProgram->Switch(m_pCurrentCommandList, &key))
+            return false;
+
+        // up-to-date
+        m_pipelineChanged = false;
+    }
+
 #if 0
     // switch shader
 
@@ -1323,27 +1387,25 @@ void D3D12GPUContext::SynchronizeShaderStates()
     if (m_pCurrentShaderProgram != nullptr)
         m_pCurrentShaderProgram->CommitLocalConstantBuffers(this);
 #endif
+
+    // Commit global constant buffer
+    m_pConstants->CommitGlobalConstantBufferChanges();
+    return true;
 }
 
 void D3D12GPUContext::Draw(uint32 firstVertex, uint32 nVertices)
 {
-    if (nVertices == 0)
+    if (nVertices == 0 || !UpdatePipelineState())
         return;
     
-    DebugAssert(m_pCurrentShaderProgram != nullptr);
-    SynchronizeShaderStates();
-
     m_pCurrentCommandList->DrawInstanced(nVertices, 1, firstVertex, 0);
     g_pRenderer->GetStats()->IncrementDrawCallCounter();
 }
 
 void D3D12GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32 nInstances)
 {
-    if (nVertices == 0 || nInstances == 0)
+    if (nVertices == 0 || nInstances == 0 || !UpdatePipelineState())
         return;
-
-    DebugAssert(m_pCurrentShaderProgram != nullptr);
-    SynchronizeShaderStates();
 
     m_pCurrentCommandList->DrawInstanced(nVertices, nInstances, firstVertex, 0);
     g_pRenderer->GetStats()->IncrementDrawCallCounter();
@@ -1351,11 +1413,8 @@ void D3D12GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32
 
 void D3D12GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 baseVertex)
 {
-    if (nIndices == 0)
+    if (nIndices == 0 || !UpdatePipelineState())
         return;
-     
-    DebugAssert(m_pCurrentShaderProgram != nullptr);
-    SynchronizeShaderStates();
 
     m_pCurrentCommandList->DrawIndexedInstanced(nIndices, 1, startIndex, baseVertex, 0);
     g_pRenderer->GetStats()->IncrementDrawCallCounter();
@@ -1363,11 +1422,8 @@ void D3D12GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 bas
 
 void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, uint32 baseVertex, uint32 nInstances)
 {
-    if (nIndices == 0)
+    if (nIndices == 0 || !UpdatePipelineState())
         return;
-
-    DebugAssert(m_pCurrentShaderProgram != nullptr);
-    SynchronizeShaderStates();
 
     m_pCurrentCommandList->DrawIndexedInstanced(nIndices, nInstances, startIndex, baseVertex, 0);
     g_pRenderer->GetStats()->IncrementDrawCallCounter();
@@ -1375,8 +1431,8 @@ void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, u
 
 void D3D12GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ)
 {
-    DebugAssert(m_pCurrentShaderProgram != nullptr);
-    SynchronizeShaderStates();
+    if (!UpdatePipelineState())
+        return;
 
     m_pCurrentCommandList->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
     g_pRenderer->GetStats()->IncrementDrawCallCounter();

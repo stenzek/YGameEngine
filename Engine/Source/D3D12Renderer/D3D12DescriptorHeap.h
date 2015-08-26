@@ -8,6 +8,7 @@ public:
     {
         D3D12_GPU_DESCRIPTOR_HANDLE GPUHandle;
         D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle;
+        D3D12_DESCRIPTOR_HEAP_TYPE Type;
         uint32 StartIndex;
         uint32 DescriptorCount;
         uint32 IncrementSize;
@@ -15,7 +16,7 @@ public:
         // constructors
         Handle() { Y_memzero(this, sizeof(*this)); }
         Handle(const Handle &handle) { Y_memcpy(this, &handle, sizeof(*this)); }
-        Handle &operator=(const Handle &handle) { Y_memcpy(this, &handle, sizeof(*this)); }
+        Handle &operator=(const Handle &handle) { Y_memcpy(this, &handle, sizeof(*this)); return *this; }
         void Clear() { Y_memzero(this, sizeof(*this)); }
 
         // Helper functions

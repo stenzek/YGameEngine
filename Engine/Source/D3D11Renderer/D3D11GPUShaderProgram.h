@@ -5,22 +5,18 @@
 class D3D11GPUShaderProgram : public GPUShaderProgram
 {
 public:
-    struct ShaderLocalConstantBuffer
+    struct ConstantBuffer
     {
-        char Name[D3D_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
+        // @TODO this class could potentially be removed to save a level of indirection
+        String Name;
         uint32 ParameterIndex;
-        uint32 Size;
+        uint32 MinimumSize;
         uint32 EngineConstantBufferIndex;
-
-        D3D11GPUBuffer *pLocalGPUBuffer;
-        byte *pLocalBuffer;
-        int32 LocalBufferDirtyLowerBounds;
-        int32 LocalBufferDirtyUpperBounds;
     };
 
-    struct ShaderParameter
+    struct Parameter
     {
-        char Name[D3D_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
+        String Name;
         SHADER_PARAMETER_TYPE Type;
         int32 ConstantBufferIndex;
         uint32 ConstantBufferOffset;
@@ -48,17 +44,14 @@ public:
     // switch context to a new shader
     void Switch(D3D11GPUContext *pContext, D3D11GPUShaderProgram *pCurrentProgram);
 
-    // update the local constant buffers for this shader with pending values
-    void CommitLocalConstantBuffers(D3D11GPUContext *pContext);
-
     // unbind from a context, resetting all shader states
     void Unbind(D3D11GPUContext *pContext);
 
     // --- internal query api ---
     uint32 InternalGetConstantBufferCount() const { return m_constantBuffers.GetSize(); }
     uint32 InternalGetParameterCount() const { return m_parameters.GetSize(); }
-    const ShaderLocalConstantBuffer *GetConstantBuffer(uint32 Index) const { DebugAssert(Index < m_constantBuffers.GetSize()); return &m_constantBuffers[Index]; }
-    const ShaderParameter *GetParameter(uint32 Index) const { DebugAssert(Index < m_parameters.GetSize()); return &m_parameters[Index]; }
+    const ConstantBuffer *GetConstantBuffer(uint32 Index) const { DebugAssert(Index < m_constantBuffers.GetSize()); return &m_constantBuffers[Index]; }
+    const Parameter *GetParameter(uint32 Index) const { DebugAssert(Index < m_parameters.GetSize()); return &m_parameters[Index]; }
 
     // --- internal parameter api ---
     void InternalSetParameterValue(D3D11GPUContext *pContext, uint32 parameterIndex, SHADER_PARAMETER_TYPE valueType, const void *pValue);
@@ -80,8 +73,8 @@ public:
 
 protected:
     // arrays
-    typedef MemArray<ShaderLocalConstantBuffer> ConstantBufferArray;
-    typedef MemArray<ShaderParameter> ParameterArray;
+    typedef Array<ConstantBuffer> ConstantBufferArray;
+    typedef Array<Parameter> ParameterArray;
 
     // shader objects
     ID3D11InputLayout *m_pD3DInputLayout;

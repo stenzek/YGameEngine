@@ -718,7 +718,11 @@ bool D3D11GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /
 void D3D11GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour)
 {
     m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
-    g_pRenderer->EndFrame();
+}
+
+void D3D11GPUContext::BeginFrame()
+{
+    g_pRenderer->BeginFrame();
 }
 
 uint32 D3D11GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)
@@ -1462,8 +1466,7 @@ void D3D11GPUContext::SynchronizeShaderStates()
     }
 
     // update the local constant buffer for the active program
-    if (m_pCurrentShaderProgram != nullptr)
-        m_pCurrentShaderProgram->CommitLocalConstantBuffers(this);
+    m_pConstants->CommitGlobalConstantBufferChanges();
 }
 
 void D3D11GPUContext::Draw(uint32 firstVertex, uint32 nVertices)

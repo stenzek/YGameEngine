@@ -443,7 +443,7 @@ Renderer::Renderer(RenderBackend *pBackendInterface, RendererOutputWindow *pOutp
     : m_fixedResources(this)
     , m_pBackendInterface(pBackendInterface)
     , m_pImplicitOutputWindow(pOutputWindow)
-    , m_frameNumber(1)
+    , m_frameNumber(0)
 {
     m_eRendererPlatform = pBackendInterface->GetPlatform();
     m_eRendererFeatureLevel = pBackendInterface->GetFeatureLevel();
@@ -576,7 +576,7 @@ void RendererStats::OnResourceDeleted(const GPUResource *pResource)
     Y_AtomicAdd(m_resourceGPUMemoryUsage[type], -(ptrdiff_t)gpuMemoryUsage);
 }
 
-void Renderer::EndFrame()
+void Renderer::BeginFrame()
 {
     m_frameNumber++;
     m_stats.ResetCounters();
@@ -2266,6 +2266,8 @@ END_SHADER_CONSTANT_BUFFER(cbViewportConstants)
 BEGIN_SHADER_CONSTANT_BUFFER(cbWorldConstants, "WorldConstantsBuffer", "WorldConstants", RENDERER_PLATFORM_COUNT, RENDERER_FEATURE_LEVEL_COUNT)
     SHADER_CONSTANT_BUFFER_FIELD("WorldTime", SHADER_PARAMETER_TYPE_FLOAT, 1)
 END_SHADER_CONSTANT_BUFFER(cbWorldConstants)
+DECLARE_RAW_SHADER_CONSTANT_BUFFER(cbGlobalConstants);
+DEFINE_RAW_SHADER_CONSTANT_BUFFER(cbGlobalConstants, "$Globals", "", 65536, RENDERER_PLATFORM_COUNT, RENDERER_FEATURE_LEVEL_SM4);
 
 GPUContextConstants::GPUContextConstants(GPUContext *pContext)
     : m_pContext(pContext),
@@ -2480,4 +2482,9 @@ void GPUContextConstants::CommitChanges()
 
     // commit world buffer
     cbWorldConstants.CommitChanges(m_pContext);
+}
+
+void GPUContextConstants::CommitGlobalConstantBufferChanges()
+{
+    cbGlobalConstants.CommitChanges(m_pContext);
 }

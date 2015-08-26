@@ -611,7 +611,11 @@ void OpenGLES2GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehav
 {
     // @TODO: Present Behaviour
     SDL_GL_SwapWindow(m_pCurrentOutputBuffer->GetSDLWindow());
-    g_pRenderer->EndFrame();
+}
+
+void OpenGLES2GPUContext::BeginFrame()
+{
+    g_pRenderer->BeginFrame();
 }
 
 uint32 OpenGLES2GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)

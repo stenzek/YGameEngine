@@ -5,24 +5,11 @@
 class D3D12GPUShaderProgram : public GPUShaderProgram
 {
 public:
-    struct ShaderLocalConstantBuffer
-    {
-        String Name;
-        uint32 ParameterIndex;
-        uint32 Size;
-        uint32 EngineConstantBufferIndex;
-
-        D3D12GPUBuffer *pLocalGPUBuffer;
-        byte *pLocalBuffer;
-        int32 LocalBufferDirtyLowerBounds;
-        int32 LocalBufferDirtyUpperBounds;
-    };
-
     struct ShaderParameter
     {
         String Name;
         SHADER_PARAMETER_TYPE Type;
-        int32 ConstantBufferIndex;
+        uint32 ConstantBufferIndex;
         uint32 ConstantBufferOffset;
         uint32 ArraySize;
         uint32 ArrayStride;
@@ -54,22 +41,11 @@ public:
     // create
     bool Create(D3D12GPUDevice *pDevice, const GPU_VERTEX_ELEMENT_DESC *pVertexAttributes, uint32 nVertexAttributes, ByteStream *pByteCodeStream);
 
-    // bind to a context that has no current shader
-    void Bind(D3D12GPUContext *pContext);
-
     // switch context to a new shader
-    void Switch(D3D12GPUContext *pContext, D3D12GPUShaderProgram *pCurrentProgram);
-
-    // update the local constant buffers for this shader with pending values
-    void CommitLocalConstantBuffers(D3D12GPUContext *pContext);
-
-    // unbind from a context, resetting all shader states
-    void Unbind(D3D12GPUContext *pContext);
+    bool Switch(ID3D12GraphicsCommandList *pCommandList, const PipelineStateKey *pKey);
 
     // --- internal query api ---
-    uint32 InternalGetConstantBufferCount() const { return m_constantBuffers.GetSize(); }
     uint32 InternalGetParameterCount() const { return m_parameters.GetSize(); }
-    const ShaderLocalConstantBuffer *GetConstantBuffer(uint32 Index) const { DebugAssert(Index < m_constantBuffers.GetSize()); return &m_constantBuffers[Index]; }
     const ShaderParameter *GetParameter(uint32 Index) const { DebugAssert(Index < m_parameters.GetSize()); return &m_parameters[Index]; }
 
     // --- internal parameter api ---
@@ -78,7 +54,6 @@ public:
     void InternalSetParameterStruct(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize);
     void InternalSetParameterStructArray(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements);
     void InternalSetParameterResource(D3D12GPUContext *pContext, uint32 parameterIndex, GPUResource *pResource, GPUSamplerState *pLinkedSamplerState);
-    void InternalBindAutomaticParameters(D3D12GPUContext *pContext);
 
     // --- pipeline state accessor ---
     ID3D12PipelineState *GetPipelineState(const PipelineStateKey *pKey);
@@ -95,8 +70,7 @@ public:
 
 protected:
     // arrays
-    typedef MemArray<ShaderLocalConstantBuffer> ConstantBufferArray;
-    typedef MemArray<ShaderParameter> ParameterArray;
+    typedef Array<ShaderParameter> ParameterArray;
 
     // compiled pipeline object
     struct PipelineState
@@ -107,8 +81,10 @@ protected:
     };
     MemArray<PipelineState> m_pipelineStates;
 
+    // vertex attributes
+    MemArray<D3D12_INPUT_ELEMENT_DESC> m_vertexAttributes;
+
     // arrays of above
-    ConstantBufferArray m_constantBuffers;
     ParameterArray m_parameters;
 
     // copies of bytecode for all shader stages

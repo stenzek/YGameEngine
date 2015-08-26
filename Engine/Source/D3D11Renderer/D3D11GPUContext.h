@@ -17,6 +17,9 @@ public:
     D3D11GPUContext(D3D11GPUDevice *pDevice, ID3D11Device *pD3DDevice, ID3D11Device1 *pD3DDevice1, ID3D11DeviceContext *pImmediateContext);
     ~D3D11GPUContext();
 
+    // Start of frame
+    virtual void BeginFrame() override final;
+
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) override final;
 

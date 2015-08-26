@@ -96,6 +96,7 @@ private:
     };
     MemArray<PendingDeletionResource> m_pendingDeletionResources;
     MemArray<PendingDeletionDescriptor> m_pendingDeletionDescriptors;
+    Mutex m_pendingDeletionLock;
 
     // instance
     static D3D12RenderBackend *s_pInstance;

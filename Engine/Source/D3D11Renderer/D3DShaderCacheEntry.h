@@ -11,8 +11,9 @@ enum D3D_SHADER_BIND_TARGET
 
 #pragma pack(push, 1)
 
-#define D3D_SHADER_CACHE_ENTRY_HEADER ((uint32)'D11E')
+#define D3D_SHADER_CACHE_ENTRY_HEADER ((uint32)'D3DS')
 #define D3D_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH 256
+#define D3D_GLOBAL_CONSTANT_BUFFER_SIZE (65536)       // 64KiB
 
 struct D3DShaderCacheEntryHeader
 {
@@ -34,15 +35,15 @@ struct D3DShaderCacheEntryVertexAttribute
 
 struct D3DShaderCacheEntryConstantBuffer
 {
-    char Name[D3D_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
-    uint32 Size;
+    uint32 NameLength;
+    uint32 MinimumSize;
     uint32 ParameterIndex;
-    bool IsLocal;
+    // <char> * NameLength follows
 };
 
 struct D3DShaderCacheEntryParameter
 {
-    char Name[D3D_SHADER_CACHE_ENTRY_MAX_NAME_LENGTH];
+    uint32 NameLength;
     SHADER_PARAMETER_TYPE Type;
     int32 ConstantBufferIndex;
     uint32 ConstantBufferOffset;
@@ -51,6 +52,7 @@ struct D3DShaderCacheEntryParameter
     uint32 BindTarget; 
     int32 BindPoint[SHADER_PROGRAM_STAGE_COUNT];
     int32 LinkedSamplerIndex;
+    // <char> * NameLength follows
 };
 
 #pragma pack(pop)

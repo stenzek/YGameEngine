@@ -706,7 +706,11 @@ void OpenGLGPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviou
 {
     // @TODO: Present Behaviour
     SDL_GL_SwapWindow(m_pCurrentOutputBuffer->GetSDLWindow());
-    g_pRenderer->EndFrame();
+}
+
+void OpenGLGPUContext::BeginFrame()
+{
+    g_pRenderer->BeginFrame();
 }
 
 uint32 OpenGLGPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)

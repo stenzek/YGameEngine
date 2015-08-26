@@ -51,6 +51,9 @@ public:
     OpenGLGPUContext(OpenGLGPUDevice *pDevice, SDL_GLContext pSDLGLContext, OpenGLGPUOutputBuffer *pOutputBuffer);
     ~OpenGLGPUContext();
 
+    // Start of frame
+    virtual void BeginFrame() override final;
+
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) override final;
 

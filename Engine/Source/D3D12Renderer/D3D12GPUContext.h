@@ -8,6 +8,9 @@ public:
     D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice);
     ~D3D12GPUContext();
 
+    // Start of frame
+    virtual void BeginFrame() override final;
+
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) override final;
 
@@ -140,7 +143,6 @@ public:
 
     // synchronize the states with the d3d context
     void SynchronizeRenderTargetsAndUAVs();
-    void SynchronizeShaderStates();
 
     // temporarily disable predication to force a call to go through
     void BypassPredication();
@@ -154,6 +156,8 @@ private:
     // preallocate constant buffers
     void CreateConstantBuffers();
     bool CreateQueuedFrameData();
+    void MoveToNextFrameList();
+    bool UpdatePipelineState();
 
     // allocate from scratch buffer
     bool AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress);
@@ -164,19 +168,23 @@ private:
 
     GPUContextConstants *m_pConstants;
 
+    // command allocator/command queue
+    ID3D12CommandAllocator *m_pCommandAllocator;
+    ID3D12CommandQueue *m_pCommandQueue;
+
     // Current command list
     ID3D12GraphicsCommandList *m_pCurrentCommandList;
     D3D12ScratchBuffer *m_pCurrentScratchBuffer;
 
     // Pool of command lists
-    struct QueuesdFrameData
+    struct QueuedFrameData
     {
         ID3D12GraphicsCommandList *pCommandList;
         D3D12ScratchBuffer *pScratchBuffer;
         uint64 FenceValue;
-        bool Pending;
+        uint32 FrameNumber;
     };
-    MemArray<QueuesdFrameData> m_queuedFrameData;
+    MemArray<QueuedFrameData> m_queuedFrameData;
     uint32 m_currentQueuedFrameIndex;
 
     // state

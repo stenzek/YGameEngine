@@ -58,6 +58,7 @@ bool D3D12DescriptorHeap::Allocate(Handle *handle)
     // create handle
     handle->CPUHandle.ptr = m_CPUHandleStart.ptr + index * m_incrementSize;
     handle->GPUHandle.ptr = m_GPUHandleStart.ptr + index * m_incrementSize;
+    handle->Type = m_type;
     handle->StartIndex = (uint32)index;
     handle->DescriptorCount = 1;
     handle->IncrementSize = m_incrementSize;
@@ -84,6 +85,7 @@ bool D3D12DescriptorHeap::AllocateRange(uint32 count, Handle *handle)
     // create handle
     handle->CPUHandle.ptr = m_CPUHandleStart.ptr + startIndex * m_incrementSize;
     handle->GPUHandle.ptr = m_GPUHandleStart.ptr + startIndex * m_incrementSize;
+    handle->Type = m_type;
     handle->StartIndex = (uint32)startIndex;
     handle->DescriptorCount = count;
     handle->IncrementSize = m_incrementSize;

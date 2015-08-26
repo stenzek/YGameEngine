@@ -34,6 +34,9 @@ public:
     OpenGLES2GPUContext(OpenGLES2RenderBackend *pBackend, OpenGLES2GPUDevice *pDevice, SDL_GLContext pSDLGLContext, OpenGLES2GPUOutputBuffer *pOutputBuffer);
     ~OpenGLES2GPUContext();
 
+    // Start of frame
+    virtual void BeginFrame() override final;
+
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) override final;
 

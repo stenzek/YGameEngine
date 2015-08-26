@@ -33,15 +33,6 @@ D3D11GPUShaderProgram::~D3D11GPUShaderProgram()
     SAFE_RELEASE(m_pD3DHullShader);
     SAFE_RELEASE(m_pD3DVertexShader);
     SAFE_RELEASE(m_pD3DInputLayout);
-
-    for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
-    {
-        ShaderLocalConstantBuffer *pConstantBuffer = &m_constantBuffers[i];
-        
-        SAFE_RELEASE(pConstantBuffer->pLocalGPUBuffer);
-        if (pConstantBuffer->pLocalBuffer != nullptr)
-            delete[] pConstantBuffer->pLocalBuffer;
-    }
 }
 
 void D3D11GPUShaderProgram::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -253,7 +244,7 @@ bool D3D11GPUShaderProgram::Create(D3D11GPUDevice *pDevice, const GPU_VERTEX_ELE
             }
 
             // copy info in
-            usedVertexAttributes[nUsedVertexAttributes].SemanticName = D3D11TypeConversion::VertexElementSemanticToString(pVertexAttributes[listIndex].Semantic);
+            usedVertexAttributes[nUsedVertexAttributes].SemanticName = NameTable_GetNameString(NameTables::GPUVertexElementSemantic, pVertexAttributes[listIndex].Semantic);
             usedVertexAttributes[nUsedVertexAttributes].SemanticIndex = pVertexAttributes[listIndex].SemanticIndex;
             usedVertexAttributes[nUsedVertexAttributes].Format = D3D11TypeConversion::VertexElementTypeToDXGIFormat(pVertexAttributes[listIndex].Type);
             usedVertexAttributes[nUsedVertexAttributes].InputSlot = pVertexAttributes[listIndex].StreamIndex;
@@ -280,52 +271,32 @@ bool D3D11GPUShaderProgram::Create(D3D11GPUDevice *pDevice, const GPU_VERTEX_ELE
     if (header.ConstantBufferCount > 0)
     {
         m_constantBuffers.Resize(header.ConstantBufferCount);
-        m_constantBuffers.ZeroContents();
         for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
         {
             D3DShaderCacheEntryConstantBuffer srcConstantBufferInfo;
-            ShaderLocalConstantBuffer *pDstConstantBuffer = &m_constantBuffers[i];
+            ConstantBuffer *pDstConstantBuffer = &m_constantBuffers[i];
             if (!binaryReader.SafeReadBytes(&srcConstantBufferInfo, sizeof(srcConstantBufferInfo)))
                 return false;
 
+            // read name
+            if (!binaryReader.SafeReadFixedString(srcConstantBufferInfo.NameLength, &pDstConstantBuffer->Name))
+                return false;
+
             // constant buffer struct
-            Y_strncpy(pDstConstantBuffer->Name, countof(pDstConstantBuffer->Name), srcConstantBufferInfo.Name);
-            pDstConstantBuffer->Size = srcConstantBufferInfo.Size;
+            pDstConstantBuffer->MinimumSize = srcConstantBufferInfo.MinimumSize;
             pDstConstantBuffer->ParameterIndex = srcConstantBufferInfo.ParameterIndex;
             pDstConstantBuffer->EngineConstantBufferIndex = 0;
-            pDstConstantBuffer->pLocalGPUBuffer = nullptr;
-            pDstConstantBuffer->pLocalBuffer = nullptr;
-            pDstConstantBuffer->LocalBufferDirtyLowerBounds = -1;
-            pDstConstantBuffer->LocalBufferDirtyUpperBounds = -1;
         
-            // create local buffers
-            if (srcConstantBufferInfo.IsLocal)
+            // lookup engine constant buffer
+            const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(pDstConstantBuffer->Name, RENDERER_PLATFORM_D3D11, D3D11RenderBackend::GetInstance()->GetFeatureLevel());
+            if (pEngineConstantBuffer == nullptr)
             {
-                // allocate local memory
-                pDstConstantBuffer->pLocalBuffer = new byte[pDstConstantBuffer->Size];
-                Y_memzero(pDstConstantBuffer->pLocalBuffer, pDstConstantBuffer->Size);
-
-                // create buffer
-                GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_WRITABLE, pDstConstantBuffer->Size);
-                if ((pDstConstantBuffer->pLocalGPUBuffer = static_cast<D3D11GPUBuffer *>(pDevice->CreateBuffer(&bufferDesc, pDstConstantBuffer->pLocalBuffer))) == nullptr)
-                {
-                    Log_ErrorPrintf("D3D11ShaderProgram::Create: Attempting to allocate local constant buffer '%s' (size %u) failed.", pDstConstantBuffer->Name, pDstConstantBuffer->Size);
-                    return false;
-                }
+                Log_ErrorPrintf("D3D11ShaderProgram::Create: Shader is requesting unknown constant buffer named '%s'.", pDstConstantBuffer->Name);
+                return false;
             }
-            else
-            {
-                // lookup engine constant buffer
-                const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(pDstConstantBuffer->Name, RENDERER_PLATFORM_D3D11, D3D11RenderBackend::GetInstance()->GetFeatureLevel());
-                if (pEngineConstantBuffer == nullptr)
-                {
-                    Log_ErrorPrintf("D3D11ShaderProgram::Create: Shader is requesting unknown non-local constant buffer named '%s'.", pDstConstantBuffer->Name);
-                    return false;
-                }
 
-                // store index
-                pDstConstantBuffer->EngineConstantBufferIndex = pEngineConstantBuffer->GetIndex();
-            }
+            // store index
+            pDstConstantBuffer->EngineConstantBufferIndex = pEngineConstantBuffer->GetIndex();
         }
     }
 
@@ -336,11 +307,14 @@ bool D3D11GPUShaderProgram::Create(D3D11GPUDevice *pDevice, const GPU_VERTEX_ELE
         for (uint32 i = 0; i < m_parameters.GetSize(); i++)
         {
             D3DShaderCacheEntryParameter srcParameter;
-            ShaderParameter *pDstParameterInfo = &m_parameters[i];
+            Parameter *pDstParameterInfo = &m_parameters[i];
             if (!binaryReader.SafeReadBytes(&srcParameter, sizeof(srcParameter)))
                 return false;
+            
+            // read name
+            if (!binaryReader.SafeReadFixedString(srcParameter.NameLength, &pDstParameterInfo->Name))
+                return false;
 
-            Y_strncpy(pDstParameterInfo->Name, countof(pDstParameterInfo->Name), srcParameter.Name);
             pDstParameterInfo->Type = srcParameter.Type;
             pDstParameterInfo->ConstantBufferIndex = srcParameter.ConstantBufferIndex;
             pDstParameterInfo->ConstantBufferOffset = srcParameter.ConstantBufferOffset;
@@ -403,10 +377,10 @@ void D3D11GPUShaderProgram::InternalBindAutomaticParameters(D3D11GPUContext *pCo
     // bind constant buffers
     for (uint32 constantBufferIndex = 0; constantBufferIndex < m_constantBuffers.GetSize(); constantBufferIndex++)
     {
-        ShaderLocalConstantBuffer *pConstantBufferDef = &m_constantBuffers[constantBufferIndex];
+        ConstantBuffer *pConstantBufferDef = &m_constantBuffers[constantBufferIndex];
 
         // local?
-        D3D11GPUBuffer *pConstantBuffer = (pConstantBufferDef->pLocalGPUBuffer != nullptr) ? pConstantBufferDef->pLocalGPUBuffer : pContext->GetConstantBuffer(pConstantBufferDef->EngineConstantBufferIndex);
+        D3D11GPUBuffer *pConstantBuffer = pContext->GetConstantBuffer(pConstantBufferDef->EngineConstantBufferIndex);
         InternalSetParameterResource(pContext, pConstantBufferDef->ParameterIndex, pConstantBuffer, nullptr);
     }
 }
@@ -471,21 +445,6 @@ void D3D11GPUShaderProgram::Switch(D3D11GPUContext *pContext, D3D11GPUShaderProg
 #endif
 }
 
-void D3D11GPUShaderProgram::CommitLocalConstantBuffers(D3D11GPUContext *pContext)
-{
-    for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
-    {
-        ShaderLocalConstantBuffer *pConstantBuffer = &m_constantBuffers[i];
-        if (pConstantBuffer->LocalBufferDirtyLowerBounds >= 0)
-        {
-            // d3d11.0 does not support partial constant buffer updates
-            //pContext->WriteBuffer(pConstantBuffer->pLocalGPUBuffer, pConstantBuffer->pLocalBuffer + pConstantBuffer->LocalBufferDirtyLowerBounds, 0, pConstantBuffer->LocalBufferDirtyUpperBounds - pConstantBuffer->LocalBufferDirtyLowerBounds);
-            pContext->WriteBuffer(pConstantBuffer->pLocalGPUBuffer, pConstantBuffer->pLocalBuffer, 0, pConstantBuffer->Size);
-            pConstantBuffer->LocalBufferDirtyLowerBounds = pConstantBuffer->LocalBufferDirtyUpperBounds = -1;
-        }
-    }
-}
-
 void D3D11GPUShaderProgram::Unbind(D3D11GPUContext *pContext)
 {
     ID3D11DeviceContext *pD3DDeviceContext = m_pBoundContext->GetD3DContext();
@@ -495,7 +454,7 @@ void D3D11GPUShaderProgram::Unbind(D3D11GPUContext *pContext)
     // unset parameters that we match against
     for (uint32 parameterIndex = 0; parameterIndex < m_parameters.GetSize(); parameterIndex++)
     {
-        const ShaderParameter *parameter = &m_parameters[parameterIndex];
+        const Parameter *parameter = &m_parameters[parameterIndex];
         for (uint32 i = 0; i < SHADER_PROGRAM_STAGE_COUNT; i++)
         {
             if (parameter->BindPoint[i] == -1)
@@ -552,7 +511,7 @@ void D3D11GPUShaderProgram::Unbind(D3D11GPUContext *pContext)
 
 void D3D11GPUShaderProgram::InternalSetParameterValue(D3D11GPUContext *pContext, uint32 parameterIndex, SHADER_PARAMETER_TYPE valueType, const void *pValue)
 {
-    const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
+    const Parameter *parameterInfo = &m_parameters[parameterIndex];
     DebugAssert(pContext == m_pBoundContext);
 
     uint32 valueSize = ShaderParameterValueTypeSize(parameterInfo->Type);
@@ -562,31 +521,15 @@ void D3D11GPUShaderProgram::InternalSetParameterValue(D3D11GPUContext *pContext,
     DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
 
     // get the constant buffer
-    ShaderLocalConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
-    DebugAssert(constantBuffer->pLocalBuffer != nullptr);
+    ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
 
-    // don't write if there is no changes
-    byte *pBufferPtr = constantBuffer->pLocalBuffer + parameterInfo->ConstantBufferOffset;
-    if (Y_memcmp(pBufferPtr, pValue, valueSize) != 0)
-    {
-        // write to the local constant buffer
-        Y_memcpy(pBufferPtr, pValue, valueSize);
-        if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-        {
-            constantBuffer->LocalBufferDirtyLowerBounds = (int32)parameterInfo->ConstantBufferOffset;
-            constantBuffer->LocalBufferDirtyUpperBounds = (int32)(parameterInfo->ConstantBufferOffset + valueSize);
-        }
-        else
-        {
-            constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)parameterInfo->ConstantBufferOffset);
-            constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyUpperBounds, (int32)(parameterInfo->ConstantBufferOffset + valueSize));
-        }
-    }
+    // write to the constant buffer
+    pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
 }
 
 void D3D11GPUShaderProgram::InternalSetParameterValueArray(D3D11GPUContext *pContext, uint32 parameterIndex, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
 {
-    const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
+    const Parameter *parameterInfo = &m_parameters[parameterIndex];
     DebugAssert(pContext == m_pBoundContext);
 
     uint32 valueSize = ShaderParameterValueTypeSize(parameterInfo->Type);
@@ -597,59 +540,19 @@ void D3D11GPUShaderProgram::InternalSetParameterValueArray(D3D11GPUContext *pCon
     DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
 
     // get the constant buffer
-    ShaderLocalConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
-    DebugAssert(constantBuffer->pLocalBuffer != nullptr);
+    ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
 
     // if there is no padding, this can be done in a single operation
     uint32 bufferOffset = parameterInfo->ConstantBufferOffset + (firstElement * parameterInfo->ArrayStride);
-    byte *pBufferPtr = constantBuffer->pLocalBuffer + bufferOffset;
     if (valueSize == parameterInfo->ArrayStride)
-    {
-        uint32 copySize = valueSize * numElements;
-        if (Y_memcmp(pBufferPtr, pValue, copySize) != 0)
-        {
-            // write to the local constant buffer
-            Y_memcpy(pBufferPtr, pValue, copySize);
-            
-            // update dirty range
-            if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = (int32)(bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = (int32)(bufferOffset + copySize);
-            }
-            else
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyUpperBounds, (int32)(bufferOffset + copySize));
-            }
-        }
-    }
+        pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, valueSize * numElements, pValue);
     else
-    {
-        if (Y_memcmp_stride(pBufferPtr, parameterInfo->ArrayStride, pValue, valueSize, valueSize, numElements) != 0)
-        {
-            // write to the local constant buffer
-            Y_memcpy_stride(pBufferPtr, parameterInfo->ArrayStride, pValue, valueSize, valueSize, numElements);
-            
-            // update dirty range
-            uint32 writeSize = parameterInfo->ArrayStride * numElements;
-            if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = (int32)(bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = (int32)(bufferOffset + writeSize);
-            }
-            else
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyLowerBounds, (int32)(bufferOffset + writeSize));
-            }
-        }
-    }    
+        pContext->WriteConstantBufferStrided(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
 }
 
 void D3D11GPUShaderProgram::InternalSetParameterStruct(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize)
 {
-    const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
+    const Parameter *parameterInfo = &m_parameters[parameterIndex];
     DebugAssert(pContext == m_pBoundContext);
     DebugAssert(parameterInfo->Type == SHADER_PARAMETER_TYPE_STRUCT && valueSize <= parameterInfo->ArrayStride);
 
@@ -657,31 +560,15 @@ void D3D11GPUShaderProgram::InternalSetParameterStruct(GPUContext *pContext, uin
     DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
 
     // get the constant buffer
-    ShaderLocalConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
-    DebugAssert(constantBuffer->pLocalBuffer != nullptr);
-
-    // don't write if there is no changes
-    byte *pBufferPtr = constantBuffer->pLocalBuffer + parameterInfo->ConstantBufferOffset;
-    if (Y_memcmp(pBufferPtr, pValue, valueSize) != 0)
-    {
-        // write to the local constant buffer
-        Y_memcpy(pBufferPtr, pValue, valueSize);
-        if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-        {
-            constantBuffer->LocalBufferDirtyLowerBounds = (int32)parameterInfo->ConstantBufferOffset;
-            constantBuffer->LocalBufferDirtyUpperBounds = (int32)(parameterInfo->ConstantBufferOffset + valueSize);
-        }
-        else
-        {
-            constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)parameterInfo->ConstantBufferOffset);
-            constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyUpperBounds, (int32)(parameterInfo->ConstantBufferOffset + valueSize));
-        }
-    }
+    ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
+    
+    // write to the constant buffer
+    pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
 }
 
 void D3D11GPUShaderProgram::InternalSetParameterStructArray(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
 {
-    const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
+    const Parameter *parameterInfo = &m_parameters[parameterIndex];
     DebugAssert(pContext == m_pBoundContext);
     DebugAssert(parameterInfo->Type == SHADER_PARAMETER_TYPE_STRUCT && valueSize <= parameterInfo->ArrayStride);
     DebugAssert(numElements > 0 && (firstElement + numElements) <= parameterInfo->ArraySize);
@@ -690,59 +577,19 @@ void D3D11GPUShaderProgram::InternalSetParameterStructArray(GPUContext *pContext
     DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
 
     // get the constant buffer
-    ShaderLocalConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
-    DebugAssert(constantBuffer->pLocalBuffer != nullptr);
+    ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
 
     // if there is no padding, this can be done in a single operation
     uint32 bufferOffset = parameterInfo->ConstantBufferOffset + (firstElement * parameterInfo->ArrayStride);
-    byte *pBufferPtr = constantBuffer->pLocalBuffer + bufferOffset;
     if (valueSize == parameterInfo->ArrayStride)
-    {
-        uint32 copySize = valueSize * numElements;
-        if (Y_memcmp(pBufferPtr, pValue, copySize) != 0)
-        {
-            // write to the local constant buffer
-            Y_memcpy(pBufferPtr, pValue, copySize);
-
-            // update dirty range
-            if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = (int32)(bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = (int32)(bufferOffset + copySize);
-            }
-            else
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyUpperBounds, (int32)(bufferOffset + copySize));
-            }
-        }
-    }
+        pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, valueSize * numElements, pValue);
     else
-    {
-        if (Y_memcmp_stride(pBufferPtr, parameterInfo->ArrayStride, pValue, valueSize, valueSize, numElements) != 0)
-        {
-            // write to the local constant buffer
-            Y_memcpy_stride(pBufferPtr, parameterInfo->ArrayStride, pValue, valueSize, valueSize, numElements);
-
-            // update dirty range
-            uint32 writeSize = parameterInfo->ArrayStride * numElements;
-            if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = (int32)(bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = (int32)(bufferOffset + writeSize);
-            }
-            else
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyLowerBounds, (int32)(bufferOffset + writeSize));
-            }
-        }
-    }
+        pContext->WriteConstantBufferStrided(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
 }
 
 void D3D11GPUShaderProgram::InternalSetParameterResource(D3D11GPUContext *pContext, uint32 parameterIndex, GPUResource *pResource, GPUSamplerState *pLinkedSamplerState)
 {
-    const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
+    const Parameter *parameterInfo = &m_parameters[parameterIndex];
     DebugAssert(pContext == m_pBoundContext);
     
 //     // handle type mismatches
@@ -811,7 +658,7 @@ void D3D11GPUShaderProgram::InternalSetParameterResource(D3D11GPUContext *pConte
     // for texture types with a linked sampler state, update it
     if (parameterInfo->LinkedSamplerIndex >= 0)
     {
-        const ShaderParameter *samplerParameterInfo = &m_parameters[parameterInfo->LinkedSamplerIndex];
+        const Parameter *samplerParameterInfo = &m_parameters[parameterInfo->LinkedSamplerIndex];
         DebugAssert(samplerParameterInfo->Type == SHADER_PARAMETER_TYPE_SAMPLER_STATE && samplerParameterInfo->BindTarget == D3D_SHADER_BIND_TARGET_SAMPLER);
 
         // write to stages
@@ -832,7 +679,7 @@ uint32 D3D11GPUShaderProgram::GetParameterCount() const
 
 void D3D11GPUShaderProgram::GetParameterInformation(uint32 index, const char **name, SHADER_PARAMETER_TYPE *type, uint32 *arraySize)
 {
-    const ShaderParameter *parameter = &m_parameters[index];
+    const Parameter *parameter = &m_parameters[index];
     *name = parameter->Name;
     *type = parameter->Type;
     *arraySize = parameter->ArraySize;

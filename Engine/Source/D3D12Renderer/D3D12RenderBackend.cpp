@@ -454,19 +454,59 @@ const D3D12DescriptorHeap::Handle *D3D12RenderBackend::GetConstantBufferDescript
     return (m_constantBufferStorage[index].pResource != nullptr) ? &m_constantBufferStorage[index].DescriptorHandle : nullptr;
 }
 
-void D3D12RenderBackend::ScheduleResourceForDeletion(ID3D12Resource *pResource, uint32 frameNumber /*= g_pRenderer->GetFrameNumber()*/)
+void D3D12RenderBackend::ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint32 frameNumber /*= g_pRenderer->GetFrameNumber()*/)
 {
-
+    PendingDeletionResource pdr;
+    pdr.pResource = pResource;
+    pdr.FrameNumber = frameNumber;
+    
+    m_pendingDeletionLock.Lock();
+    m_pendingDeletionResources.Add(pdr);
+    m_pendingDeletionLock.Unlock();
 }
 
 void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle *pHandle, uint32 frameNumber /*= g_pRenderer->GetFrameNumber()*/)
 {
+    PendingDeletionDescriptor pdr;
+    pdr.Handle = *pHandle;
+    pdr.FrameNumber = frameNumber;
 
+    m_pendingDeletionLock.Lock();
+    m_pendingDeletionDescriptors.Add(pdr);
+    m_pendingDeletionLock.Unlock();
 }
 
 void D3D12RenderBackend::DeletePendingResources(uint32 frameNumber)
 {
+    m_pendingDeletionLock.Lock();
 
+    for (uint32 i = 0; i < m_pendingDeletionResources.GetSize(); )
+    {
+        if (m_pendingDeletionResources[i].FrameNumber > frameNumber)
+        {
+            i++;
+            continue;
+        }
+
+        m_pendingDeletionResources[i].pResource->Release();
+        m_pendingDeletionResources.FastRemove(i);
+    }
+
+    for (uint32 i = 0; i < m_pendingDeletionDescriptors.GetSize(); )
+    {
+        PendingDeletionDescriptor &desc = m_pendingDeletionDescriptors[i];
+        if (desc.FrameNumber > frameNumber)
+        {
+            i++;
+            continue;
+        }
+
+        DebugAssert(desc.Type < countof(m_pDescriptorHeaps));
+        m_pDescriptorHeaps[desc.Type]->Free(&desc.Handle);
+        m_pendingDeletionResources.FastRemove(i);
+    }
+
+    m_pendingDeletionLock.Unlock();
 }
 
 bool D3D12RenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer)

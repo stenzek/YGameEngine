@@ -446,6 +446,9 @@ public:
     // Commit
     void CommitChanges();
 
+    // Commit the shared program globals constant buffer
+    void CommitGlobalConstantBufferChanges();
+
 private:
     GPUContext *m_pContext;
 
@@ -518,7 +521,7 @@ public:
     GPUCommandList() {}
     virtual ~GPUCommandList() {}
 
-        // State clearing
+    // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) = 0;
 
     // Retrieve RendererVariables interface.
@@ -643,6 +646,9 @@ class GPUContext : public GPUCommandList
 public:
     GPUContext() {}
     virtual ~GPUContext() {}
+
+    // Start of frame
+    virtual void BeginFrame() = 0;
 
     // Swap chain manipulation
     virtual bool GetExclusiveFullScreen() = 0;
@@ -931,7 +937,7 @@ public:
 
     // Frame number
     uint32 GetFrameNumber() const { return m_frameNumber; }
-    void EndFrame();
+    void BeginFrame();
 
     // Stats access
     RendererStats *GetStats() { return &m_stats; }

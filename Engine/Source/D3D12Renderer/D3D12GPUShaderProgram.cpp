@@ -3,8 +3,37 @@
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
+#include "Renderer/ShaderConstantBuffer.h"
 #include "Core/ThirdParty/MurmurHash3.h"
 Log_SetChannel(D3D12RenderBackend);
+
+// lookup table for types
+static const DXGI_FORMAT s_GPUVertexElementTypeToDXGIFormat[GPU_VERTEX_ELEMENT_TYPE_COUNT] =
+{
+    DXGI_FORMAT_R8_SINT,            // GPU_VERTEX_ELEMENT_TYPE_BYTE
+    DXGI_FORMAT_R8G8_SINT,          // GPU_VERTEX_ELEMENT_TYPE_BYTE2
+    DXGI_FORMAT_R8G8B8A8_SINT,      // GPU_VERTEX_ELEMENT_TYPE_BYTE4
+    DXGI_FORMAT_R8_UINT,            // GPU_VERTEX_ELEMENT_TYPE_UBYTE
+    DXGI_FORMAT_R8G8_UINT,          // GPU_VERTEX_ELEMENT_TYPE_UBYTE2
+    DXGI_FORMAT_R8G8B8A8_UINT,      // GPU_VERTEX_ELEMENT_TYPE_UBYTE4
+    DXGI_FORMAT_R16_FLOAT,          // GPU_VERTEX_ELEMENT_TYPE_HALF
+    DXGI_FORMAT_R16G16_FLOAT,       // GPU_VERTEX_ELEMENT_TYPE_HALF2
+    DXGI_FORMAT_R16G16B16A16_FLOAT, // GPU_VERTEX_ELEMENT_TYPE_HALF4
+    DXGI_FORMAT_R32_FLOAT,          // GPU_VERTEX_ELEMENT_TYPE_FLOAT
+    DXGI_FORMAT_R32G32_FLOAT,       // GPU_VERTEX_ELEMENT_TYPE_FLOAT2
+    DXGI_FORMAT_R32G32B32_FLOAT,    // GPU_VERTEX_ELEMENT_TYPE_FLOAT3
+    DXGI_FORMAT_R32G32B32A32_FLOAT, // GPU_VERTEX_ELEMENT_TYPE_FLOAT4
+    DXGI_FORMAT_R32_SINT,           // GPU_VERTEX_ELEMENT_TYPE_INT
+    DXGI_FORMAT_R32G32_SINT,        // GPU_VERTEX_ELEMENT_TYPE_INT2
+    DXGI_FORMAT_R32G32B32_SINT,     // GPU_VERTEX_ELEMENT_TYPE_INT3
+    DXGI_FORMAT_R32G32B32A32_SINT,  // GPU_VERTEX_ELEMENT_TYPE_INT4
+    DXGI_FORMAT_R32_UINT,           // GPU_VERTEX_ELEMENT_TYPE_UINT
+    DXGI_FORMAT_R32G32_UINT,        // GPU_VERTEX_ELEMENT_TYPE_UINT2
+    DXGI_FORMAT_R32G32B32_UINT,     // GPU_VERTEX_ELEMENT_TYPE_UINT3
+    DXGI_FORMAT_R32G32B32A32_UINT,  // GPU_VERTEX_ELEMENT_TYPE_UINT4
+    DXGI_FORMAT_R8G8B8A8_SNORM,     // GPU_VERTEX_ELEMENT_TYPE_SNORM4
+    DXGI_FORMAT_R8G8B8A8_UNORM,     // GPU_VERTEX_ELEMENT_TYPE_UNORM4
+};
 
 D3D12GPUShaderProgram::D3D12GPUShaderProgram()
 {
@@ -92,47 +121,6 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
     return ps.pPipelineState;
 }
 
-
-
-#if 0
-
-#define LAZY_RESOURCE_CLEANUP_AFTER_SWITCH 1
-
-D3D12GPUShaderProgram::D3D12GPUShaderProgram()
-    : m_pD3DInputLayout(nullptr),
-      m_pD3DVertexShader(nullptr),
-      m_pD3DHullShader(nullptr),
-      m_pD3DDomainShader(nullptr),
-      m_pD3DGeometryShader(nullptr),
-      m_pD3DPixelShader(nullptr),
-      m_pD3DComputeShader(nullptr),
-      m_pBoundContext(nullptr)
-{
-
-}
-
-D3D12GPUShaderProgram::~D3D12GPUShaderProgram()
-{
-    DebugAssert(m_pBoundContext == NULL);
-
-    SAFE_RELEASE(m_pD3DComputeShader);
-    SAFE_RELEASE(m_pD3DPixelShader);
-    SAFE_RELEASE(m_pD3DGeometryShader);
-    SAFE_RELEASE(m_pD3DDomainShader);
-    SAFE_RELEASE(m_pD3DHullShader);
-    SAFE_RELEASE(m_pD3DVertexShader);
-    SAFE_RELEASE(m_pD3DInputLayout);
-
-    for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
-    {
-        ShaderLocalConstantBuffer *pConstantBuffer = &m_constantBuffers[i];
-        
-        SAFE_RELEASE(pConstantBuffer->pLocalGPUBuffer);
-        if (pConstantBuffer->pLocalBuffer != nullptr)
-            delete[] pConstantBuffer->pLocalBuffer;
-    }
-}
-
 void D3D12GPUShaderProgram::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
 {
     // dummy values for now
@@ -145,38 +133,21 @@ void D3D12GPUShaderProgram::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMe
 
 void D3D12GPUShaderProgram::SetDebugName(const char *name)
 {
-    if (m_pD3DVertexShader != nullptr)
-        D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DVertexShader, name);
-    if (m_pD3DHullShader != nullptr)
-        D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DHullShader, name);
-    if (m_pD3DDomainShader != nullptr)
-        D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DDomainShader, name);
-    if (m_pD3DGeometryShader != nullptr)
-        D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DGeometryShader, name);
-    if (m_pD3DPixelShader != nullptr)
-        D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DPixelShader, name);
-    if (m_pD3DComputeShader != nullptr)
-        D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DComputeShader, name);
+
 }
 
 bool D3D12GPUShaderProgram::Create(D3D12GPUDevice *pDevice, const GPU_VERTEX_ELEMENT_DESC *pVertexAttributes, uint32 nVertexAttributes, ByteStream *pByteCodeStream)
 {
-    HRESULT hResult;
-    ID3D12Device *pD3DDevice = pDevice->GetD3DDevice();
     BinaryReader binaryReader(pByteCodeStream);
 
     // get the header of the shader cache entry
-    D3D12ShaderCacheEntryHeader header;
+    D3DShaderCacheEntryHeader header;
     if (!binaryReader.SafeReadBytes(&header, sizeof(header)) ||
-        header.Signature != D3D12_SHADER_CACHE_ENTRY_HEADER)
+        header.Signature != D3D_SHADER_CACHE_ENTRY_HEADER)
     {
         Log_ErrorPrintf("D3D12GPUShaderProgram::Create: Shader cache entry header corrupted.");
         return false;
     }
-
-    // save a copy of the vertex shader code, we need it to validate the input layout
-    byte *pVertexShaderByteCode = nullptr;
-    uint32 vertexShaderByteCodeSize = 0;
 
     // create d3d shader objects, and arrays for them
     for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
@@ -184,143 +155,22 @@ bool D3D12GPUShaderProgram::Create(D3D12GPUDevice *pDevice, const GPU_VERTEX_ELE
         if (header.StageSize[stageIndex] == 0)
             continue;
 
-        // read in stage bytecode
-        uint32 stageByteCodeSize = header.StageSize[stageIndex];
-        byte *pStageByteCode = new byte[stageByteCodeSize];
-        if (!binaryReader.SafeReadBytes(pStageByteCode, stageByteCodeSize))
-        {
-            delete[] pVertexShaderByteCode;
+        // create binary blob for bytecode
+        m_pStageByteCode[stageIndex] = BinaryBlob::Allocate(header.StageSize[stageIndex]);
+        if (!binaryReader.SafeReadBytes(m_pStageByteCode[stageIndex]->GetDataPointer(), header.StageSize[stageIndex]))
             return false;
-        }
-
-        // create d3d objects
-        switch (stageIndex)
-        {
-        case SHADER_PROGRAM_STAGE_VERTEX_SHADER:
-            {
-                if ((hResult = pD3DDevice->CreateVertexShader(pStageByteCode, stageByteCodeSize, nullptr, &m_pD3DVertexShader)) != S_OK)
-                {
-                    Log_ErrorPrintf("D3D12ShaderProgram::Create: CreateVertexShader failed with hResult %08X.", hResult);
-                    delete[] pStageByteCode;
-                    return false;
-                }
-
-                // save VS bytecode
-                pVertexShaderByteCode = pStageByteCode;
-                vertexShaderByteCodeSize = stageByteCodeSize;
-            }
-            break;
-
-        case SHADER_PROGRAM_STAGE_HULL_SHADER:
-            {
-                if ((hResult = pD3DDevice->CreateHullShader(pStageByteCode, stageByteCodeSize, nullptr, &m_pD3DHullShader)) != S_OK)
-                {
-                    Log_ErrorPrintf("D3D12ShaderProgram::Create: CreateHullShader failed with hResult %08X.", hResult);
-                    delete[] pStageByteCode;
-                    delete[] pVertexShaderByteCode;
-                    return false;
-                }
-
-                delete[] pStageByteCode;
-            }
-            break;
-
-        case SHADER_PROGRAM_STAGE_DOMAIN_SHADER:
-            {
-                if ((hResult = pD3DDevice->CreateDomainShader(pStageByteCode, stageByteCodeSize, nullptr, &m_pD3DDomainShader)) != S_OK)
-                {
-                    Log_ErrorPrintf("D3D12ShaderProgram::Create: CreateDomainShader failed with hResult %08X.", hResult);
-                    delete[] pStageByteCode;
-                    delete[] pVertexShaderByteCode;
-                    return false;
-                }
-
-                delete[] pStageByteCode;
-            }
-            break;
-
-        case SHADER_PROGRAM_STAGE_GEOMETRY_SHADER:
-            {
-                if ((hResult = pD3DDevice->CreateGeometryShader(pStageByteCode, stageByteCodeSize, nullptr, &m_pD3DGeometryShader)) != S_OK)
-                {
-                    Log_ErrorPrintf("D3D12ShaderProgram::Create: CreateGeometryShader failed with hResult %08X.", hResult);
-                    delete[] pStageByteCode;
-                    delete[] pVertexShaderByteCode;
-                    return false;
-                }
-
-                delete[] pStageByteCode;
-            }
-            break;
-        
-        case SHADER_PROGRAM_STAGE_PIXEL_SHADER:
-            {
-                if ((hResult = pD3DDevice->CreatePixelShader(pStageByteCode, stageByteCodeSize, nullptr, &m_pD3DPixelShader)) != S_OK)
-                {
-                    Log_ErrorPrintf("D3D12ShaderProgram::Create: CreatePixelShader failed with hResult %08X.", hResult);
-                    delete[] pStageByteCode;
-                    delete[] pVertexShaderByteCode;
-                    return false;
-                }
-
-                delete[] pStageByteCode;
-            }
-            break;
-
-        case SHADER_PROGRAM_STAGE_COMPUTE_SHADER:
-            {
-                if ((hResult = pD3DDevice->CreateComputeShader(pStageByteCode, stageByteCodeSize, nullptr, &m_pD3DComputeShader)) != S_OK)
-                {
-                    Log_ErrorPrintf("D3D12ShaderProgram::Create: CreateComputeShader failed with hResult %08X.", hResult);
-                    delete[] pStageByteCode;
-                    delete[] pVertexShaderByteCode;
-                    return false;
-                }
-
-                delete[] pStageByteCode;
-            }
-            break;
-
-        default:
-            UnreachableCode();
-            break;
-        }
     }
 
-#ifdef Y_BUILD_CONFIG_DEBUG
-//     // set debug name
-//     {
-//         SmallString debugName;
-//         debugName.Format("%s:%u:%s:%u:%s:%u", pCacheEntryHeader->BaseShaderName, pCacheEntryHeader->BaseShaderFlags, pCacheEntryHeader->VertexFactoryName, pCacheEntryHeader->VertexFactoryFlags, pCacheEntryHeader->MaterialShaderName, pCacheEntryHeader->MaterialShaderFlags);
-//         if (m_pD3DVertexShader != nullptr)
-//             D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DVertexShader, debugName);
-//         if (m_pD3DHullShader != nullptr)
-//             D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DHullShader, debugName);
-//         if (m_pD3DDomainShader != nullptr)
-//             D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DDomainShader, debugName);        
-//         if (m_pD3DGeometryShader != nullptr)
-//             D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DGeometryShader, debugName);
-//         if (m_pD3DPixelShader != nullptr)
-//             D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DPixelShader, debugName);
-//         if (m_pD3DComputeShader != nullptr)
-//             D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DComputeShader, debugName);
-//     }
-#endif
-
     // load up vertex attributes
-    if (header.VertexAttributeCount > 0 && vertexShaderByteCodeSize > 0)
+    if (header.VertexAttributeCount > 0)
     {
         // create a filtered list of vertex attributes provided and those used by the shader
-        D3D12_INPUT_ELEMENT_DESC usedVertexAttributes[GPU_INPUT_LAYOUT_MAX_ELEMENTS];
-        uint32 nUsedVertexAttributes = 0;
+        m_vertexAttributes.Reserve(header.VertexAttributeCount);
         for (uint32 i = 0; i < header.VertexAttributeCount; i++)
         {
-            D3D12ShaderCacheEntryVertexAttribute attribute;
+            D3DShaderCacheEntryVertexAttribute attribute;
             if (!binaryReader.SafeReadBytes(&attribute, sizeof(attribute)))
-            {
-                delete[] pVertexShaderByteCode;
                 return false;
-            }
 
             // search in the list provided
             uint32 listIndex;
@@ -337,84 +187,48 @@ bool D3D12GPUShaderProgram::Create(D3D12GPUDevice *pDevice, const GPU_VERTEX_ELE
             if (listIndex == nVertexAttributes)
             {
                 Log_ErrorPrintf("D3D12ShaderProgram::Create: failed to match shader attribute with provided attributes");
-                delete[] pVertexShaderByteCode;
                 return false;
             }
 
             // copy info in
-            usedVertexAttributes[nUsedVertexAttributes].SemanticName = D3D12TypeConversion::VertexElementSemanticToString(pVertexAttributes[listIndex].Semantic);
-            usedVertexAttributes[nUsedVertexAttributes].SemanticIndex = pVertexAttributes[listIndex].SemanticIndex;
-            usedVertexAttributes[nUsedVertexAttributes].Format = D3D12TypeConversion::VertexElementTypeToDXGIFormat(pVertexAttributes[listIndex].Type);
-            usedVertexAttributes[nUsedVertexAttributes].InputSlot = pVertexAttributes[listIndex].StreamIndex;
-            usedVertexAttributes[nUsedVertexAttributes].AlignedByteOffset = pVertexAttributes[listIndex].StreamOffset;
-            usedVertexAttributes[nUsedVertexAttributes].InputSlotClass = (pVertexAttributes[listIndex].InstanceStepRate != 0) ? D3D12_INPUT_PER_INSTANCE_DATA : D3D12_INPUT_PER_VERTEX_DATA;
-            usedVertexAttributes[nUsedVertexAttributes].InstanceDataStepRate = pVertexAttributes[listIndex].InstanceStepRate;
-            nUsedVertexAttributes++;
-        }
-
-        // create input layout
-        // TODO: Cache these
-        if (FAILED(hResult = pD3DDevice->CreateInputLayout(usedVertexAttributes, nUsedVertexAttributes, pVertexShaderByteCode, vertexShaderByteCodeSize, &m_pD3DInputLayout)))
-        {
-            Log_ErrorPrintf("D3D12ShaderProgram::Create: CreateInputLayout failed with hResult %08X", hResult);
-            delete[] pVertexShaderByteCode;
-            return false;
+            D3D12_INPUT_ELEMENT_DESC vertexAttribute;
+            vertexAttribute.SemanticName = NameTable_GetNameString(NameTables::GPUVertexElementSemantic, pVertexAttributes[listIndex].Semantic);
+            vertexAttribute.SemanticIndex = pVertexAttributes[listIndex].SemanticIndex;
+            vertexAttribute.Format = s_GPUVertexElementTypeToDXGIFormat[pVertexAttributes[listIndex].Type];
+            vertexAttribute.InputSlot = pVertexAttributes[listIndex].StreamIndex;
+            vertexAttribute.AlignedByteOffset = pVertexAttributes[listIndex].StreamOffset;
+            vertexAttribute.InputSlotClass = (pVertexAttributes[listIndex].InstanceStepRate != 0) ? D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+            vertexAttribute.InstanceDataStepRate = pVertexAttributes[listIndex].InstanceStepRate;
+            m_vertexAttributes.Add(vertexAttribute);
         }
     }
 
-    // can finally free this now
-    delete[] pVertexShaderByteCode;
-
     // load up constant buffers
+    PODArray<uint32> engineConstantBufferIndices;
     if (header.ConstantBufferCount > 0)
     {
-        m_constantBuffers.Resize(header.ConstantBufferCount);
-        m_constantBuffers.ZeroContents();
-        for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
+        SmallString constantBufferName;
+        engineConstantBufferIndices.Resize(header.ConstantBufferCount);
+        for (uint32 i = 0; i < engineConstantBufferIndices.GetSize(); i++)
         {
-            D3D12ShaderCacheEntryConstantBuffer srcConstantBufferInfo;
-            ShaderLocalConstantBuffer *pDstConstantBuffer = &m_constantBuffers[i];
+            D3DShaderCacheEntryConstantBuffer srcConstantBufferInfo;
             if (!binaryReader.SafeReadBytes(&srcConstantBufferInfo, sizeof(srcConstantBufferInfo)))
                 return false;
 
-            // constant buffer struct
-            Y_strncpy(pDstConstantBuffer->Name, countof(pDstConstantBuffer->Name), srcConstantBufferInfo.Name);
-            pDstConstantBuffer->Size = srcConstantBufferInfo.Size;
-            pDstConstantBuffer->ParameterIndex = srcConstantBufferInfo.ParameterIndex;
-            pDstConstantBuffer->EngineConstantBufferIndex = 0;
-            pDstConstantBuffer->pLocalGPUBuffer = nullptr;
-            pDstConstantBuffer->pLocalBuffer = nullptr;
-            pDstConstantBuffer->LocalBufferDirtyLowerBounds = -1;
-            pDstConstantBuffer->LocalBufferDirtyUpperBounds = -1;
-        
-            // create local buffers
-            if (srcConstantBufferInfo.IsLocal)
-            {
-                // allocate local memory
-                pDstConstantBuffer->pLocalBuffer = new byte[pDstConstantBuffer->Size];
-                Y_memzero(pDstConstantBuffer->pLocalBuffer, pDstConstantBuffer->Size);
+            // read name
+            if (!binaryReader.SafeReadFixedString(srcConstantBufferInfo.NameLength, &constantBufferName))
+                return false;
 
-                // create buffer
-                GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_WRITABLE, pDstConstantBuffer->Size);
-                if ((pDstConstantBuffer->pLocalGPUBuffer = static_cast<D3D12GPUBuffer *>(pDevice->CreateBuffer(&bufferDesc, pDstConstantBuffer->pLocalBuffer))) == nullptr)
-                {
-                    Log_ErrorPrintf("D3D12ShaderProgram::Create: Attempting to allocate local constant buffer '%s' (size %u) failed.", pDstConstantBuffer->Name, pDstConstantBuffer->Size);
-                    return false;
-                }
-            }
-            else
+            // lookup engine constant buffer
+            const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(constantBufferName, RENDERER_PLATFORM_D3D12, D3D12RenderBackend::GetInstance()->GetFeatureLevel());
+            if (pEngineConstantBuffer == nullptr)
             {
-                // lookup engine constant buffer
-                const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(pDstConstantBuffer->Name, RENDERER_PLATFORM_D3D12, D3D12RenderBackend::GetInstance()->GetFeatureLevel());
-                if (pEngineConstantBuffer == nullptr)
-                {
-                    Log_ErrorPrintf("D3D12ShaderProgram::Create: Shader is requesting unknown non-local constant buffer named '%s'.", pDstConstantBuffer->Name);
-                    return false;
-                }
-
-                // store index
-                pDstConstantBuffer->EngineConstantBufferIndex = pEngineConstantBuffer->GetIndex();
+                Log_ErrorPrintf("D3D12ShaderProgram::Create: Shader is requesting unknown non-local constant buffer named '%s'.", constantBufferName.GetCharArray());
+                return false;
             }
+
+            // add index
+            engineConstantBufferIndices[i] = pEngineConstantBuffer->GetIndex();
         }
     }
 
@@ -424,416 +238,98 @@ bool D3D12GPUShaderProgram::Create(D3D12GPUDevice *pDevice, const GPU_VERTEX_ELE
         m_parameters.Resize(header.ParameterCount);
         for (uint32 i = 0; i < m_parameters.GetSize(); i++)
         {
-            D3D12ShaderCacheEntryParameter srcParameter;
+            D3DShaderCacheEntryParameter srcParameter;
             ShaderParameter *pDstParameterInfo = &m_parameters[i];
             if (!binaryReader.SafeReadBytes(&srcParameter, sizeof(srcParameter)))
                 return false;
 
-            Y_strncpy(pDstParameterInfo->Name, countof(pDstParameterInfo->Name), srcParameter.Name);
+            // read name
+            if (!binaryReader.SafeReadFixedString(srcParameter.NameLength, &pDstParameterInfo->Name))
+                return false;
+
             pDstParameterInfo->Type = srcParameter.Type;
             pDstParameterInfo->ConstantBufferIndex = srcParameter.ConstantBufferIndex;
             pDstParameterInfo->ConstantBufferOffset = srcParameter.ConstantBufferOffset;
             pDstParameterInfo->ArraySize = srcParameter.ArraySize;
             pDstParameterInfo->ArrayStride = srcParameter.ArrayStride;
-            pDstParameterInfo->BindTarget = (D3D12_SHADER_BIND_TARGET)srcParameter.BindTarget;
+            pDstParameterInfo->BindTarget = (D3D_SHADER_BIND_TARGET)srcParameter.BindTarget;
             Y_memcpy(pDstParameterInfo->BindPoint, srcParameter.BindPoint, sizeof(pDstParameterInfo->BindPoint));
             pDstParameterInfo->LinkedSamplerIndex = srcParameter.LinkedSamplerIndex;
         }
     }
-        
-
 
     // all ok
     return true;
 }
 
-void D3D12GPUShaderProgram::Bind(D3D12GPUContext *pContext)
+bool D3D12GPUShaderProgram::Switch(ID3D12GraphicsCommandList *pCommandList, const PipelineStateKey *pKey)
 {
-    DebugAssert(m_pBoundContext == nullptr);
-    ID3D12DeviceContext *pD3DDeviceContext = pContext->GetD3DContext();
+    // get pipeline state
+    ID3D12PipelineState *pPipelineState = GetPipelineState(pKey);
+    if (pPipelineState == nullptr)
+        return false;
 
-    // ------------------ IA ------------------
-    if (m_pD3DInputLayout != nullptr)
-        pD3DDeviceContext->IASetInputLayout(m_pD3DInputLayout);
+    pCommandList->SetPipelineState(pPipelineState);
+    
+    // @TODO switch to program root
+    // @TODO bind constant buffers
 
-    // ------------------ VS ------------------
-    if (m_pD3DVertexShader != nullptr)
-        pD3DDeviceContext->VSSetShader(m_pD3DVertexShader, nullptr, 0);
-
-    // ------------------ HS ------------------
-    if (m_pD3DHullShader != nullptr)
-        pD3DDeviceContext->HSSetShader(m_pD3DHullShader, nullptr, 0);
-
-    // ------------------ DS ------------------
-    if (m_pD3DDomainShader != nullptr)
-        pD3DDeviceContext->DSSetShader(m_pD3DDomainShader, nullptr, 0);
-
-    // ------------------ GS ------------------
-    if (m_pD3DGeometryShader != nullptr)
-        pD3DDeviceContext->GSSetShader(m_pD3DGeometryShader, nullptr, 0);
-
-    // ------------------ PS ------------------
-    if (m_pD3DPixelShader != nullptr)
-        pD3DDeviceContext->PSSetShader(m_pD3DPixelShader, nullptr, 0);
-
-    // ------------------ CS ------------------
-    if (m_pD3DComputeShader != nullptr)
-        pD3DDeviceContext->CSSetShader(m_pD3DComputeShader, nullptr, 0);
-
-    // bound
-    m_pBoundContext = pContext;
-
-    // bind params
-    InternalBindAutomaticParameters(pContext);
+    // done
+    return true;
 }
-
-void D3D12GPUShaderProgram::InternalBindAutomaticParameters(D3D12GPUContext *pContext)
-{
-    // bind constant buffers
-    for (uint32 constantBufferIndex = 0; constantBufferIndex < m_constantBuffers.GetSize(); constantBufferIndex++)
-    {
-        ShaderLocalConstantBuffer *pConstantBufferDef = &m_constantBuffers[constantBufferIndex];
-
-        // local?
-        D3D12GPUBuffer *pConstantBuffer = (pConstantBufferDef->pLocalGPUBuffer != nullptr) ? pConstantBufferDef->pLocalGPUBuffer : pContext->GetConstantBuffer(pConstantBufferDef->EngineConstantBufferIndex);
-        InternalSetParameterResource(pContext, pConstantBufferDef->ParameterIndex, pConstantBuffer, nullptr);
-    }
-}
-
-void D3D12GPUShaderProgram::Switch(D3D12GPUContext *pContext, D3D12GPUShaderProgram *pCurrentProgram)
-{
-#ifdef LAZY_RESOURCE_CLEANUP_AFTER_SWITCH
-    ID3D12DeviceContext *pD3DDeviceContext = pContext->GetD3DContext();
-    DebugAssert(m_pBoundContext == nullptr && pCurrentProgram->m_pBoundContext == pContext);
-
-    // ------------------ IA ------------------
-    if (m_pD3DInputLayout != nullptr)
-        pD3DDeviceContext->IASetInputLayout(m_pD3DInputLayout);
-    else if (pCurrentProgram->m_pD3DInputLayout != nullptr)
-        pD3DDeviceContext->IASetInputLayout(nullptr);
-
-    // ------------------ VS ------------------
-    if (m_pD3DVertexShader != nullptr)
-        pD3DDeviceContext->VSSetShader(m_pD3DVertexShader, nullptr, 0);
-    else if (pCurrentProgram->m_pD3DVertexShader != nullptr)
-        pD3DDeviceContext->VSSetShader(nullptr, nullptr, 0);
-
-    // ------------------ HS ------------------
-    if (m_pD3DHullShader != nullptr)
-        pD3DDeviceContext->HSSetShader(m_pD3DHullShader, nullptr, 0);
-    else if (pCurrentProgram->m_pD3DHullShader != nullptr)
-        pD3DDeviceContext->HSSetShader(nullptr, nullptr, 0);
-
-    // ------------------ DS ------------------
-    if (m_pD3DDomainShader != nullptr)
-        pD3DDeviceContext->DSSetShader(m_pD3DDomainShader, nullptr, 0);
-    else if (pCurrentProgram->m_pD3DDomainShader != nullptr)
-        pD3DDeviceContext->DSSetShader(nullptr, nullptr, 0);
-
-    // ------------------ GS ------------------
-    if (m_pD3DGeometryShader != nullptr)
-        pD3DDeviceContext->GSSetShader(m_pD3DGeometryShader, nullptr, 0);
-    else if (pCurrentProgram->m_pD3DGeometryShader != nullptr)
-        pD3DDeviceContext->GSSetShader(nullptr, nullptr, 0);
-
-    // ------------------ PS ------------------
-    if (m_pD3DPixelShader != nullptr)
-        pD3DDeviceContext->PSSetShader(m_pD3DPixelShader, nullptr, 0);
-    else if (pCurrentProgram->m_pD3DPixelShader != nullptr)
-        pD3DDeviceContext->PSSetShader(nullptr, nullptr, 0);
-
-    // ------------------ CS ------------------
-    if (m_pD3DComputeShader != nullptr)
-        pD3DDeviceContext->CSSetShader(m_pD3DComputeShader, nullptr, 0);
-    else if (pCurrentProgram->m_pD3DComputeShader != nullptr)
-        pD3DDeviceContext->CSSetShader(nullptr, nullptr, 0);
-
-    // swap pointers
-    pCurrentProgram->m_pBoundContext = nullptr;
-    m_pBoundContext = pContext;
-
-    // bind params
-    InternalBindAutomaticParameters(pContext);
-#else
-    pCurrentProgram->Unbind(pContext);
-    Bind(pContext);
-#endif
-}
-
-void D3D12GPUShaderProgram::CommitLocalConstantBuffers(D3D12GPUContext *pContext)
-{
-    for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
-    {
-        ShaderLocalConstantBuffer *pConstantBuffer = &m_constantBuffers[i];
-        if (pConstantBuffer->LocalBufferDirtyLowerBounds >= 0)
-        {
-            // D3D12.0 does not support partial constant buffer updates
-            //pContext->WriteBuffer(pConstantBuffer->pLocalGPUBuffer, pConstantBuffer->pLocalBuffer + pConstantBuffer->LocalBufferDirtyLowerBounds, 0, pConstantBuffer->LocalBufferDirtyUpperBounds - pConstantBuffer->LocalBufferDirtyLowerBounds);
-            pContext->WriteBuffer(pConstantBuffer->pLocalGPUBuffer, pConstantBuffer->pLocalBuffer, 0, pConstantBuffer->Size);
-            pConstantBuffer->LocalBufferDirtyLowerBounds = pConstantBuffer->LocalBufferDirtyUpperBounds = -1;
-        }
-    }
-}
-
-void D3D12GPUShaderProgram::Unbind(D3D12GPUContext *pContext)
-{
-    ID3D12DeviceContext *pD3DDeviceContext = m_pBoundContext->GetD3DContext();
-    DebugAssert(m_pBoundContext == pContext);
-
-#ifndef LAZY_RESOURCE_CLEANUP_AFTER_SWITCH
-    // unset parameters that we match against
-    for (uint32 parameterIndex = 0; parameterIndex < m_parameters.GetSize(); parameterIndex++)
-    {
-        const ShaderParameter *parameter = &m_parameters[parameterIndex];
-        for (uint32 i = 0; i < SHADER_PROGRAM_STAGE_COUNT; i++)
-        {
-            if (parameter->BindPoint[i] == -1)
-                continue;
-
-            switch (parameter->BindTarget)
-            {
-            case D3D12_SHADER_BIND_TARGET_CONSTANT_BUFFER:
-                pContext->SetShaderConstantBuffers((SHADER_PROGRAM_STAGE)i, parameter->BindPoint[i], nullptr);
-                break;
-
-            case D3D12_SHADER_BIND_TARGET_RESOURCE:
-                pContext->SetShaderResources((SHADER_PROGRAM_STAGE)i, parameter->BindPoint[i], nullptr);
-                break;
-
-            case D3D12_SHADER_BIND_TARGET_SAMPLER:
-                pContext->SetShaderSamplers((SHADER_PROGRAM_STAGE)i, parameter->BindPoint[i], nullptr);
-                break;
-            }
-        }
-    }
-#endif
-
-    // ------------------ IA ------------------
-    if (m_pD3DInputLayout != nullptr)
-        pD3DDeviceContext->IASetInputLayout(nullptr);
-
-    // ------------------ VS ------------------
-    if (m_pD3DVertexShader != nullptr)
-        pD3DDeviceContext->VSSetShader(nullptr, nullptr, 0);
-
-    // ------------------ HS ------------------
-    if (m_pD3DHullShader != nullptr)
-        pD3DDeviceContext->HSSetShader(nullptr, nullptr, 0);
-
-    // ------------------ DS ------------------
-    if (m_pD3DDomainShader != nullptr)
-        pD3DDeviceContext->DSSetShader(nullptr, nullptr, 0);
-
-    // ------------------ GS ------------------
-    if (m_pD3DGeometryShader != nullptr)
-        pD3DDeviceContext->GSSetShader(nullptr, nullptr, 0);
-
-    // ------------------ PS ------------------
-    if (m_pD3DPixelShader != nullptr)
-        pD3DDeviceContext->PSSetShader(nullptr, nullptr, 0);
-
-    // ------------------ CSS ------------------
-    if (m_pD3DComputeShader != nullptr)
-        pD3DDeviceContext->CSSetShader(nullptr, nullptr, 0);
-
-    m_pBoundContext = nullptr;
-}
-
 void D3D12GPUShaderProgram::InternalSetParameterValue(D3D12GPUContext *pContext, uint32 parameterIndex, SHADER_PARAMETER_TYPE valueType, const void *pValue)
 {
     const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
-    DebugAssert(pContext == m_pBoundContext);
-
     uint32 valueSize = ShaderParameterValueTypeSize(parameterInfo->Type);
     DebugAssert(parameterInfo->Type == valueType && valueSize > 0);
 
-    // should be attached to a local constant buffer
-    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
-
-    // get the constant buffer
-    ShaderLocalConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
-    DebugAssert(constantBuffer->pLocalBuffer != nullptr);
-
-    // don't write if there is no changes
-    byte *pBufferPtr = constantBuffer->pLocalBuffer + parameterInfo->ConstantBufferOffset;
-    if (Y_memcmp(pBufferPtr, pValue, valueSize) != 0)
-    {
-        // write to the local constant buffer
-        Y_memcpy(pBufferPtr, pValue, valueSize);
-        if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-        {
-            constantBuffer->LocalBufferDirtyLowerBounds = (int32)parameterInfo->ConstantBufferOffset;
-            constantBuffer->LocalBufferDirtyUpperBounds = (int32)(parameterInfo->ConstantBufferOffset + valueSize);
-        }
-        else
-        {
-            constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)parameterInfo->ConstantBufferOffset);
-            constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyUpperBounds, (int32)(parameterInfo->ConstantBufferOffset + valueSize));
-        }
-    }
+    // write to the constant buffer
+    pContext->WriteConstantBuffer(parameterInfo->ConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
 }
 
 void D3D12GPUShaderProgram::InternalSetParameterValueArray(D3D12GPUContext *pContext, uint32 parameterIndex, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
 {
     const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
-    DebugAssert(pContext == m_pBoundContext);
-
     uint32 valueSize = ShaderParameterValueTypeSize(parameterInfo->Type);
     DebugAssert(parameterInfo->Type == valueType && valueSize > 0);
     DebugAssert(numElements > 0 && (firstElement + numElements) <= parameterInfo->ArraySize);
 
-    // should be attached to a local constant buffer
-    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
-
-    // get the constant buffer
-    ShaderLocalConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
-    DebugAssert(constantBuffer->pLocalBuffer != nullptr);
-
     // if there is no padding, this can be done in a single operation
     uint32 bufferOffset = parameterInfo->ConstantBufferOffset + (firstElement * parameterInfo->ArrayStride);
-    byte *pBufferPtr = constantBuffer->pLocalBuffer + bufferOffset;
     if (valueSize == parameterInfo->ArrayStride)
-    {
-        uint32 copySize = valueSize * numElements;
-        if (Y_memcmp(pBufferPtr, pValue, copySize) != 0)
-        {
-            // write to the local constant buffer
-            Y_memcpy(pBufferPtr, pValue, copySize);
-            
-            // update dirty range
-            if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = (int32)(bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = (int32)(bufferOffset + copySize);
-            }
-            else
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyUpperBounds, (int32)(bufferOffset + copySize));
-            }
-        }
-    }
+        pContext->WriteConstantBuffer(parameterInfo->ConstantBufferIndex, parameterIndex, bufferOffset, valueSize * numElements, pValue);
     else
-    {
-        if (Y_memcmp_stride(pBufferPtr, parameterInfo->ArrayStride, pValue, valueSize, valueSize, numElements) != 0)
-        {
-            // write to the local constant buffer
-            Y_memcpy_stride(pBufferPtr, parameterInfo->ArrayStride, pValue, valueSize, valueSize, numElements);
-            
-            // update dirty range
-            uint32 writeSize = parameterInfo->ArrayStride * numElements;
-            if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = (int32)(bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = (int32)(bufferOffset + writeSize);
-            }
-            else
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyLowerBounds, (int32)(bufferOffset + writeSize));
-            }
-        }
-    }    
+        pContext->WriteConstantBufferStrided(parameterInfo->ConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
 }
 
 void D3D12GPUShaderProgram::InternalSetParameterStruct(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize)
 {
     const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
-    DebugAssert(pContext == m_pBoundContext);
     DebugAssert(parameterInfo->Type == SHADER_PARAMETER_TYPE_STRUCT && valueSize <= parameterInfo->ArrayStride);
 
-    // should be attached to a local constant buffer
-    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
-
-    // get the constant buffer
-    ShaderLocalConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
-    DebugAssert(constantBuffer->pLocalBuffer != nullptr);
-
-    // don't write if there is no changes
-    byte *pBufferPtr = constantBuffer->pLocalBuffer + parameterInfo->ConstantBufferOffset;
-    if (Y_memcmp(pBufferPtr, pValue, valueSize) != 0)
-    {
-        // write to the local constant buffer
-        Y_memcpy(pBufferPtr, pValue, valueSize);
-        if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-        {
-            constantBuffer->LocalBufferDirtyLowerBounds = (int32)parameterInfo->ConstantBufferOffset;
-            constantBuffer->LocalBufferDirtyUpperBounds = (int32)(parameterInfo->ConstantBufferOffset + valueSize);
-        }
-        else
-        {
-            constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)parameterInfo->ConstantBufferOffset);
-            constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyUpperBounds, (int32)(parameterInfo->ConstantBufferOffset + valueSize));
-        }
-    }
+    // write to the constant buffer
+    pContext->WriteConstantBuffer(parameterInfo->ConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
 }
 
 void D3D12GPUShaderProgram::InternalSetParameterStructArray(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
 {
     const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
-    DebugAssert(pContext == m_pBoundContext);
     DebugAssert(parameterInfo->Type == SHADER_PARAMETER_TYPE_STRUCT && valueSize <= parameterInfo->ArrayStride);
     DebugAssert(numElements > 0 && (firstElement + numElements) <= parameterInfo->ArraySize);
 
-    // should be attached to a local constant buffer
-    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
-
-    // get the constant buffer
-    ShaderLocalConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
-    DebugAssert(constantBuffer->pLocalBuffer != nullptr);
-
     // if there is no padding, this can be done in a single operation
     uint32 bufferOffset = parameterInfo->ConstantBufferOffset + (firstElement * parameterInfo->ArrayStride);
-    byte *pBufferPtr = constantBuffer->pLocalBuffer + bufferOffset;
     if (valueSize == parameterInfo->ArrayStride)
-    {
-        uint32 copySize = valueSize * numElements;
-        if (Y_memcmp(pBufferPtr, pValue, copySize) != 0)
-        {
-            // write to the local constant buffer
-            Y_memcpy(pBufferPtr, pValue, copySize);
-
-            // update dirty range
-            if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = (int32)(bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = (int32)(bufferOffset + copySize);
-            }
-            else
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyUpperBounds, (int32)(bufferOffset + copySize));
-            }
-        }
-    }
+        pContext->WriteConstantBuffer(parameterInfo->ConstantBufferIndex, parameterIndex, bufferOffset, valueSize * numElements, pValue);
     else
-    {
-        if (Y_memcmp_stride(pBufferPtr, parameterInfo->ArrayStride, pValue, valueSize, valueSize, numElements) != 0)
-        {
-            // write to the local constant buffer
-            Y_memcpy_stride(pBufferPtr, parameterInfo->ArrayStride, pValue, valueSize, valueSize, numElements);
-
-            // update dirty range
-            uint32 writeSize = parameterInfo->ArrayStride * numElements;
-            if (constantBuffer->LocalBufferDirtyLowerBounds < 0)
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = (int32)(bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = (int32)(bufferOffset + writeSize);
-            }
-            else
-            {
-                constantBuffer->LocalBufferDirtyLowerBounds = Min(constantBuffer->LocalBufferDirtyLowerBounds, (int32)bufferOffset);
-                constantBuffer->LocalBufferDirtyUpperBounds = Max(constantBuffer->LocalBufferDirtyLowerBounds, (int32)(bufferOffset + writeSize));
-            }
-        }
-    }
+        pContext->WriteConstantBufferStrided(parameterInfo->ConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
 }
 
 void D3D12GPUShaderProgram::InternalSetParameterResource(D3D12GPUContext *pContext, uint32 parameterIndex, GPUResource *pResource, GPUSamplerState *pLinkedSamplerState)
 {
+#if 0
     const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
-    DebugAssert(pContext == m_pBoundContext);
-    
+
 //     // handle type mismatches
 //     if (pResource != nullptr)
 //     {
@@ -912,6 +408,7 @@ void D3D12GPUShaderProgram::InternalSetParameterResource(D3D12GPUContext *pConte
                 pContext->SetShaderSamplers((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, pD3DSamplerState);
         }
     }
+#endif
 }
 
 uint32 D3D12GPUShaderProgram::GetParameterCount() const
@@ -979,16 +476,4 @@ GPUShaderProgram *D3D12GPUDevice::CreateComputeProgram(ByteStream *pByteCodeStre
     }
 
     return pProgram;
-}
-
-#endif
-
-GPUShaderProgram *D3D12GPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
-{
-    return nullptr;
-}
-
-GPUShaderProgram *D3D12GPUDevice::CreateComputeProgram(ByteStream *pByteCodeStream)
-{
-    return nullptr;
 }

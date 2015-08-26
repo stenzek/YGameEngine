@@ -856,7 +856,7 @@ WorldRenderer::IntermediateBuffer *WorldRenderer::RequestIntermediateBuffer(uint
     // create rtv
     if (flags & GPU_TEXTURE_FLAG_BIND_RENDER_TARGET)
     {
-        GPU_RENDER_TARGET_VIEW_DESC rtvDesc((uint32)0, 0, 1);
+        GPU_RENDER_TARGET_VIEW_DESC rtvDesc((uint32)0, 0, 1, pixelFormat);
         if ((buffer->pRTV = g_pRenderer->CreateRenderTargetView(buffer->pTexture, &rtvDesc)) == nullptr)
         {
             buffer->pTexture->Release();
@@ -868,7 +868,7 @@ WorldRenderer::IntermediateBuffer *WorldRenderer::RequestIntermediateBuffer(uint
     else if (flags & GPU_TEXTURE_FLAG_BIND_DEPTH_STENCIL_BUFFER)
     {
         // create dsv
-        GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC dsvDesc((uint32)0, 0, 1);
+        GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC dsvDesc((uint32)0, 0, 1, pixelFormat);
         if ((buffer->pDSV = g_pRenderer->CreateDepthStencilBufferView(buffer->pTexture, &dsvDesc)) == nullptr)
         {
             buffer->pTexture->Release();

@@ -757,7 +757,7 @@ void D3D11GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
     if ((nRenderTargets == 0 || (nRenderTargets == 1 && ppRenderTargets[0] == nullptr)) && pDepthBufferView == nullptr)
     {
         // change?
-        if (m_nCurrentRenderTargets == 0 && pDepthBufferView == nullptr)
+        if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
             return;
 
         // kill current targets

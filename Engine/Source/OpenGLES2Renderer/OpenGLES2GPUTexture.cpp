@@ -754,26 +754,36 @@ GPURenderTargetView *OpenGLES2GPUDevice::CreateRenderTargetView(GPUTexture *pTex
 
     // fill in DSV structure
     TEXTURE_TYPE textureType;
+    PIXEL_FORMAT pixelFormat;
     GLuint textureName;
     switch (pTexture->GetResourceType())
     {
     case GPU_RESOURCE_TYPE_TEXTURE2D:
         textureType = TEXTURE_TYPE_2D;
+        pixelFormat = static_cast<OpenGLES2GPUTexture2D *>(pTexture)->GetDesc()->Format;
         textureName = static_cast<OpenGLES2GPUTexture2D *>(pTexture)->GetGLTextureId();
         break;
         
     case GPU_RESOURCE_TYPE_TEXTURECUBE:
         textureType = TEXTURE_TYPE_CUBE;
+        pixelFormat = static_cast<OpenGLES2GPUTextureCube *>(pTexture)->GetDesc()->Format;
         textureName = static_cast<OpenGLES2GPUTextureCube *>(pTexture)->GetGLTextureId();
         break;
 
     case GPU_RESOURCE_TYPE_DEPTH_TEXTURE:
         textureType = TEXTURE_TYPE_DEPTH;
+        pixelFormat = static_cast<OpenGLES2GPUDepthTexture *>(pTexture)->GetDesc()->Format;
         textureName = static_cast<OpenGLES2GPUDepthTexture *>(pTexture)->GetGLRenderBufferId();
         break;
 
     default:
         Log_ErrorPrintf("OpenGLES2GPUDevice::CreateRenderTargetView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
+        return nullptr;
+    }
+
+    if (pixelFormat != pDesc->Format)
+    {
+        Log_ErrorPrintf("OpenGLES2GPUDevice::CreateRenderTargetView: Pixel format must match view format. (%u vs %u)", pixelFormat, pDesc->Format);
         return nullptr;
     }
 
@@ -813,30 +823,40 @@ GPUDepthStencilBufferView *OpenGLES2GPUDevice::CreateDepthStencilBufferView(GPUT
 
     // fill in DSV structure
     TEXTURE_TYPE textureType;
-    GLenum attachmentPoint;
+    PIXEL_FORMAT pixelFormat;
     GLuint textureName;
+    GLenum attachmentPoint;
     switch (pTexture->GetResourceType())
     {
     case GPU_RESOURCE_TYPE_TEXTURE2D:
         textureType = TEXTURE_TYPE_2D;
-        attachmentPoint = GetTextureDepthStencilAttachmentPoint(static_cast<OpenGLES2GPUTexture2D *>(pTexture)->GetDesc()->Format);
+        pixelFormat = static_cast<OpenGLES2GPUTexture2D *>(pTexture)->GetDesc()->Format;
         textureName = static_cast<OpenGLES2GPUTexture2D *>(pTexture)->GetGLTextureId();
+        attachmentPoint = GetTextureDepthStencilAttachmentPoint(pixelFormat);
         break;
 
     case GPU_RESOURCE_TYPE_TEXTURECUBE:
         textureType = TEXTURE_TYPE_CUBE;
-        attachmentPoint = GetTextureDepthStencilAttachmentPoint(static_cast<OpenGLES2GPUTextureCube *>(pTexture)->GetDesc()->Format);
+        pixelFormat = static_cast<OpenGLES2GPUTextureCube *>(pTexture)->GetDesc()->Format;
         textureName = static_cast<OpenGLES2GPUTextureCube *>(pTexture)->GetGLTextureId();
+        attachmentPoint = GetTextureDepthStencilAttachmentPoint(pixelFormat);
         break;
 
     case GPU_RESOURCE_TYPE_DEPTH_TEXTURE:
         textureType = TEXTURE_TYPE_DEPTH;
-        attachmentPoint = GetTextureDepthStencilAttachmentPoint(static_cast<OpenGLES2GPUDepthTexture *>(pTexture)->GetDesc()->Format);
+        pixelFormat = static_cast<OpenGLES2GPUDepthTexture *>(pTexture)->GetDesc()->Format;
         textureName = static_cast<OpenGLES2GPUDepthTexture *>(pTexture)->GetGLRenderBufferId();
+        attachmentPoint = GetTextureDepthStencilAttachmentPoint(pixelFormat);
         break;
 
     default:
         Log_ErrorPrintf("OpenGLES2GPUDevice::CreateDepthBufferView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
+        return nullptr;
+    }
+
+    if (pixelFormat != pDesc->Format)
+    {
+        Log_ErrorPrintf("OpenGLES2GPUDevice::CreateDepthStencilBufferView: Pixel format must match view format. (%u vs %u)", pixelFormat, pDesc->Format);
         return nullptr;
     }
 

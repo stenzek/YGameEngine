@@ -2783,6 +2783,8 @@ GPURenderTargetView *OpenGLGPUDevice::CreateRenderTargetView(GPUTexture *pTextur
         return nullptr;
     }
 
+    // @TODO views
+
     return new OpenGLGPURenderTargetView(pTexture, pDesc, textureType, textureName, multiLayer);
 }
 
@@ -2878,6 +2880,8 @@ GPUDepthStencilBufferView *OpenGLGPUDevice::CreateDepthStencilBufferView(GPUText
         Log_ErrorPrintf("OpenGLGPUDevice::CreateDepthBufferView: Invalid resource type %s", NameTable_GetNameString(NameTables::GPUResourceType, pTexture->GetResourceType()));
         return nullptr;
     }
+
+    // @TODO views
 
     return new OpenGLGPUDepthStencilBufferView(pTexture, pDesc, textureType, attachmentPoint, textureName, multiLayer);
 }

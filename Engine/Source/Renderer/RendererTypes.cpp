@@ -428,121 +428,121 @@ Y_Define_NameTable(NameTables::RendererBlendOps)
 Y_NameTable_End()
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUTexture1D *pTexture, uint32 mipLevel /*= 0*/)
-    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(1)
+    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUTexture1DArray *pTexture, uint32 mipLevel /*= 0*/)
-    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(pTexture->GetDesc()->ArraySize)
+    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(pTexture->GetDesc()->ArraySize), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUTexture1DArray *pTexture, uint32 mipLevel, uint32 arrayIndex)
-    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex), NumLayers(1)
+    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUTexture2D *pTexture, uint32 mipLevel /*= 0*/)
-    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(1)
+    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUTexture2DArray *pTexture, uint32 mipLevel /*= 0*/)
-    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(pTexture->GetDesc()->ArraySize)
+    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(pTexture->GetDesc()->ArraySize), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUTexture2DArray *pTexture, uint32 mipLevel, uint32 arrayIndex)
-    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex), NumLayers(1)
+    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUTexture3D *pTexture, uint32 mipLevel, uint32 slideIndex)
-    : MipLevel(mipLevel), FirstLayerIndex(slideIndex), NumLayers(1)
+    : MipLevel(mipLevel), FirstLayerIndex(slideIndex), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUTextureCube *pTexture, uint32 mipLevel /*= 0*/)
-    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(CUBE_FACE_COUNT)
+    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(CUBE_FACE_COUNT), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUTextureCube *pTexture, uint32 mipLevel, CUBE_FACE faceIndex)
-    : MipLevel(mipLevel), FirstLayerIndex(faceIndex), NumLayers(1)
+    : MipLevel(mipLevel), FirstLayerIndex(faceIndex), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUTextureCubeArray *pTexture, uint32 mipLevel, uint32 arrayIndex)
-    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex * CUBE_FACE_COUNT), NumLayers(CUBE_FACE_COUNT)
+    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex * CUBE_FACE_COUNT), NumLayers(CUBE_FACE_COUNT), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUTextureCubeArray *pTexture, uint32 mipLevel, uint32 arrayIndex, CUBE_FACE faceIndex)
-    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex * CUBE_FACE_COUNT + faceIndex), NumLayers(1)
+    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex * CUBE_FACE_COUNT + faceIndex), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_RENDER_TARGET_VIEW_DESC::GPU_RENDER_TARGET_VIEW_DESC(GPUDepthTexture *pTexture)
-    : MipLevel(0), FirstLayerIndex(0), NumLayers(1)
+    : MipLevel(0), FirstLayerIndex(0), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC::GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUTexture2D *pTexture, uint32 mipLevel /*= 0*/)
-    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(1)
+    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC::GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUTexture2DArray *pTexture, uint32 mipLevel /*= 0*/)
-    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(pTexture->GetDesc()->ArraySize)
+    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(pTexture->GetDesc()->ArraySize), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC::GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUTexture2DArray *pTexture, uint32 mipLevel, uint32 arrayIndex)
-    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex), NumLayers(1)
+    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC::GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUTextureCube *pTexture, uint32 mipLevel /*= 0*/)
-    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(CUBE_FACE_COUNT)
+    : MipLevel(mipLevel), FirstLayerIndex(0), NumLayers(CUBE_FACE_COUNT), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC::GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUTextureCube *pTexture, uint32 mipLevel, CUBE_FACE faceIndex)
-    : MipLevel(mipLevel), FirstLayerIndex(faceIndex), NumLayers(1)
+    : MipLevel(mipLevel), FirstLayerIndex(faceIndex), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC::GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUTextureCubeArray *pTexture, uint32 mipLevel, uint32 arrayIndex)
-    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex * CUBE_FACE_COUNT), NumLayers(CUBE_FACE_COUNT)
+    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex * CUBE_FACE_COUNT), NumLayers(CUBE_FACE_COUNT), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC::GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUTextureCubeArray *pTexture, uint32 mipLevel, uint32 arrayIndex, CUBE_FACE faceIndex)
-    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex * CUBE_FACE_COUNT + faceIndex), NumLayers(1)
+    : MipLevel(mipLevel), FirstLayerIndex(arrayIndex * CUBE_FACE_COUNT + faceIndex), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }
 
 GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC::GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUDepthTexture *pTexture)
-    : MipLevel(0), FirstLayerIndex(0), NumLayers(1)
+    : MipLevel(0), FirstLayerIndex(0), NumLayers(1), Format(pTexture->GetDesc()->Format)
 {
 
 }

@@ -628,7 +628,7 @@ struct GPU_BUFFER_DESC
 struct GPU_RENDER_TARGET_VIEW_DESC
 {
     GPU_RENDER_TARGET_VIEW_DESC() {}
-    GPU_RENDER_TARGET_VIEW_DESC(uint32 mipLevel, uint32 firstLayerIndex, uint32 numLayers) : MipLevel(mipLevel), FirstLayerIndex(firstLayerIndex), NumLayers(numLayers) {}
+    GPU_RENDER_TARGET_VIEW_DESC(uint32 mipLevel, uint32 firstLayerIndex, uint32 numLayers, PIXEL_FORMAT format) : MipLevel(mipLevel), FirstLayerIndex(firstLayerIndex), NumLayers(numLayers), Format(format) {}
     GPU_RENDER_TARGET_VIEW_DESC(GPUTexture1D *pTexture, uint32 mipLevel = 0);
     GPU_RENDER_TARGET_VIEW_DESC(GPUTexture1DArray *pTexture, uint32 mipLevel = 0);
     GPU_RENDER_TARGET_VIEW_DESC(GPUTexture1DArray *pTexture, uint32 mipLevel, uint32 arrayIndex);
@@ -642,17 +642,18 @@ struct GPU_RENDER_TARGET_VIEW_DESC
     GPU_RENDER_TARGET_VIEW_DESC(GPUTextureCubeArray *pTexture, uint32 mipLevel, uint32 arrayIndex, CUBE_FACE faceIndex);
     GPU_RENDER_TARGET_VIEW_DESC(GPUDepthTexture *pTexture);
 
-    void Set(uint32 mipLevel, uint32 firstLayerIndex, uint32 numLayers) { MipLevel = mipLevel; FirstLayerIndex = firstLayerIndex; NumLayers = numLayers; }
+    void Set(uint32 mipLevel, uint32 firstLayerIndex, uint32 numLayers, PIXEL_FORMAT format) { MipLevel = mipLevel; FirstLayerIndex = firstLayerIndex; NumLayers = numLayers; Format = format; }
 
     uint32 MipLevel;
     uint32 FirstLayerIndex;
     uint32 NumLayers;
+    PIXEL_FORMAT Format;
 };
 
 struct GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC
 {
     GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC() {}
-    GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(uint32 mipLevel, uint32 firstLayerIndex, uint32 numLayers) : MipLevel(mipLevel), FirstLayerIndex(firstLayerIndex), NumLayers(numLayers) {}
+    GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(uint32 mipLevel, uint32 firstLayerIndex, uint32 numLayers, PIXEL_FORMAT format) : MipLevel(mipLevel), FirstLayerIndex(firstLayerIndex), NumLayers(numLayers), Format(format) {}
     GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUTexture2D *pTexture, uint32 mipLevel = 0);
     GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUTexture2DArray *pTexture, uint32 mipLevel = 0);
     GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUTexture2DArray *pTexture, uint32 mipLevel, uint32 arrayIndex);
@@ -662,11 +663,12 @@ struct GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC
     GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUTextureCubeArray *pTexture, uint32 mipLevel, uint32 arrayIndex, CUBE_FACE faceIndex);
     GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC(GPUDepthTexture *pTexture);
     
-    void Set(uint32 mipLevel, uint32 firstLayerIndex, uint32 numLayers) { MipLevel = mipLevel; FirstLayerIndex = firstLayerIndex; NumLayers = numLayers; }
+    void Set(uint32 mipLevel, uint32 firstLayerIndex, uint32 numLayers, PIXEL_FORMAT format) { MipLevel = mipLevel; FirstLayerIndex = firstLayerIndex; NumLayers = numLayers; Format = format; }
 
     uint32 MipLevel;
     uint32 FirstLayerIndex;
     uint32 NumLayers;
+    PIXEL_FORMAT Format;
 };
 
 struct GPU_COMPUTE_VIEW_DESC

@@ -815,6 +815,13 @@ void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
 
     // the transition back can happen later (as long as it happens before the command list is re-used...)
     ResourceBarrier(m_pCurrentSwapChain->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+    // update the new backbuffer for the swap chain
+    m_pCurrentSwapChain->UpdateCurrentBackBuffer();
+
+    // if we were bound to the pipeline, switch to the new backbuffer
+    if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
+        SynchronizeRenderTargetsAndUAVs();
 }
 
 uint32 D3D12GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)
@@ -841,7 +848,7 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
     if ((nRenderTargets == 0 || (nRenderTargets == 1 && ppRenderTargets[0] == nullptr)) && pDepthBufferView == nullptr)
     {
         // change?
-        if (m_nCurrentRenderTargets == 0 && pDepthBufferView == nullptr)
+        if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
             return;
 
         // kill current targets

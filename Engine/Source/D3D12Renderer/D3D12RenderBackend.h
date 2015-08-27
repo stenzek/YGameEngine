@@ -8,7 +8,7 @@ public:
     struct ConstantBufferStorage
     {
         ID3D12Resource *pResource;
-        D3D12DescriptorHeap::Handle DescriptorHandle;
+        D3D12DescriptorHandle DescriptorHandle;
         uint32 Size;
     };
 
@@ -30,15 +30,15 @@ public:
 
     // constant buffer management
     ID3D12Resource *GetConstantBufferResource(uint32 index);
-    const D3D12DescriptorHeap::Handle *GetConstantBufferDescriptor(uint32 index) const;
+    const D3D12DescriptorHandle *GetConstantBufferDescriptor(uint32 index) const;
 
     // resource cleanup
     uint64 GetCurrentCleanupFenceValue() const { return m_currentCleanupFenceValue; }
     void SetCleanupFenceValue(uint64 fenceValue) { m_currentCleanupFenceValue = fenceValue; }
     void ScheduleResourceForDeletion(ID3D12Pageable *pResource);
     void ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint64 fenceValue);
-    void ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle);
-    void ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle, uint64 fenceValue);
+    void ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle);
+    void ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle, uint64 fenceValue);
     void DeletePendingResources(uint64 fenceValue);
 
     // creation
@@ -95,7 +95,7 @@ private:
     struct PendingDeletionDescriptor
     {
         D3D12_DESCRIPTOR_HEAP_TYPE Type;
-        D3D12DescriptorHeap::Handle Handle;
+        D3D12DescriptorHandle Handle;
         uint64 FenceValue;
     };
     MemArray<PendingDeletionResource> m_pendingDeletionResources;

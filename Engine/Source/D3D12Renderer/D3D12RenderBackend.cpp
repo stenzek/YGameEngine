@@ -448,7 +448,7 @@ ID3D12Resource *D3D12RenderBackend::GetConstantBufferResource(uint32 index)
     return m_constantBufferStorage[index].pResource;
 }
 
-const D3D12DescriptorHeap::Handle *D3D12RenderBackend::GetConstantBufferDescriptor(uint32 index) const
+const D3D12DescriptorHandle *D3D12RenderBackend::GetConstantBufferDescriptor(uint32 index) const
 {
     DebugAssert(index < m_constantBufferStorage.GetSize());
     return (m_constantBufferStorage[index].pResource != nullptr) ? &m_constantBufferStorage[index].DescriptorHandle : nullptr;
@@ -470,12 +470,12 @@ void D3D12RenderBackend::ScheduleResourceForDeletion(ID3D12Pageable *pResource, 
     m_pendingDeletionLock.Unlock();
 }
 
-void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle)
+void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle)
 {
     ScheduleDescriptorForDeletion(handle, m_currentCleanupFenceValue);
 }
 
-void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)
+void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)
 {
     PendingDeletionDescriptor pdr;
     pdr.Handle = handle;

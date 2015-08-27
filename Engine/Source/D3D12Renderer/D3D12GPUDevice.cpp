@@ -193,7 +193,7 @@ static const D3D12_COMPARISON_FUNC s_D3D12ComparisonFuncs[GPU_COMPARISON_FUNC_CO
     D3D12_COMPARISON_FUNC_ALWAYS,            // RENDERER_COMPARISON_FUNC_ALWAYS
 };
 
-D3D12GPUSamplerState::D3D12GPUSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const D3D12DescriptorHeap::Handle &samplerHandle)
+D3D12GPUSamplerState::D3D12GPUSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const D3D12DescriptorHandle &samplerHandle)
     : GPUSamplerState(pSamplerStateDesc)
     , m_samplerHandle(samplerHandle)
 {
@@ -226,7 +226,7 @@ GPUSamplerState *D3D12GPUDevice::CreateSamplerState(const GPU_SAMPLER_STATE_DESC
     }
 
     // allocate a descriptor
-    D3D12DescriptorHeap::Handle descriptorHandle;
+    D3D12DescriptorHandle descriptorHandle;
     if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&descriptorHandle))
     {
         Log_ErrorPrintf("Failed to allocate descriptor handle");

@@ -39,7 +39,7 @@ D3D12DescriptorHeap *D3D12DescriptorHeap::Create(ID3D12Device *pDevice, D3D12_DE
     return new D3D12DescriptorHeap(type, descriptorCount, pD3DDescriptorHeap, incrementSize);
 }
 
-bool D3D12DescriptorHeap::Allocate(Handle *handle)
+bool D3D12DescriptorHeap::Allocate(D3D12DescriptorHandle *handle)
 {
     m_mutex.Lock();
 
@@ -65,7 +65,7 @@ bool D3D12DescriptorHeap::Allocate(Handle *handle)
     return true;
 }
 
-bool D3D12DescriptorHeap::AllocateRange(uint32 count, Handle *handle)
+bool D3D12DescriptorHeap::AllocateRange(uint32 count, D3D12DescriptorHandle *handle)
 {
     m_mutex.Lock();
 
@@ -92,7 +92,7 @@ bool D3D12DescriptorHeap::AllocateRange(uint32 count, Handle *handle)
     return true;
 }
 
-void D3D12DescriptorHeap::Free(Handle &handle)
+void D3D12DescriptorHeap::Free(D3D12DescriptorHandle &handle)
 {
     // free empty handle?
     if (handle.DescriptorCount == 0)
@@ -114,14 +114,14 @@ void D3D12DescriptorHeap::Free(Handle &handle)
     handle.Clear();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::Handle::GetOffsetCPUHandle(uint32 index) const
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorHandle::GetOffsetCPUHandle(uint32 index) const
 {
     D3D12_CPU_DESCRIPTOR_HANDLE handle = CPUHandle;
     handle.ptr += IncrementSize * index;
     return handle;
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::Handle::GetOffsetGPUHandle(uint32 index) const
+D3D12_GPU_DESCRIPTOR_HANDLE D3D12DescriptorHandle::GetOffsetGPUHandle(uint32 index) const
 {
     D3D12_GPU_DESCRIPTOR_HANDLE handle = GPUHandle;
     handle.ptr += IncrementSize * index;

@@ -79,7 +79,7 @@ bool D3D12GPUContext::WriteTexture(GPUTexture1DArray *pTexture, const void *pSou
     return false;
 }
 
-D3D12GPUTexture2D::D3D12GPUTexture2D(const GPU_TEXTURE2D_DESC *pDesc, ID3D12Resource *pD3DResource, const D3D12DescriptorHeap::Handle &srvHandle, const D3D12DescriptorHeap::Handle &samplerHandle, D3D12_RESOURCE_STATES defaultResourceState)
+D3D12GPUTexture2D::D3D12GPUTexture2D(const GPU_TEXTURE2D_DESC *pDesc, ID3D12Resource *pD3DResource, const D3D12DescriptorHandle &srvHandle, const D3D12DescriptorHandle &samplerHandle, D3D12_RESOURCE_STATES defaultResourceState)
     : GPUTexture2D(pDesc)
     , m_pD3DResource(pD3DResource)
     , m_srvHandle(srvHandle)
@@ -184,7 +184,7 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
     }
 
     // create SRV
-    D3D12DescriptorHeap::Handle srvHandle;
+    D3D12DescriptorHandle srvHandle;
     if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_SHADER_BINDABLE)
     {
         // allocate a descriptor
@@ -204,7 +204,7 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
     }
 
     // create sampler state
-    D3D12DescriptorHeap::Handle samplerHandle;
+    D3D12DescriptorHandle samplerHandle;
     if (pSamplerStateDesc != nullptr)
     {
         // fill the descriptor
@@ -383,7 +383,7 @@ bool D3D12GPUContext::WriteTexture(GPUDepthTexture *pTexture, const void *pSourc
     return false;
 }
 
-D3D12GPURenderTargetView::D3D12GPURenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc, const D3D12DescriptorHeap::Handle &descriptorHandle, ID3D12Resource *pD3DResource)
+D3D12GPURenderTargetView::D3D12GPURenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource)
     : GPURenderTargetView(pTexture, pDesc)
     , m_descriptorHandle(descriptorHandle)
     , m_pD3DResource(pD3DResource)
@@ -507,7 +507,7 @@ GPURenderTargetView *D3D12GPUDevice::CreateRenderTargetView(GPUTexture *pTexture
     }
 
     // allocate handle
-    D3D12DescriptorHeap::Handle handle;
+    D3D12DescriptorHandle handle;
     if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Allocate(&handle))
     {
         Log_ErrorPrintf("D3D12GPUDevice::CreateRenderTargetView: Failed to allocate descriptor.");
@@ -519,7 +519,7 @@ GPURenderTargetView *D3D12GPUDevice::CreateRenderTargetView(GPUTexture *pTexture
     return new D3D12GPURenderTargetView(pTexture, pDesc, handle, pD3DResource);
 }
 
-D3D12GPUDepthStencilBufferView::D3D12GPUDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc, const D3D12DescriptorHeap::Handle &descriptorHandle, ID3D12Resource *pD3DResource)
+D3D12GPUDepthStencilBufferView::D3D12GPUDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource)
     : GPUDepthStencilBufferView(pTexture, pDesc)
     , m_descriptorHandle(descriptorHandle)
     , m_pD3DResource(pD3DResource)
@@ -645,7 +645,7 @@ GPUDepthStencilBufferView *D3D12GPUDevice::CreateDepthStencilBufferView(GPUTextu
     }
 
     // allocate handle
-    D3D12DescriptorHeap::Handle handle;
+    D3D12DescriptorHandle handle;
     if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Allocate(&handle))
     {
         Log_ErrorPrintf("D3D12GPUDevice::CreateRenderTargetView: Failed to allocate descriptor.");
@@ -657,7 +657,7 @@ GPUDepthStencilBufferView *D3D12GPUDevice::CreateDepthStencilBufferView(GPUTextu
     return new D3D12GPUDepthStencilBufferView(pTexture, pDesc, handle, pD3DResource);
 }
 
-D3D12GPUComputeView::D3D12GPUComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc, const D3D12DescriptorHeap::Handle &descriptorHandle, ID3D12Resource *pD3DResource)
+D3D12GPUComputeView::D3D12GPUComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource)
     : GPUComputeView(pResource, pDesc)
     , m_descriptorHandle(descriptorHandle)
     , m_pD3DResource(pD3DResource)

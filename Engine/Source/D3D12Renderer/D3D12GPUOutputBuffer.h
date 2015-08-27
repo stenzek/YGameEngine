@@ -55,6 +55,6 @@ private:
     PODArray<ID3D12Resource *> m_backBuffers;
     ID3D12Resource *m_pDepthStencilBuffer;
 
-    D3D12DescriptorHeap::Handle m_renderTargetViewsDescriptorStart;
-    D3D12DescriptorHeap::Handle m_depthStencilViewDescriptor;
+    D3D12DescriptorHandle m_renderTargetViewsDescriptorStart;
+    D3D12DescriptorHandle m_depthStencilViewDescriptor;
 };

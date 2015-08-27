@@ -5,16 +5,16 @@
 class D3D12GPUSamplerState : public GPUSamplerState
 {
 public:
-    D3D12GPUSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const D3D12DescriptorHeap::Handle &samplerHandle);
+    D3D12GPUSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const D3D12DescriptorHandle &samplerHandle);
     virtual ~D3D12GPUSamplerState();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
     virtual void SetDebugName(const char *name) override;
 
-    const D3D12DescriptorHeap::Handle &GetSamplerHandle() { return m_samplerHandle; }
+    const D3D12DescriptorHandle &GetSamplerHandle() { return m_samplerHandle; }
 
 private:
-    D3D12DescriptorHeap::Handle m_samplerHandle;
+    D3D12DescriptorHandle m_samplerHandle;
 };
 
 class D3D12GPURasterizerState : public GPURasterizerState

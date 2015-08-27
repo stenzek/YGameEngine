@@ -1002,7 +1002,6 @@ void D3D12GPUContext::SetDrawTopology(DRAW_TOPOLOGY topology)
 
 uint32 D3D12GPUContext::GetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUBuffer **ppVertexBuffers, uint32 *pVertexBufferOffsets, uint32 *pVertexBufferStrides)
 {
-#if 0
     DebugAssert(firstBuffer + nBuffers < countof(m_pCurrentVertexBuffers));
 
     uint32 saveCount;
@@ -1017,16 +1016,11 @@ uint32 D3D12GPUContext::GetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GP
     }
 
     return saveCount;
-#endif
-    return 0;
 }
 
 void D3D12GPUContext::SetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUBuffer *const *ppVertexBuffers, const uint32 *pVertexBufferOffsets, const uint32 *pVertexBufferStrides)
 {
-#if 0
-    ID3D12Buffer *pD3DBuffers[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
-    UINT D3DBufferOffsets[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
-    UINT D3DBufferStrides[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferViews[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
 
     for (uint32 i = 0; i < nBuffers; i++)
     {
@@ -1045,23 +1039,23 @@ void D3D12GPUContext::SetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUB
             m_currentVertexBufferOffsets[bufferIndex] = pVertexBufferOffsets[i];
             m_currentVertexBufferStrides[bufferIndex] = pVertexBufferStrides[i];
 
-            pD3DBuffers[i] = pD3D12VertexBuffer->GetD3DBuffer();
-            D3DBufferOffsets[i] = pVertexBufferOffsets[i];
-            D3DBufferStrides[i] = pVertexBufferStrides[i];
+            // @TODO cache this address, save virtual call?
+            DebugAssert(pVertexBufferOffsets[i] < pD3D12VertexBuffer->GetDesc()->Size);
+            vertexBufferViews[i].BufferLocation = pD3D12VertexBuffer->GetD3DResource()->GetGPUVirtualAddress();
+            vertexBufferViews[i].SizeInBytes = pD3D12VertexBuffer->GetDesc()->Size - pVertexBufferOffsets[i];
+            vertexBufferViews[i].StrideInBytes = pVertexBufferStrides[i];
         }
         else
         {
             m_currentVertexBufferOffsets[bufferIndex] = 0;
             m_currentVertexBufferStrides[bufferIndex] = 0;
-
-            pD3DBuffers[i] = nullptr;
-            D3DBufferOffsets[i] = 0;
-            D3DBufferStrides[i] = 0;
+            Y_memzero(&vertexBufferViews[i], sizeof(vertexBufferViews[0]));
         }
     }
 
-    // todo: pending set
-    m_pD3DContext->IASetVertexBuffers(firstBuffer, nBuffers, pD3DBuffers, D3DBufferStrides, D3DBufferOffsets);
+    // pass to command list
+    // @TODO may be worth batching this to a dirty range?
+    m_pCurrentCommandList->IASetVertexBuffers(firstBuffer, nBuffers, vertexBufferViews);
 
     // update new bind count
     uint32 bindCount = 0;
@@ -1072,12 +1066,10 @@ void D3D12GPUContext::SetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUB
             bindCount = i + 1;
     }
     m_currentVertexBufferBindCount = bindCount;
-#endif
 }
 
 void D3D12GPUContext::SetVertexBuffer(uint32 bufferIndex, GPUBuffer *pVertexBuffer, uint32 offset, uint32 stride)
 {
-#if 0
     if (m_pCurrentVertexBuffers[bufferIndex] == pVertexBuffer &&
         m_currentVertexBufferOffsets[bufferIndex] == offset &&
         m_currentVertexBufferStrides[bufferIndex] == stride)
@@ -1097,11 +1089,20 @@ void D3D12GPUContext::SetVertexBuffer(uint32 bufferIndex, GPUBuffer *pVertexBuff
     m_currentVertexBufferOffsets[bufferIndex] = offset;
     m_currentVertexBufferStrides[bufferIndex] = stride;
 
-    // todo: pending set
-    ID3D12Buffer *pD3DBuffer = (pVertexBuffer != nullptr) ? static_cast<D3D12GPUBuffer *>(pVertexBuffer)->GetD3DBuffer() : nullptr;
-    UINT D3DOffset = (pVertexBuffer != nullptr) ? offset : 0;
-    UINT D3DStride = (pVertexBuffer != nullptr) ? stride : 0;
-    m_pD3DContext->IASetVertexBuffers(bufferIndex, 1, &pD3DBuffer, &D3DStride, &D3DOffset);
+    // set in command list
+    if (m_pCurrentVertexBuffers[bufferIndex] != nullptr)
+    {
+        D3D12_VERTEX_BUFFER_VIEW bufferView;
+        DebugAssert(offset < m_pCurrentVertexBuffers[bufferIndex]->GetDesc()->Size);
+        bufferView.BufferLocation = m_pCurrentVertexBuffers[bufferIndex]->GetD3DResource()->GetGPUVirtualAddress();
+        bufferView.SizeInBytes = m_pCurrentVertexBuffers[bufferIndex]->GetDesc()->Size - offset;
+        bufferView.StrideInBytes = stride;
+        m_pCurrentCommandList->IASetVertexBuffers(bufferIndex, 1, &bufferView);
+    }
+    else
+    {
+        m_pCurrentCommandList->IASetVertexBuffers(bufferIndex, 1, nullptr);
+    }
 
     // update new bind count
     uint32 bindCount = 0;
@@ -1112,41 +1113,45 @@ void D3D12GPUContext::SetVertexBuffer(uint32 bufferIndex, GPUBuffer *pVertexBuff
             bindCount = i + 1;
     }
     m_currentVertexBufferBindCount = bindCount;
-#endif
 }
 
 void D3D12GPUContext::GetIndexBuffer(GPUBuffer **ppBuffer, GPU_INDEX_FORMAT *pFormat, uint32 *pOffset)
 {
-#if 0
     *ppBuffer = m_pCurrentIndexBuffer;
     *pFormat = m_currentIndexFormat;
     *pOffset = m_currentIndexBufferOffset;
-#endif
 }
 
 void D3D12GPUContext::SetIndexBuffer(GPUBuffer *pBuffer, GPU_INDEX_FORMAT format, uint32 offset)
 {
-#if 0
     if (m_pCurrentIndexBuffer == pBuffer && m_currentIndexFormat == format && m_currentIndexBufferOffset == offset)
         return;
 
     if (m_pCurrentIndexBuffer != pBuffer)
     {
-        if (m_pCurrentIndexBuffer != NULL)
+        if (m_pCurrentIndexBuffer != nullptr)
             m_pCurrentIndexBuffer->Release();
 
-        if ((m_pCurrentIndexBuffer = static_cast<D3D12GPUBuffer *>(pBuffer)) != NULL)
+        if ((m_pCurrentIndexBuffer = static_cast<D3D12GPUBuffer *>(pBuffer)) != nullptr)
             m_pCurrentIndexBuffer->AddRef();
     }
 
     m_currentIndexFormat = format;
     m_currentIndexBufferOffset = offset;
 
-    if (m_pCurrentIndexBuffer != NULL)
-        m_pD3DContext->IASetIndexBuffer(m_pCurrentIndexBuffer->GetD3DBuffer(), (format == GPU_INDEX_FORMAT_UINT16) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, m_currentIndexBufferOffset);
+    if (m_pCurrentIndexBuffer != nullptr)
+    {
+        D3D12_INDEX_BUFFER_VIEW bufferView;
+        DebugAssert(offset < m_pCurrentIndexBuffer->GetDesc()->Size);
+        bufferView.BufferLocation = m_pCurrentIndexBuffer->GetD3DResource()->GetGPUVirtualAddress();
+        bufferView.SizeInBytes = m_pCurrentIndexBuffer->GetDesc()->Size - offset;
+        bufferView.Format = (format == GPU_INDEX_FORMAT_UINT16) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
+        m_pCurrentCommandList->IASetIndexBuffer(&bufferView);
+    }
     else
-        m_pD3DContext->IASetIndexBuffer(NULL, DXGI_FORMAT_R16_UINT, 0);
-#endif
+    {
+        m_pCurrentCommandList->IASetIndexBuffer(nullptr);
+    }
 }
 
 void D3D12GPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)

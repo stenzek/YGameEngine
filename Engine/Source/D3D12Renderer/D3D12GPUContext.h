@@ -148,6 +148,7 @@ public:
     void SetShaderUAVs(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
 
     // synchronize the states with the d3d context
+    void SynchronizeVertexBuffers();
     void SynchronizeRenderTargetsAndUAVs();
 
     // temporarily disable predication to force a call to go through

@@ -92,26 +92,26 @@ bool D3D12DescriptorHeap::AllocateRange(uint32 count, Handle *handle)
     return true;
 }
 
-void D3D12DescriptorHeap::Free(Handle *handle)
+void D3D12DescriptorHeap::Free(Handle &handle)
 {
     // free empty handle?
-    if (handle->DescriptorCount == 0)
+    if (handle.DescriptorCount == 0)
         return;
 
     // @TODO sanity check handle is correct offset and hasn't been corrupted
-    uint32 startIndex = handle->StartIndex;
+    uint32 startIndex = handle.StartIndex;
     DebugAssert(startIndex < m_descriptorCount);
 
     m_mutex.Lock();
-    for (uint32 i = 0; i < handle->DescriptorCount; i++)
+    for (uint32 i = 0; i < handle.DescriptorCount; i++)
     {
-        DebugAssert(m_allocationMap.TestBit(handle->StartIndex + i));
-        m_allocationMap.UnsetBit(handle->StartIndex + i);
+        DebugAssert(m_allocationMap.TestBit(handle.StartIndex + i));
+        m_allocationMap.UnsetBit(handle.StartIndex + i);
     }
     m_mutex.Unlock();
 
     // wipe handle
-    handle->Clear();
+    handle.Clear();
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::Handle::GetOffsetCPUHandle(uint32 index) const

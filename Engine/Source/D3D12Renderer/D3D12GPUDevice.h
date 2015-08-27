@@ -1,19 +1,20 @@
 #pragma once
 #include "D3D12Renderer/D3D12Common.h"
+#include "D3D12Renderer/D3D12DescriptorHeap.h"
 
 class D3D12GPUSamplerState : public GPUSamplerState
 {
 public:
-    D3D12GPUSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const D3D12_SAMPLER_DESC *pD3DSamplerDesc);
+    D3D12GPUSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const D3D12DescriptorHeap::Handle &samplerHandle);
     virtual ~D3D12GPUSamplerState();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
     virtual void SetDebugName(const char *name) override;
 
-    const D3D12_SAMPLER_DESC *GetD3DSamplerStateDesc() { return &m_D3DSamplerStateDesc; }
+    const D3D12DescriptorHeap::Handle &GetSamplerHandle() { return m_samplerHandle; }
 
 private:
-    D3D12_SAMPLER_DESC m_D3DSamplerStateDesc;
+    D3D12DescriptorHeap::Handle m_samplerHandle;
 };
 
 class D3D12GPURasterizerState : public GPURasterizerState

@@ -465,10 +465,10 @@ void D3D12RenderBackend::ScheduleResourceForDeletion(ID3D12Pageable *pResource, 
     m_pendingDeletionLock.Unlock();
 }
 
-void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle *pHandle, uint32 frameNumber /*= g_pRenderer->GetFrameNumber()*/)
+void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle, uint32 frameNumber /*= g_pRenderer->GetFrameNumber()*/)
 {
     PendingDeletionDescriptor pdr;
-    pdr.Handle = *pHandle;
+    pdr.Handle = handle;
     pdr.FrameNumber = frameNumber;
 
     m_pendingDeletionLock.Lock();
@@ -502,7 +502,7 @@ void D3D12RenderBackend::DeletePendingResources(uint32 frameNumber)
         }
 
         DebugAssert(desc.Type < countof(m_pDescriptorHeaps));
-        m_pDescriptorHeaps[desc.Type]->Free(&desc.Handle);
+        m_pDescriptorHeaps[desc.Type]->Free(desc.Handle);
         m_pendingDeletionResources.FastRemove(i);
     }
 

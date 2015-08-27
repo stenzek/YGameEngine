@@ -22,6 +22,7 @@ public:
         // Helper functions
         D3D12_CPU_DESCRIPTOR_HANDLE GetOffsetCPUHandle(uint32 index) const;
         D3D12_GPU_DESCRIPTOR_HANDLE GetOffsetGPUHandle(uint32 index) const;
+        bool IsNull() const { return (DescriptorCount == 0); }
 
         // Get this handle
         operator D3D12_CPU_DESCRIPTOR_HANDLE () const { return CPUHandle; }
@@ -35,7 +36,7 @@ public:
 
     bool Allocate(Handle *handle);
     bool AllocateRange(uint32 count, Handle *handle);
-    void Free(Handle *handle);
+    void Free(Handle &handle);
 
 private:
     D3D12DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 descriptorCount, ID3D12DescriptorHeap *pD3DDescriptorHeap, uint32 incrementSize);

@@ -34,7 +34,7 @@ public:
 
     // resource cleanup
     void ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint32 frameNumber = g_pRenderer->GetFrameNumber());
-    void ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle *pHandle, uint32 frameNumber = g_pRenderer->GetFrameNumber());
+    void ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle, uint32 frameNumber = g_pRenderer->GetFrameNumber());
     void DeletePendingResources(uint32 frameNumber);
 
     // creation

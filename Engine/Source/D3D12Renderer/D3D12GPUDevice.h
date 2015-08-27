@@ -111,6 +111,10 @@ public:
     bool CreateOffThreadResources();
     void FlushCopyQueue();
 
+    // create a resource barrier on the current command list. NOTE: doesn't flush the copy command list, assumes batching
+    void ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
+    void ResourceBarrier(ID3D12Resource *pResource, uint32 subResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
+
 private:
     D3D12RenderBackend *m_pBackend;
     IDXGIFactory3 *m_pDXGIFactory;

@@ -2,15 +2,14 @@
 #include "D3D12Renderer/D3D12GPUBuffer.h"
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUContext.h"
+#include "D3D12Renderer/D3D12RenderBackend.h"
 Log_SetChannel(D3D12RenderBackend);
 
-D3D12GPUBuffer::D3D12GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, ID3D12Resource *pD3DResource, ID3D12Resource *pD3DReadBackResource, ID3D12Resource *pD3DStagingResource)
+D3D12GPUBuffer::D3D12GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, ID3D12Resource *pD3DResource, D3D12_RESOURCE_STATES defaultResourceState)
     : GPUBuffer(pBufferDesc)
     , m_pD3DResource(pD3DResource)
-    , m_pD3DReadBackResource(pD3DReadBackResource)
-    , m_pD3DStagingResource(pD3DStagingResource)
-    , m_pMappedContext(nullptr)
-    , m_pMappedPointer(nullptr)
+    , m_pD3DMapResource(nullptr)
+    , m_defaultResourceState(defaultResourceState)
 {
     // @TODO virtual call bad here, should just adjust the counter directly.
     g_pRenderer->GetStats()->OnResourceCreated(this);
@@ -20,9 +19,7 @@ D3D12GPUBuffer::~D3D12GPUBuffer()
 {
     g_pRenderer->GetStats()->OnResourceDeleted(this);
 
-    DebugAssert(m_pMappedContext == nullptr);
-    SAFE_RELEASE(m_pD3DReadBackResource);
-    SAFE_RELEASE(m_pD3DStagingResource);
+    DebugAssert(m_pD3DMapResource == nullptr);
     SAFE_RELEASE(m_pD3DResource);
 }
 
@@ -38,40 +35,49 @@ void D3D12GPUBuffer::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsa
 void D3D12GPUBuffer::SetDebugName(const char *debugName)
 {
     D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DResource, debugName);
-
-    if (m_pD3DReadBackResource != nullptr)
-        D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DReadBackResource, SmallString::FromFormat("%s_STAGING", debugName));
-
-    if (m_pD3DStagingResource != nullptr)
-        D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DStagingResource, SmallString::FromFormat("%s_STAGING", debugName));
 }
 
 GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /* = NULL */)
 {
+    // work out the default resource state
+    D3D12_RESOURCE_STATES defaultResourceState = D3D12_RESOURCE_STATE_COMMON;
+    if (pDesc->Flags & (GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_BIND_VERTEX_BUFFER))
+        defaultResourceState |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+    if (pDesc->Flags & GPU_BUFFER_FLAG_BIND_INDEX_BUFFER)
+        defaultResourceState |= D3D12_RESOURCE_STATE_INDEX_BUFFER;
+
+    // initial resource state
+    D3D12_RESOURCE_STATES initialResourceState = defaultResourceState;
+    if (pInitialData != nullptr)
+        initialResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+
     // create main resource
     ID3D12Resource *pResource;
     D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
     D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, pDesc->Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
-    HRESULT hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pResource));
+    HRESULT hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resourceDesc, initialResourceState, nullptr, IID_PPV_ARGS(&pResource));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateCommitedResource for main resource failed with hResult %08X", hResult);
         return false;
     }
 
-    // create upload resource
+    // create instance
+    D3D12GPUBuffer *pBuffer = new D3D12GPUBuffer(pDesc, pResource, defaultResourceState);
+
+    // handle uploads
     if (pInitialData != nullptr)
     {
-        ID3D12Resource *pUploadResource;
-        D3D12_HEAP_PROPERTIES uploadHeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
-        D3D12_RESOURCE_DESC uploadResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, pDesc->Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN,{ 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE };
-        hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resourceDesc, D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr, IID_PPV_ARGS(&pUploadResource));
-        if (FAILED(hResult))
+        // create an upload resource
+        ID3D12Resource *pUploadResource = pBuffer->CreateUploadResource(m_pD3DDevice, pDesc->Size);
+        if (pUploadResource == nullptr)
         {
-            Log_ErrorPrintf("CreateCommitedResource for upload resource failed with hResult %08X", hResult);
-            pResource->Release();
-            return false;
+            pBuffer->Release();
+            return nullptr;
         }
+
+        // batch this stuff together when off-thread
+        BeginResourceBatchUpload();
 
         // map the upload resource
         D3D12_RANGE mapRange = { 0, pDesc->Size - 1 };
@@ -89,149 +95,228 @@ GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
         Y_memcpy(pMappedPointer, pInitialData, pDesc->Size);
         pUploadResource->Unmap(0, &mapRange);
 
-        // add to copy command queue
+        // copy from the upload buffer to the real buffer
         GetCommandList()->CopyBufferRegion(pResource, 0, pUploadResource, 0, pDesc->Size);
-        FlushCopyQueue();
+
+        // transition to the real resource state
+        ResourceBarrier(pResource, D3D12_RESOURCE_STATE_COPY_DEST, defaultResourceState);
+
+        // flush copy queue
+        EndResourceBatchUpload();
         ScheduleUploadResourceDeletion(pUploadResource);
     }
 
-    // create readback resource
-    ID3D12Resource *pReadBackResource = nullptr;
-    if (pDesc->Flags & GPU_BUFFER_FLAG_READABLE)
+    // done, return the pointer from before
+    return pBuffer;
+}
+
+ID3D12Resource *D3D12GPUBuffer::CreateUploadResource(ID3D12Device *pD3DDevice, uint32 size) const
+{
+    ID3D12Resource *pResource;
+    D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
+    D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE };
+    HRESULT hResult = pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resourceDesc, D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr, IID_PPV_ARGS(&pResource));
+    if (FAILED(hResult))
     {
-        // @TODO
+        Log_ErrorPrintf("CreateCommitedResource for upload resource failed with hResult %08X", hResult);
+        return nullptr;
     }
 
-    // create staging resource (for mapping)
-    ID3D12Resource *pMappingResource = nullptr;
-    if (pDesc->Flags & GPU_BUFFER_FLAG_MAPPABLE)
+    return pResource;
+}
+
+ID3D12Resource *D3D12GPUBuffer::CreateReadbackResource(ID3D12Device *pD3DDevice, uint32 size) const
+{
+    ID3D12Resource *pResource;
+    D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_READBACK, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
+    D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE };
+    HRESULT hResult = pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pResource));
+    if (FAILED(hResult))
     {
-        // @TODO
+        Log_ErrorPrintf("CreateCommitedResource for readback resource failed with hResult %08X", hResult);
+        return nullptr;
     }
 
-    return new D3D12GPUBuffer(pDesc, pResource, pReadBackResource, pMappingResource);
+    return pResource;
 }
 
 bool D3D12GPUContext::ReadBuffer(GPUBuffer *pBuffer, void *pDestination, uint32 start, uint32 count)
 {
-#if 0
     D3D12GPUBuffer *pD3D12Buffer = static_cast<D3D12GPUBuffer *>(pBuffer);
-    DebugAssert((start + count) <= pD3D12Buffer->GetDesc()->Size);
-    DebugAssert(pD3D12Buffer->GetDesc()->Flags & GPU_BUFFER_FLAG_READABLE);
+    DebugAssert(count > 0 && (start + count) <= pD3D12Buffer->GetDesc()->Size);
 
-    // Copy from the GPU buffer to the staging buffer
-    bool fullCopy = (start == 0 && count == pBuffer->GetDesc()->Size);
-    if (fullCopy)
-    {
-        // as there isn't multiple mip levels we can copy the whole resource
-        m_pD3DContext->CopyResource(pD3D12Buffer->GetD3DStagingBuffer(), pD3D12Buffer->GetD3DBuffer());
-    }
-    else
-    {
-        // calculate box
-        D3D12_BOX box = { start, 0, 0, start + count, 1, 1 };
-        m_pD3DContext->CopySubresourceRegion(pD3D12Buffer->GetD3DStagingBuffer(), 0, 0, 0, 0, pD3D12Buffer->GetD3DBuffer(), 0, &box);
-    }
+    // create a readback buffer
+    ID3D12Resource *pReadbackBuffer = pD3D12Buffer->CreateReadbackResource(m_pD3DDevice, count);
+    if (pReadbackBuffer == nullptr)
+        return false;
 
-    // map the staging buffer into memory
-    D3D12_MAPPED_SUBRESOURCE mappedSubresource;
-    HRESULT hResult = m_pD3DContext->Map(pD3D12Buffer->GetD3DStagingBuffer(), 0, D3D12_MAP_READ, 0, &mappedSubresource);
+    // transition to copy state, and queue a copy to the readback buffer (the transition back is placed on the next command list)
+    ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+    m_pCurrentCommandList->CopyBufferRegion(pReadbackBuffer, 0, pD3D12Buffer->GetD3DResource(), start, count);
+
+    // flush + finish the command queue (slow!)
+    D3D12GPUContext::Finish();
+
+    // now we can transition back
+    ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, pD3D12Buffer->GetDefaultResourceState());
+
+    // map the readback buffer
+    D3D12_RANGE mapRange = { 0, count - 1 };
+    void *pMappedPointer;
+    HRESULT hResult = pReadbackBuffer->Map(0, &mapRange, &pMappedPointer);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D12GPUContext::ReadBuffer: Map of staging buffer failed with hResult %08X", hResult);
+        Log_ErrorPrintf("Failed to map readback buffer: %08X", hResult);
+        pReadbackBuffer->Release();
         return false;
     }
 
-    // copy into our memory
-    Y_memcpy(pDestination, mappedSubresource.pData, count);
-    m_pD3DContext->Unmap(pD3D12Buffer->GetD3DStagingBuffer(), 0);
+    // copy the contents over, and unmap the buffer
+    Y_memcpy(pDestination, pMappedPointer, count);
+    pReadbackBuffer->Unmap(0, &mapRange);
+    pReadbackBuffer->Release();
     return true;
-#endif
-
-    // @TODO slow path, as the command list has to be flushed.. but this will break our bindings. need to work out how to do this.
-    return false;
 }
 
 bool D3D12GPUContext::WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint32 start, uint32 count)
 {
-#if 0
     D3D12GPUBuffer *pD3D12Buffer = static_cast<D3D12GPUBuffer *>(pBuffer);
     DebugAssert(pD3D12Buffer->GetDesc()->Flags & GPU_BUFFER_FLAG_WRITABLE);
-    DebugAssert((start + count) <= pD3D12Buffer->GetDesc()->Size);
+    DebugAssert(count > 0 && (start + count) <= pD3D12Buffer->GetDesc()->Size);
 
-    bool fullCopy = (start == 0 && count == pBuffer->GetDesc()->Size);
-    if (pD3D12Buffer->GetDesc()->Flags & GPU_BUFFER_FLAG_MAPPABLE)
+    // can we use the scratch buffer?
+    if (count <= D3D12_BUFFER_WRITE_SCRATCH_BUFFER_THRESHOLD)
     {
-        // Have to use map
-        D3D12_MAPPED_SUBRESOURCE mappedSubresource;
-        HRESULT hResult = m_pD3DContext->Map(pD3D12Buffer->GetD3DBuffer(), 0, (fullCopy) ? D3D12_MAP_WRITE_DISCARD : D3D12_MAP_WRITE, 0, &mappedSubresource);
-        if (FAILED(hResult))
+        // allocate scratch buffer space
+        ID3D12Resource *pScratchBufferResource;
+        void *pScratchBufferCPUPointer;
+        uint32 scratchBufferOffset;
+        if (AllocateScratchBufferMemory(count, &pScratchBufferResource, &scratchBufferOffset, &pScratchBufferCPUPointer, nullptr))
         {
-            Log_ErrorPrintf("D3D12GPUContext::WriteBuffer: Map failed with HResult %08X", hResult);
-            return false;
+            // copy to scratch buffer
+            Y_memcpy(pScratchBufferCPUPointer, pSource, count);
+
+            // queue a copy from scratch buffer -> buffer
+            ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
+            m_pCurrentCommandList->CopyBufferRegion(pD3D12Buffer->GetD3DResource(), start, pScratchBufferResource, scratchBufferOffset, count);
+            ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
+            return true;
         }
 
-        // write and unmap
-        Y_memcpy(reinterpret_cast<byte *>(mappedSubresource.pData) + start, pSource, count);
-        m_pD3DContext->Unmap(pD3D12Buffer->GetD3DBuffer(), 0);
+        // failed to alloc
+        Log_WarningPrintf("Failed to allocate scratch buffer storage, falling back to slow path.");
     }
-    else
+
+    // allocate an upload buffer
+    ID3D12Resource *pUploadBuffer = pD3D12Buffer->CreateUploadResource(m_pD3DDevice, count);
+    if (pUploadBuffer == nullptr)
+        return false;
+
+    // map the upload buffer
+    D3D12_RANGE mapRange = { 0, count - 1 };
+    void *pMappedPointer;
+    HRESULT hResult = pUploadBuffer->Map(0, &mapRange, &pMappedPointer);
+    if (FAILED(hResult))
     {
-        // Use UpdateSubresource
-        if (fullCopy)
-        {
-            // whole buffer
-            m_pD3DContext->UpdateSubresource(pD3D12Buffer->GetD3DBuffer(), 0, NULL, pSource, 0, 0);
-        }
-        else
-        {
-            // partial buffer, use box
-            D3D12_BOX box = { start, 0, 0, start + count, 1, 1 };
-            m_pD3DContext->UpdateSubresource(pD3D12Buffer->GetD3DBuffer(), 0, &box, pSource, 0, 0);
-        }
+        Log_ErrorPrintf("Failed to map upload buffer: %08X", hResult);
+        pUploadBuffer->Release();
+        return false;
     }
+
+    // copy the contents over, and unmap the buffer
+    Y_memcpy(pMappedPointer, pSource, count);
+    pUploadBuffer->Unmap(0, &mapRange);
+
+    // transition to copy state, and queue a copy from the upload buffer
+    ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
+    m_pCurrentCommandList->CopyBufferRegion(pUploadBuffer, 0, pD3D12Buffer->GetD3DResource(), start, count);
+    ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
+
+    // release the upload buffer later
+    m_pBackend->ScheduleResourceForDeletion(pUploadBuffer);
     return true;
-#endif
-    
-    // @TODO if buffer size is smaller than a threshold, use the scratch buffer, otherwise the mapping buffer??
-    return false;
 }
 
 bool D3D12GPUContext::MapBuffer(GPUBuffer *pBuffer, GPU_MAP_TYPE mapType, void **ppPointer)
 {
-#if 0
     D3D12GPUBuffer *pD3D12Buffer = static_cast<D3D12GPUBuffer *>(pBuffer);
     DebugAssert(pD3D12Buffer->GetDesc()->Flags & GPU_BUFFER_FLAG_MAPPABLE);
-    DebugAssert(pD3D12Buffer->GetMappedContext() == NULL && pD3D12Buffer->GetMappedPointer() == NULL);
+    DebugAssert(pD3D12Buffer->GetMapResource() == nullptr);
 
-    D3D12_MAPPED_SUBRESOURCE mappedSubresource;
-    HRESULT hResult = m_pD3DContext->Map(pD3D12Buffer->GetD3DBuffer(), 0, D3D12TypeConversion::MapTypetoD3D12MapType(mapType), 0, &mappedSubresource);
+    // get buffer size
+    uint32 bufferSize = pD3D12Buffer->GetDesc()->Size;
+
+    // create a mapping buffer based on the initial state (read/write)
+    // @TODO handle WRITE_NO_OVERWRITE and optimizations for this case..
+    // @TODO use scratch buffer for small maps (this would need a mapbufferrange call though)
+    ID3D12Resource *pMapBuffer;
+    if (mapType == GPU_MAP_TYPE_READ || mapType == GPU_MAP_TYPE_READ_WRITE)
+    {
+        // create readback buffer
+        pMapBuffer = pD3D12Buffer->CreateReadbackResource(m_pD3DDevice, bufferSize);
+        if (pMapBuffer == nullptr)
+            return false;
+
+        // copy the contents from the gpu buffer to the readback buffer
+        ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+        m_pCurrentCommandList->CopyBufferRegion(pMapBuffer, 0, pD3D12Buffer->GetD3DResource(), 0, bufferSize);
+
+        // flush + finish the command queue (slow!)
+        D3D12GPUContext::Finish();
+
+        // now we can transition back
+        ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, pD3D12Buffer->GetDefaultResourceState());
+}
+    else
+    {
+        // write-only, so create upload buffer
+        pMapBuffer = pD3D12Buffer->CreateUploadResource(m_pD3DDevice, bufferSize);
+        if (pMapBuffer == nullptr)
+            return false;
+    }
+
+    // map the buffer
+    D3D12_RANGE mapRange = { 0, bufferSize - 1 };
+    HRESULT hResult = pMapBuffer->Map(0, &mapRange, ppPointer);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D12GPUContext::MapBuffer: Failed with HResult %08X", hResult);
+        Log_ErrorPrintf("Failed to map buffer: %08X", hResult);
+        pMapBuffer->Release();
         return false;
     }
 
-    pD3D12Buffer->SetMappedContextPointer(this, mappedSubresource.pData);
-    *ppPointer = mappedSubresource.pData;
+    // wait for the unmap call.
+    pD3D12Buffer->SetMapResource(pMapBuffer, mapType);
     return true;
-#endif
-    // @TODO use mapping buffer
-    // obviously sync issue here if the buffer is mapped twice before the buffer is done with
-    // maybe the best solution is to just create buffers on-demand? they're on the cpu, so
-    // allocation can't be *that* slow
-    return false;
 }
 
 void D3D12GPUContext::Unmapbuffer(GPUBuffer *pBuffer, void *pPointer)
 {
-#if 0
     D3D12GPUBuffer *pD3D12Buffer = static_cast<D3D12GPUBuffer *>(pBuffer);
     DebugAssert(pD3D12Buffer->GetDesc()->Flags & GPU_BUFFER_FLAG_MAPPABLE);
-    DebugAssert(pD3D12Buffer->GetMappedContext() == this && pD3D12Buffer->GetMappedPointer() == pPointer);
+    DebugAssert(pD3D12Buffer->GetMapResource() != nullptr);
 
-    m_pD3DContext->Unmap(pD3D12Buffer->GetD3DBuffer(), 0);
-    pD3D12Buffer->SetMappedContextPointer(NULL, NULL);
-#endif
+    // if we're in any write mode, we have to copy from the map buffer back to the gpu buffer
+    ID3D12Resource *pMapBuffer = pD3D12Buffer->GetMapResource();
+    GPU_MAP_TYPE mapMode = pD3D12Buffer->GetMapType();
+    if (mapMode == GPU_MAP_TYPE_READ_WRITE || mapMode == GPU_MAP_TYPE_WRITE || mapMode == GPU_MAP_TYPE_WRITE_DISCARD || mapMode == GPU_MAP_TYPE_WRITE_NO_OVERWRITE)
+    {
+        // read/write has to be transitioned
+        if (mapMode == GPU_MAP_TYPE_READ_WRITE)
+            ResourceBarrier(pMapBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COPY_SOURCE);
+
+        // copy to the gpu buffer
+        ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
+        m_pCurrentCommandList->CopyBufferRegion(pMapBuffer, 0, pD3D12Buffer->GetD3DResource(), 0, pD3D12Buffer->GetDesc()->Size);
+        ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
+
+        // have to wait until the gpu is finished with it before releasing the buffer
+        m_pBackend->ScheduleResourceForDeletion(pMapBuffer);
+    }
+    else
+    {
+        // this was only a read mapping, so we can just nuke the resource right now (the gpu won't touch it)
+        pMapBuffer->Release();
+    }
 }
 

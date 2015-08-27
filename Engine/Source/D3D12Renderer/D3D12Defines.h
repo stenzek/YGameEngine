@@ -21,4 +21,5 @@ namespace D3D12Helpers
     void SetD3D12DeviceChildDebugName(ID3D12DeviceChild *pDeviceChild, const char *debugName);
 }
 
-#define D3D12_CONSTANT_BUFFER_ALIGNMENT (65536)         // 64KiB
+#define D3D12_CONSTANT_BUFFER_ALIGNMENT (65536)             // 64KiB
+#define D3D12_BUFFER_WRITE_SCRATCH_BUFFER_THRESHOLD (1024)  // 1KiB

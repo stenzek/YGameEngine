@@ -166,17 +166,17 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         defaultResourceState |= D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
     // find the initial state
-    D3D12_RESOURCE_STATES createResourceState;
+    D3D12_RESOURCE_STATES initialResourceState;
     if (ppInitialData != nullptr)
-        createResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+        initialResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
     else
-        createResourceState = defaultResourceState;
+        initialResourceState = defaultResourceState;
 
     // create the texture resource
     ID3D12Resource *pD3DResource;
     D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
     D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, pTextureDesc->Width, pTextureDesc->Height, 1, (UINT16)pTextureDesc->MipLevels, creationFormat, { 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, resourceFlags };
-    hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, heapFlags, &resourceDesc, createResourceState, nullptr, IID_PPV_ARGS(&pD3DResource));
+    hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, heapFlags, &resourceDesc, initialResourceState, nullptr, IID_PPV_ARGS(&pD3DResource));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateCommittedResource failed with hResult %08X", hResult);
@@ -288,6 +288,9 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
             D3D12_TEXTURE_COPY_LOCATION destCopyLocation = { pUploadResource, D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, mipLevel };
             GetCommandList()->CopyTextureRegion(&destCopyLocation, 0, 0, 0, &sourceCopyLocation, nullptr);
         }
+
+        // transition to its real resource state
+        ResourceBarrier(pD3DResource, D3D12_RESOURCE_STATE_COPY_DEST, defaultResourceState);
 
         // done with the upload, and free the buffer
         EndResourceBatchUpload();

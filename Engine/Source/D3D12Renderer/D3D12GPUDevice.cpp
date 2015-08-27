@@ -158,6 +158,32 @@ void D3D12GPUDevice::FlushCopyQueue()
     m_offThreadUploadResources.Clear();
 }
 
+void D3D12GPUDevice::ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState)
+{
+    DebugAssert(m_offThreadCopyQueueEnabled || m_pGPUContext != nullptr);
+
+    D3D12_RESOURCE_BARRIER resourceBarrier =
+    {
+        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE,
+        { pResource, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, beforeState, afterState }
+    };
+
+    GetCommandList()->ResourceBarrier(1, &resourceBarrier);
+}
+
+void D3D12GPUDevice::ResourceBarrier(ID3D12Resource *pResource, uint32 subResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState)
+{
+    DebugAssert(m_offThreadCopyQueueEnabled ||  m_pGPUContext != nullptr);
+
+    D3D12_RESOURCE_BARRIER resourceBarrier =
+    {
+        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE,
+        { pResource, subResource, beforeState, afterState }
+    };
+
+    GetCommandList()->ResourceBarrier(1, &resourceBarrier);
+}
+
 ID3D12GraphicsCommandList *D3D12GPUDevice::GetCommandList()
 {
     return (m_pGPUContext != nullptr) ? m_pGPUContext->GetCurrentCommandList() : m_pOffThreadCommandList;

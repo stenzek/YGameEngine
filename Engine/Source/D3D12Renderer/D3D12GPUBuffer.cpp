@@ -20,7 +20,8 @@ D3D12GPUBuffer::~D3D12GPUBuffer()
     g_pRenderer->GetStats()->OnResourceDeleted(this);
 
     DebugAssert(m_pD3DMapResource == nullptr);
-    SAFE_RELEASE(m_pD3DResource);
+    
+    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(m_pD3DResource);
 }
 
 void D3D12GPUBuffer::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const

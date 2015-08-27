@@ -1041,7 +1041,7 @@ void D3D12GPUContext::SetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUB
 
             // @TODO cache this address, save virtual call?
             DebugAssert(pVertexBufferOffsets[i] < pD3D12VertexBuffer->GetDesc()->Size);
-            vertexBufferViews[i].BufferLocation = pD3D12VertexBuffer->GetD3DResource()->GetGPUVirtualAddress();
+            vertexBufferViews[i].BufferLocation = pD3D12VertexBuffer->GetD3DResource()->GetGPUVirtualAddress() + pVertexBufferOffsets[i];
             vertexBufferViews[i].SizeInBytes = pD3D12VertexBuffer->GetDesc()->Size - pVertexBufferOffsets[i];
             vertexBufferViews[i].StrideInBytes = pVertexBufferStrides[i];
         }
@@ -1094,7 +1094,7 @@ void D3D12GPUContext::SetVertexBuffer(uint32 bufferIndex, GPUBuffer *pVertexBuff
     {
         D3D12_VERTEX_BUFFER_VIEW bufferView;
         DebugAssert(offset < m_pCurrentVertexBuffers[bufferIndex]->GetDesc()->Size);
-        bufferView.BufferLocation = m_pCurrentVertexBuffers[bufferIndex]->GetD3DResource()->GetGPUVirtualAddress();
+        bufferView.BufferLocation = m_pCurrentVertexBuffers[bufferIndex]->GetD3DResource()->GetGPUVirtualAddress() + offset;
         bufferView.SizeInBytes = m_pCurrentVertexBuffers[bufferIndex]->GetDesc()->Size - offset;
         bufferView.StrideInBytes = stride;
         m_pCurrentCommandList->IASetVertexBuffers(bufferIndex, 1, &bufferView);
@@ -1143,7 +1143,7 @@ void D3D12GPUContext::SetIndexBuffer(GPUBuffer *pBuffer, GPU_INDEX_FORMAT format
     {
         D3D12_INDEX_BUFFER_VIEW bufferView;
         DebugAssert(offset < m_pCurrentIndexBuffer->GetDesc()->Size);
-        bufferView.BufferLocation = m_pCurrentIndexBuffer->GetD3DResource()->GetGPUVirtualAddress();
+        bufferView.BufferLocation = m_pCurrentIndexBuffer->GetD3DResource()->GetGPUVirtualAddress() + offset;
         bufferView.SizeInBytes = m_pCurrentIndexBuffer->GetDesc()->Size - offset;
         bufferView.Format = (format == GPU_INDEX_FORMAT_UINT16) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
         m_pCurrentCommandList->IASetIndexBuffer(&bufferView);
@@ -1597,79 +1597,45 @@ void D3D12GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCount
 
 void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices)
 {
+    if (!UpdatePipelineState())
+        return;
+
     // can use scratch buffer directly. NOTE: needs a resource barrier
-#if 0
-    const byte *pVerticesPtr = reinterpret_cast<const byte *>(pVertices);
-    uint32 remainingVertices = nVertices;
+    // this probably should use a threshold to go to an upload buffer..
+    uint32 bufferSpaceRequired = vertexSize * nVertices;
+    ID3D12Resource *pScratchBufferResource;
+    void *pScratchBufferCPUPointer;
+    D3D12_GPU_VIRTUAL_ADDRESS scratchBufferGPUPointer;
+    uint32 scratchBufferOffset;
+    if (!AllocateScratchBufferMemory(bufferSpaceRequired, &pScratchBufferResource, &scratchBufferOffset, &pScratchBufferCPUPointer, &scratchBufferGPUPointer))
+        return;
 
-//     // we need to disable any currently bound vertex array, as we handle it manually
-//     if (m_currentVertexBufferBindCount > 0)
-//     {
-//         ID3D12Buffer *pNullD3DBuffers[GPU_MAX_SIMULTANEOUS_VERTEX_BUFFERS] = { NULL };
-//         UINT nullD3DOffsetStrides[GPU_MAX_SIMULTANEOUS_VERTEX_BUFFERS] = { 0 };
-//         m_pD3DContext->IASetVertexBuffers(0, m_currentVertexBufferBindCount, pNullD3DBuffers, nullD3DOffsetStrides, nullD3DOffsetStrides);
-//     }
+    // set vertex buffer
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+    ResourceBarrier(pScratchBufferResource, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+    vertexBufferView.BufferLocation = scratchBufferGPUPointer;
+    vertexBufferView.SizeInBytes = bufferSpaceRequired;
+    vertexBufferView.StrideInBytes = vertexSize;
+    m_pCurrentCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
 
-    // setup draw
-    DebugAssert(m_pCurrentShaderProgram != nullptr);
-    SynchronizeShaderStates();
+    // invoke draw
+    m_pCurrentCommandList->DrawInstanced(nVertices, 1, 0, 0);
 
-    // while we still have vertices left to draw...
-    while (remainingVertices > 0)
+    // restore vertex buffer
+    if (m_pCurrentVertexBuffers[0] != nullptr)
     {
-        // map buffer
-        void *pMappedPointer;
-        uint32 bufferOffset;
-        uint32 mappedVertices;
-        if (!GetTempVertexBufferPointer(vertexSize, remainingVertices, &pMappedPointer, &bufferOffset, &mappedVertices))
-            return;
-
-        // fill buffer
-        Y_memcpy(pMappedPointer, pVerticesPtr, vertexSize * mappedVertices);
-
-        // unmap buffer
-        m_pD3DContext->Unmap(m_pUserVertexBuffer, 0);
-
-        // update vb
-        m_pD3DContext->IASetVertexBuffers(0, 1, &m_pUserVertexBuffer, &vertexSize, &bufferOffset);
-
-        // draw it
-        m_pD3DContext->Draw(mappedVertices, 0);
-        //m_drawCallCounter++;
-
-        // reduce vertices
-        pVerticesPtr += mappedVertices * vertexSize;
-        remainingVertices -= mappedVertices;
-    }
-
-    // restore state
-    if (m_currentVertexBufferBindCount > 0)
-    {
-//         // re-bind old vertex buffers
-//         ID3D12Buffer *pD3DBuffers[GPU_MAX_SIMULTANEOUS_VERTEX_BUFFERS];
-//         UINT D3DOffsets[GPU_MAX_SIMULTANEOUS_VERTEX_BUFFERS];
-//         UINT D3DStrides[GPU_MAX_SIMULTANEOUS_VERTEX_BUFFERS];
-//         for (uint32 i = 0; i < m_currentVertexBufferBindCount; i++)
-//         {
-//             pD3DBuffers[i] = (m_pCurrentVertexBuffers[i] != NULL) ? m_pCurrentVertexBuffers[i]->GetD3DBuffer() : NULL;
-//             D3DOffsets[i] = m_currentVertexBufferOffsets[i];
-//             D3DStrides[i] = m_currentVertexBufferStrides[i];
-//         }
-//         m_pD3DContext->IASetVertexBuffers(0, m_currentVertexBufferBindCount, pD3DBuffers, D3DOffsets, D3DStrides);
-
-        ID3D12Buffer *pD3DBuffer = (m_pCurrentVertexBuffers[0] != nullptr) ? m_pCurrentVertexBuffers[0]->GetD3DBuffer() : nullptr;
-        UINT D3DOffset = m_currentVertexBufferOffsets[0];
-        UINT D3DStride = m_currentVertexBufferStrides[0];
-        m_pD3DContext->IASetVertexBuffers(0, 1, &pD3DBuffer, &D3DStride, &D3DOffset);
+        vertexBufferView.BufferLocation = m_pCurrentVertexBuffers[0]->GetD3DResource()->GetGPUVirtualAddress() + m_currentVertexBufferOffsets[0];
+        vertexBufferView.SizeInBytes = m_pCurrentVertexBuffers[0]->GetDesc()->Size - m_currentVertexBufferOffsets[0];
+        vertexBufferView.StrideInBytes = m_currentVertexBufferStrides[0];
+        m_pCurrentCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
     }
     else
     {
-        // unbind the temp one
-        ID3D12Buffer *pNullD3DBuffer = NULL;
-        UINT nullD3DOffsetStride = 0;
-        m_pD3DContext->IASetVertexBuffers(0, 1, &pNullD3DBuffer, &nullD3DOffsetStride, &nullD3DOffsetStride);
+        m_pCurrentCommandList->IASetVertexBuffers(0, 1, nullptr);
     }
-#endif
+
+    // restore scratch buffer state
+    ResourceBarrier(pScratchBufferResource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_SOURCE);
 }
 
 
@@ -1782,6 +1748,7 @@ void D3D12GPUContext::BlitFrameBuffer(GPUTexture2D *pTexture, uint32 sourceX, ui
 
 void D3D12GPUContext::GenerateMips(GPUTexture *pTexture)
 {
+    // @TODO has to be done using shaders :(
 #if 0
     ID3D12ShaderResourceView *pSRV = nullptr;
     uint32 flags = 0;

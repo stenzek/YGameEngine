@@ -454,35 +454,45 @@ const D3D12DescriptorHeap::Handle *D3D12RenderBackend::GetConstantBufferDescript
     return (m_constantBufferStorage[index].pResource != nullptr) ? &m_constantBufferStorage[index].DescriptorHandle : nullptr;
 }
 
-void D3D12RenderBackend::ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint32 frameNumber /*= g_pRenderer->GetFrameNumber()*/)
+void D3D12RenderBackend::ScheduleResourceForDeletion(ID3D12Pageable *pResource)
+{
+    ScheduleResourceForDeletion(pResource, m_currentCleanupFenceValue);
+}
+
+void D3D12RenderBackend::ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)
 {
     PendingDeletionResource pdr;
     pdr.pResource = pResource;
-    pdr.FrameNumber = frameNumber;
+    pdr.FenceValue = fenceValue;
     
     m_pendingDeletionLock.Lock();
     m_pendingDeletionResources.Add(pdr);
     m_pendingDeletionLock.Unlock();
 }
 
-void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle, uint32 frameNumber /*= g_pRenderer->GetFrameNumber()*/)
+void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle)
+{
+    ScheduleDescriptorForDeletion(handle, m_currentCleanupFenceValue);
+}
+
+void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)
 {
     PendingDeletionDescriptor pdr;
     pdr.Handle = handle;
-    pdr.FrameNumber = frameNumber;
+    pdr.FenceValue = fenceValue;
 
     m_pendingDeletionLock.Lock();
     m_pendingDeletionDescriptors.Add(pdr);
     m_pendingDeletionLock.Unlock();
 }
 
-void D3D12RenderBackend::DeletePendingResources(uint32 frameNumber)
+void D3D12RenderBackend::DeletePendingResources(uint64 fenceValue)
 {
     m_pendingDeletionLock.Lock();
 
     for (uint32 i = 0; i < m_pendingDeletionResources.GetSize(); )
     {
-        if (m_pendingDeletionResources[i].FrameNumber > frameNumber)
+        if (m_pendingDeletionResources[i].FenceValue > fenceValue)
         {
             i++;
             continue;
@@ -495,7 +505,7 @@ void D3D12RenderBackend::DeletePendingResources(uint32 frameNumber)
     for (uint32 i = 0; i < m_pendingDeletionDescriptors.GetSize(); )
     {
         PendingDeletionDescriptor &desc = m_pendingDeletionDescriptors[i];
-        if (desc.FrameNumber > frameNumber)
+        if (desc.FenceValue > fenceValue)
         {
             i++;
             continue;

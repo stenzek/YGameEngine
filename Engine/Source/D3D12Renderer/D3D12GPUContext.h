@@ -161,10 +161,13 @@ public:
 private:
     // preallocate constant buffers
     void CreateConstantBuffers();
-    bool CreateQueuedFrameData();
-    void ExecuteImmediateCommandList();
-    void MoveToNextFrameCommandList();
-    void WaitForQueuedFrame(uint32 index);
+    bool CreateInternalCommandLists();
+    void WaitForCommandQueue(uint32 index);
+    void ExecuteCurrentCommandList();
+    void MoveToNextCommandQueue();
+    void FinishPendingCommands();
+    void ClearCommandListDependantState();
+    void RestoreCommandListDependantState();
     bool UpdatePipelineState();
 
     // allocate from scratch buffer
@@ -181,8 +184,8 @@ private:
     ID3D12GraphicsCommandList *m_pCurrentCommandList;
     D3D12ScratchBuffer *m_pCurrentScratchBuffer;
 
-    // Pool of command lists
-    struct QueuedFrameData
+    // Pool of command lists - DCommandQueue because of CommandQueue class that will be removed
+    struct DCommandQueue
     {
         ID3D12CommandAllocator *pCommandAllocator;
         ID3D12CommandQueue *pCommandQueue;
@@ -191,11 +194,12 @@ private:
         D3D12ScratchBuffer *pScratchBuffer;
         HANDLE FenceReachedEvent;
         uint64 FenceValue;
-        uint32 FrameNumber;
         bool Pending;
     };
-    MemArray<QueuedFrameData> m_queuedFrameData;
-    uint32 m_currentQueuedFrameIndex;
+    MemArray<DCommandQueue> m_commandQueues;
+    uint32 m_currentCommandQueueIndex;
+    uint64 m_nextFenceValue;
+    bool m_currentCommandListExecuted;
 
     // state
     RENDERER_VIEWPORT m_currentViewport;

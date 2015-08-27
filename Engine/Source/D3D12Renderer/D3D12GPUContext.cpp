@@ -15,6 +15,9 @@ D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *p
     , m_pDevice(pDevice)
     , m_pD3DDevice(pD3DDevice)
     , m_pConstants(nullptr)
+    , m_currentCommandQueueIndex(0)
+    , m_nextFenceValue(0)
+    , m_currentCommandListExecuted(false)
 {
     // add references
     m_pDevice->SetGPUContext(this);
@@ -67,10 +70,9 @@ D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *p
 D3D12GPUContext::~D3D12GPUContext()
 {
     // move to next frame, executing all commands
-    MoveToNextFrameCommandList();
-
-    // ensure everything is finished
-    D3D12GPUContext::Finish();
+    ExecuteCurrentCommandList();
+    MoveToNextCommandQueue();
+    FinishPendingCommands();
 
 #if 0
     // clear any state
@@ -171,7 +173,7 @@ bool D3D12GPUContext::Create()
     CreateConstantBuffers();
 
     // create queued frame data
-    if (!CreateQueuedFrameData())
+    if (!CreateInternalCommandLists())
         return false;
 
     return true;
@@ -204,18 +206,17 @@ void D3D12GPUContext::CreateConstantBuffers()
     }
 }
 
-bool D3D12GPUContext::CreateQueuedFrameData()
+bool D3D12GPUContext::CreateInternalCommandLists()
 {
     HRESULT hResult;
     uint32 frameLatency = m_pBackend->GetFrameLatency();
-    m_queuedFrameData.Resize(frameLatency);
-    m_queuedFrameData.ZeroContents();
+    m_commandQueues.Resize(frameLatency);
+    m_commandQueues.ZeroContents();
 
     for (uint32 i = 0; i < frameLatency; i++)
     {
-        QueuedFrameData *pFrameData = &m_queuedFrameData[i];
+        DCommandQueue *pFrameData = &m_commandQueues[i];
         pFrameData->FenceValue = 0;
-        pFrameData->FrameNumber = 0;
         pFrameData->Pending = false;
 
         // allocate command allocator
@@ -269,83 +270,92 @@ bool D3D12GPUContext::CreateQueuedFrameData()
     }
 
     // set current frame
-    m_currentQueuedFrameIndex = 0;
-    m_pCurrentScratchBuffer = m_queuedFrameData[m_currentQueuedFrameIndex].pScratchBuffer;
-    m_pCurrentCommandList = m_queuedFrameData[m_currentQueuedFrameIndex].pCommandList;
-    m_pCurrentCommandQueue = m_queuedFrameData[m_currentQueuedFrameIndex].pCommandQueue;
+    m_currentCommandQueueIndex = 0;
+    m_pCurrentScratchBuffer = m_commandQueues[m_currentCommandQueueIndex].pScratchBuffer;
+    m_pCurrentCommandList = m_commandQueues[m_currentCommandQueueIndex].pCommandList;
+    m_pCurrentCommandQueue = m_commandQueues[m_currentCommandQueueIndex].pCommandQueue;
+    m_nextFenceValue = 1;
     return true;
 }
 
 void D3D12GPUContext::BeginFrame()
 {
     g_pRenderer->BeginFrame();
-    MoveToNextFrameCommandList();
 }
 
 void D3D12GPUContext::Flush()
 {
-    ExecuteImmediateCommandList();
+    ExecuteCurrentCommandList();
+    MoveToNextCommandQueue();
+    RestoreCommandListDependantState();
 }
 
 void D3D12GPUContext::Finish()
 {
-    // move to the next frame's command list, creating an event for this one
-    MoveToNextFrameCommandList();
-
-    // ensure all other frames have been reached
-    uint32 frameLatency = m_pBackend->GetFrameLatency();
-    for (uint32 queuedFrameIndex = (m_currentQueuedFrameIndex + 1) % frameLatency; queuedFrameIndex != m_currentQueuedFrameIndex; queuedFrameIndex = (queuedFrameIndex + 1) % frameLatency)
-    {
-        if (m_queuedFrameData[queuedFrameIndex].Pending)
-            WaitForQueuedFrame(queuedFrameIndex);
-    }
+    ExecuteCurrentCommandList();
+    MoveToNextCommandQueue();
+    RestoreCommandListDependantState();
+    FinishPendingCommands();
 }
 
-void D3D12GPUContext::ExecuteImmediateCommandList()
+void D3D12GPUContext::ExecuteCurrentCommandList()
 {
+    Assert(!m_currentCommandListExecuted);
+
+    // execute any queued commands on the immediate command list
     HRESULT hResult = m_pCurrentCommandList->Close();
-    if (FAILED(hResult))
+    if (SUCCEEDED(hResult))
     {
-        Log_ErrorPrintf("ID3D12CommandList::Close failed with hResult %08X", hResult);
-        return;
+        m_pCurrentCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pCurrentCommandList);
+    }
+    else
+    {
+        Log_WarningPrintf("ID3D12CommandList::Close failed with hResult %08X, some may commands may not be executed.", hResult);
     }
 
-    m_pCurrentCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pCurrentCommandList);
+    m_currentCommandListExecuted = true;
 }
 
-void D3D12GPUContext::MoveToNextFrameCommandList()
-{
-    // ensure any queued commands have been executed (Between Present+BeginFrame)
-    ExecuteImmediateCommandList();
-
+void D3D12GPUContext::MoveToNextCommandQueue()
+{   
     // set up fence for the next time round (for the current command list)
-    QueuedFrameData *pFrameData = &m_queuedFrameData[m_currentQueuedFrameIndex];
+    DCommandQueue *pFrameData = &m_commandQueues[m_currentCommandQueueIndex];
     ResetEvent(pFrameData->FenceReachedEvent);
-    pFrameData->pFence->SetEventOnCompletion(++pFrameData->FenceValue, pFrameData->FenceReachedEvent);
+    pFrameData->pFence->SetEventOnCompletion(pFrameData->FenceValue, pFrameData->FenceReachedEvent);
     pFrameData->pCommandQueue->Signal(pFrameData->pFence, pFrameData->FenceValue);
     pFrameData->Pending = true;
 
     // next frame
-    m_currentQueuedFrameIndex++;
-    m_currentQueuedFrameIndex %= D3D12RenderBackend::GetInstance()->GetFrameLatency();
+    m_currentCommandQueueIndex++;
+    m_currentCommandQueueIndex %= D3D12RenderBackend::GetInstance()->GetFrameLatency();
 
     // wait for these operations to finish
-    pFrameData = &m_queuedFrameData[m_currentQueuedFrameIndex];
+    pFrameData = &m_commandQueues[m_currentCommandQueueIndex];
     if (pFrameData->Pending)
-        WaitForQueuedFrame(m_currentQueuedFrameIndex);
-
-    // set up this frame details
-    pFrameData->FrameNumber = g_pRenderer->GetFrameNumber();
+        WaitForCommandQueue(m_currentCommandQueueIndex);
 
     // update pointers
+    pFrameData->FenceValue = m_nextFenceValue++;
     m_pCurrentCommandQueue = pFrameData->pCommandQueue;
     m_pCurrentCommandList = pFrameData->pCommandList;
     m_pCurrentScratchBuffer = pFrameData->pScratchBuffer;
+    m_currentCommandListExecuted = false;
 }
 
-void D3D12GPUContext::WaitForQueuedFrame(uint32 index)
+void D3D12GPUContext::FinishPendingCommands()
 {
-    QueuedFrameData *pFrameData = &m_queuedFrameData[m_currentQueuedFrameIndex];
+    // ensure all other frames have been reached
+    uint32 frameLatency = m_pBackend->GetFrameLatency();
+    for (uint32 queuedFrameIndex = (m_currentCommandQueueIndex + 1) % frameLatency; queuedFrameIndex != m_currentCommandQueueIndex; queuedFrameIndex = (queuedFrameIndex + 1) % frameLatency)
+    {
+        if (m_commandQueues[queuedFrameIndex].Pending)
+            WaitForCommandQueue(queuedFrameIndex);
+    }
+}
+
+void D3D12GPUContext::WaitForCommandQueue(uint32 index)
+{
+    DCommandQueue *pFrameData = &m_commandQueues[m_currentCommandQueueIndex];
     DebugAssert(pFrameData->Pending);
 
     WaitForSingleObject(pFrameData->FenceReachedEvent, INFINITE);
@@ -359,10 +369,45 @@ void D3D12GPUContext::WaitForQueuedFrame(uint32 index)
     pFrameData->pScratchBuffer->Reset();
 
     // release resources
-    m_pBackend->DeletePendingResources(pFrameData->FrameNumber);
+    m_pBackend->DeletePendingResources(pFrameData->FenceValue);
 
     // no longer active
     pFrameData->Pending = false;
+}
+
+void D3D12GPUContext::ClearCommandListDependantState()
+{
+    // pipeline state
+    SAFE_RELEASE(m_pCurrentShaderProgram);
+    m_pipelineChanged = false;
+
+    // render targets -- still needs to be re-synced
+    for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
+        SAFE_RELEASE(m_pCurrentRenderTargetViews[i]);
+    SAFE_RELEASE(m_pCurrentDepthBufferView);
+    m_nCurrentRenderTargets = 0;
+    SynchronizeRenderTargetsAndUAVs();
+
+    // predicate
+    //SAFE_RELEASE(m_pCurrentPredicate);
+
+    // other stuff
+    m_currentBlendStateBlendFactors.SetZero();
+    m_currentDepthStencilRef = 0;
+}
+
+void D3D12GPUContext::RestoreCommandListDependantState()
+{
+    // pipeline state
+    m_pipelineChanged = true;
+    UpdatePipelineState();
+
+    // render targets
+    SynchronizeRenderTargetsAndUAVs();
+
+    // other stuff
+    m_pCurrentCommandList->OMSetBlendFactor(m_currentBlendStateBlendFactors);
+    m_pCurrentCommandList->OMSetStencilRef(m_currentDepthStencilRef);
 }
 
 bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress)
@@ -385,7 +430,7 @@ bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **
         // nuke current scratch buffer (the internal buffer will be scheduled for deletion after the frame)
         delete m_pCurrentScratchBuffer;
         m_pCurrentScratchBuffer = pNewScratchBuffer;
-        m_queuedFrameData[m_currentQueuedFrameIndex].pScratchBuffer = pNewScratchBuffer;
+        m_commandQueues[m_currentCommandQueueIndex].pScratchBuffer = pNewScratchBuffer;
 
         // allocate from new scratch buffer
         if (!m_pCurrentScratchBuffer->Allocate(size, &offset))
@@ -808,20 +853,22 @@ void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
     ResourceBarrier(m_pCurrentSwapChain->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
     // ensure all commands have been queued
-    ExecuteImmediateCommandList();
+    ExecuteCurrentCommandList();
 
     // present the image
     m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
 
-    // the transition back can happen later (as long as it happens before the command list is re-used...)
+    // move to next command list (placed after here so the present happens before the fence. @TODO is this behaviour needed?)
+    MoveToNextCommandQueue();
+
+    // transition back
     ResourceBarrier(m_pCurrentSwapChain->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
     // update the new backbuffer for the swap chain
     m_pCurrentSwapChain->UpdateCurrentBackBuffer();
 
-    // if we were bound to the pipeline, switch to the new backbuffer
-    if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
-        SynchronizeRenderTargetsAndUAVs();
+    // restore state (since new command list)
+    RestoreCommandListDependantState();
 }
 
 uint32 D3D12GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)

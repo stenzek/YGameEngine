@@ -33,9 +33,13 @@ public:
     const D3D12DescriptorHeap::Handle *GetConstantBufferDescriptor(uint32 index) const;
 
     // resource cleanup
-    void ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint32 frameNumber = g_pRenderer->GetFrameNumber());
-    void ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle, uint32 frameNumber = g_pRenderer->GetFrameNumber());
-    void DeletePendingResources(uint32 frameNumber);
+    uint64 GetCurrentCleanupFenceValue() const { return m_currentCleanupFenceValue; }
+    void SetCleanupFenceValue(uint64 fenceValue) { m_currentCleanupFenceValue = fenceValue; }
+    void ScheduleResourceForDeletion(ID3D12Pageable *pResource);
+    void ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint64 fenceValue);
+    void ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle);
+    void ScheduleDescriptorForDeletion(const D3D12DescriptorHeap::Handle &handle, uint64 fenceValue);
+    void DeletePendingResources(uint64 fenceValue);
 
     // creation
     bool Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
@@ -86,17 +90,18 @@ private:
     struct PendingDeletionResource
     {
         ID3D12Pageable *pResource;
-        uint32 FrameNumber;
+        uint64 FenceValue;
     };
     struct PendingDeletionDescriptor
     {
         D3D12_DESCRIPTOR_HEAP_TYPE Type;
         D3D12DescriptorHeap::Handle Handle;
-        uint32 FrameNumber;
+        uint64 FenceValue;
     };
     MemArray<PendingDeletionResource> m_pendingDeletionResources;
     MemArray<PendingDeletionDescriptor> m_pendingDeletionDescriptors;
     Mutex m_pendingDeletionLock;
+    uint64 m_currentCleanupFenceValue;
 
     // instance
     static D3D12RenderBackend *s_pInstance;

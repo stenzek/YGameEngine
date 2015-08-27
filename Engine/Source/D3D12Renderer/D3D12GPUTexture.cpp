@@ -79,9 +79,223 @@ bool D3D12GPUContext::WriteTexture(GPUTexture1DArray *pTexture, const void *pSou
     return false;
 }
 
+D3D12GPUTexture2D::D3D12GPUTexture2D(const GPU_TEXTURE2D_DESC *pDesc, ID3D12Resource *pD3DResource, const D3D12DescriptorHeap::Handle &srvHandle, const D3D12DescriptorHeap::Handle &samplerHandle, D3D12_RESOURCE_STATES defaultResourceState)
+    : GPUTexture2D(pDesc)
+    , m_pD3DResource(pD3DResource)
+    , m_srvHandle(srvHandle)
+    , m_samplerHandle(samplerHandle)
+    , m_defaultResourceState(defaultResourceState)
+{   
+
+}
+
+D3D12GPUTexture2D::~D3D12GPUTexture2D()
+{
+    if (!m_samplerHandle.IsNull())
+        D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(m_samplerHandle);
+
+    if (!m_srvHandle.IsNull())
+        D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(m_srvHandle);
+
+    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(m_pD3DResource);
+}
+
+void D3D12GPUTexture2D::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
+{
+    if (cpuMemoryUsage != nullptr)
+        *cpuMemoryUsage = sizeof(*this);
+
+    if (gpuMemoryUsage != nullptr)
+    {
+        uint32 memoryUsage = 0;
+
+        for (uint32 j = 0; j < m_desc.MipLevels; j++)
+            memoryUsage += PixelFormat_CalculateImageSize(m_desc.Format, Max(m_desc.Width >> j, (uint32)1), Max(m_desc.Height >> j, (uint32)1), 1);
+
+        *gpuMemoryUsage = memoryUsage;
+    }
+}
+
+void D3D12GPUTexture2D::SetDebugName(const char *name)
+{
+    D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DResource, name);
+}
+
 GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= nullptr*/, const uint32 *pInitialDataPitch /*= nullptr*/)
 {
-    return nullptr;
+    HRESULT hResult;
+
+    // validate pixel formats.
+    const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
+    DXGI_FORMAT creationFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(pTextureDesc->Format);
+    DebugAssert(pPixelFormatInfo != nullptr && creationFormat != DXGI_FORMAT_UNKNOWN);
+    UNREFERENCED_PARAMETER(pPixelFormatInfo);
+
+    // validate descriptor. we shouldn't be creating invalid textures on the device, so just assert out.
+    DebugAssert(pTextureDesc->Width > 0 && pTextureDesc->Height > 0 && pTextureDesc->MipLevels < TEXTURE_MAX_MIPMAP_COUNT);
+
+    // determine view formats
+    DXGI_FORMAT srvFormat, rtvFormat, dsvFormat;
+    MapTextureFormatToViewFormat(&creationFormat, &srvFormat, &rtvFormat, &dsvFormat);
+
+    // get d3d resource flags
+    D3D12_RESOURCE_FLAGS resourceFlags = D3D12_RESOURCE_FLAG_NONE;
+    if (!(pTextureDesc->Flags & GPU_TEXTURE_FLAG_SHADER_BINDABLE))
+        resourceFlags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+    if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_BIND_RENDER_TARGET)
+        resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+    if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_BIND_DEPTH_STENCIL_BUFFER)
+        resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+    if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_BIND_COMPUTE_WRITABLE)
+        resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+    // get heap flags
+    D3D12_HEAP_FLAGS heapFlags = D3D12_HEAP_FLAG_DENY_BUFFERS;
+    if (pTextureDesc->Flags & (GPU_TEXTURE_FLAG_BIND_RENDER_TARGET | GPU_TEXTURE_FLAG_BIND_DEPTH_STENCIL_BUFFER))
+        heapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
+    else
+        heapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
+
+    // find generic state -- default to RTV/DSV only if not SRV
+    D3D12_RESOURCE_STATES defaultResourceState = D3D12_RESOURCE_STATE_COMMON;
+    if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_SHADER_BINDABLE)
+        defaultResourceState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    else if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_BIND_RENDER_TARGET)
+        defaultResourceState |= D3D12_RESOURCE_STATE_RENDER_TARGET;
+    else if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_BIND_DEPTH_STENCIL_BUFFER)
+        defaultResourceState |= D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
+    // find the initial state
+    D3D12_RESOURCE_STATES createResourceState;
+    if (ppInitialData != nullptr)
+        createResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+    else
+        createResourceState = defaultResourceState;
+
+    // create the texture resource
+    ID3D12Resource *pD3DResource;
+    D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
+    D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, pTextureDesc->Width, pTextureDesc->Height, 1, (UINT16)pTextureDesc->MipLevels, creationFormat, { 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, resourceFlags };
+    hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, heapFlags, &resourceDesc, createResourceState, nullptr, IID_PPV_ARGS(&pD3DResource));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateCommittedResource failed with hResult %08X", hResult);
+        return false;
+    }
+
+    // create SRV
+    D3D12DescriptorHeap::Handle srvHandle;
+    if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_SHADER_BINDABLE)
+    {
+        // allocate a descriptor
+        if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Allocate(&srvHandle))
+        {
+            pD3DResource->Release();
+            return false;
+        }
+
+        // fill the descriptor
+        D3D12_RENDER_TARGET_VIEW_DESC rtvDesc;
+        rtvDesc.Format = srvFormat;
+        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+        rtvDesc.Texture2D.MipSlice = 0;
+        rtvDesc.Texture2D.PlaneSlice = 0;
+        m_pD3DDevice->CreateRenderTargetView(pD3DResource, &rtvDesc, srvHandle);
+    }
+
+    // create sampler state
+    D3D12DescriptorHeap::Handle samplerHandle;
+    if (pSamplerStateDesc != nullptr)
+    {
+        // fill the descriptor
+        D3D12_SAMPLER_DESC samplerDesc;
+        if (!D3D12Helpers::FillD3D12SamplerStateDesc(pSamplerStateDesc, &samplerDesc))
+        {
+            Log_ErrorPrintf("Failed to convert sampler state description.");
+            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            pD3DResource->Release();
+            return false;
+        }
+
+        // allocate a descriptor
+        if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&srvHandle))
+        {
+            Log_ErrorPrintf("Failed to allocator sampler descriptor.");
+            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            pD3DResource->Release();
+            return false;
+        }
+
+        // fill the descriptor @TODO use a pool here, since we'll have duplicates for sure..
+        m_pD3DDevice->CreateSampler(&samplerDesc, samplerHandle);
+    }
+
+    // create the upload resource, and do the upload
+    if (ppInitialData != nullptr)
+    {
+        ID3D12Resource *pUploadResource;
+        D3D12_HEAP_PROPERTIES uploadHeapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
+        D3D12_RESOURCE_DESC uploadResourceDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, pTextureDesc->Width, pTextureDesc->Height, 1, (UINT16)pTextureDesc->MipLevels, creationFormat, { 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE };
+        hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES, &resourceDesc, D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr, IID_PPV_ARGS(&pUploadResource));
+        if (FAILED(hResult))
+        {
+            Log_ErrorPrintf("CreateCommittedResource for upload resource failed with hResult %08X", hResult);
+            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
+            pD3DResource->Release();
+            return false;
+        }
+
+        // get the footprints of each subresource
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT *pSubResourceFootprints = (D3D12_PLACED_SUBRESOURCE_FOOTPRINT *)alloca(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) * pTextureDesc->MipLevels);
+        UINT *pRowCounts = (UINT *)alloca(sizeof(UINT) * pTextureDesc->MipLevels);
+        UINT64 *pRowPitches = (UINT64 *)alloca(sizeof(UINT64) * pTextureDesc->MipLevels);
+        m_pD3DDevice->GetCopyableFootprints(&resourceDesc, 0, pTextureDesc->MipLevels, 0, pSubResourceFootprints, pRowCounts, pRowPitches, nullptr);
+
+        // we need to batch the uploads, even on the render thread
+        BeginResourceBatchUpload();
+
+        // loop through mip levels
+        for (uint32 mipLevel = 0; mipLevel < pTextureDesc->MipLevels; mipLevel++)
+        {
+            // map this mip level
+            UINT64 subResourceSize = pRowCounts[mipLevel] * pRowPitches[mipLevel];
+            D3D12_RANGE mapRange = { 0, (SIZE_T)(subResourceSize - 1) };
+            void *pMappedPointer;
+            hResult = pUploadResource->Map(mipLevel, &mapRange, &pMappedPointer);
+            if (FAILED(hResult))
+            {
+                Log_ErrorPrintf("Map SubResource(%u) for upload resource failed with hResult %08X", mipLevel, hResult);
+                m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+                m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
+                EndResourceBatchUpload();
+                ScheduleUploadResourceDeletion(pUploadResource);
+                ScheduleUploadResourceDeletion(pD3DResource);
+                return false;
+            }
+
+            // copy in data
+            if (pRowPitches[mipLevel] == pInitialDataPitch[mipLevel])
+                Y_memcpy(pMappedPointer, ppInitialData[mipLevel], (size_t)pRowPitches[mipLevel] * pRowCounts[mipLevel]);
+            else
+                Y_memcpy_stride(pMappedPointer, (size_t)pRowPitches[mipLevel], ppInitialData[mipLevel], pInitialDataPitch[mipLevel], Min((size_t)pRowPitches[mipLevel], (size_t)pInitialDataPitch[mipLevel]), pRowCounts[mipLevel]);
+
+            // release the mapping
+            pUploadResource->Unmap(mipLevel, &mapRange);
+
+            // invoke a copy of this subresource
+            D3D12_TEXTURE_COPY_LOCATION sourceCopyLocation = { pUploadResource, D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT, pSubResourceFootprints[mipLevel] };
+            D3D12_TEXTURE_COPY_LOCATION destCopyLocation = { pUploadResource, D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, mipLevel };
+            GetCommandList()->CopyTextureRegion(&destCopyLocation, 0, 0, 0, &sourceCopyLocation, nullptr);
+        }
+
+        // done with the upload, and free the buffer
+        EndResourceBatchUpload();
+        ScheduleUploadResourceDeletion(pUploadResource);
+    }
+
+    // create class
+    return new D3D12GPUTexture2D(pTextureDesc, pD3DResource, srvHandle, samplerHandle, defaultResourceState);
 }
 
 bool D3D12GPUContext::ReadTexture(GPUTexture2D *pTexture, void *pDestination, uint32 destinationRowPitch, uint32 cbDestination, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY)
@@ -179,7 +393,7 @@ D3D12GPURenderTargetView::D3D12GPURenderTargetView(GPUTexture *pTexture, const G
 
 D3D12GPURenderTargetView::~D3D12GPURenderTargetView()
 {
-    D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(&m_descriptorHandle);
+    D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(m_descriptorHandle);
 }
 
 void D3D12GPURenderTargetView::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -227,9 +441,10 @@ GPURenderTargetView *D3D12GPUDevice::CreateRenderTargetView(GPUTexture *pTexture
         rtvDesc.Texture1DArray.FirstArraySlice = pDesc->FirstLayerIndex;
         rtvDesc.Texture1DArray.ArraySize = pDesc->NumLayers;
         break;
+#endif
 
     case GPU_RESOURCE_TYPE_TEXTURE2D:
-        pD3DResource = static_cast<D3D12GPUTexture2D *>(pTexture)->GetD3DTexture();
+        pD3DResource = static_cast<D3D12GPUTexture2D *>(pTexture)->GetD3DResource();
         creationFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2D *>(pTexture)->GetDesc()->Format);
         MapTextureFormatToViewFormat(&creationFormat, &srvFormat, &rtvFormat, &dsvFormat);
         rtvDesc.Format = rtvFormat;
@@ -238,6 +453,7 @@ GPURenderTargetView *D3D12GPUDevice::CreateRenderTargetView(GPUTexture *pTexture
         rtvDesc.Texture2D.PlaneSlice = 0;
         break;
 
+#if 0
     case GPU_RESOURCE_TYPE_TEXTURE2DARRAY:
         pD3DResource = static_cast<D3D12GPUTexture2DArray *>(pTexture)->GetD3DTexture();
         creationFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2DArray *>(pTexture)->GetDesc()->Format);
@@ -313,7 +529,7 @@ D3D12GPUDepthStencilBufferView::D3D12GPUDepthStencilBufferView(GPUTexture *pText
 
 D3D12GPUDepthStencilBufferView::~D3D12GPUDepthStencilBufferView()
 {
-    D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(&m_descriptorHandle);
+    D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(m_descriptorHandle);
 }
 
 void D3D12GPUDepthStencilBufferView::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -363,17 +579,19 @@ GPUDepthStencilBufferView *D3D12GPUDevice::CreateDepthStencilBufferView(GPUTextu
         dsvDesc.Texture1DArray.FirstArraySlice = pDesc->FirstLayerIndex;
         dsvDesc.Texture1DArray.ArraySize = pDesc->NumLayers;
         break;
+#endif
 
     case GPU_RESOURCE_TYPE_TEXTURE2D:
-        pD3DResource = static_cast<D3D12GPUTexture2D *>(pTexture)->GetD3DTexture();
+        pD3DResource = static_cast<D3D12GPUTexture2D *>(pTexture)->GetD3DResource();
         creationFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2D *>(pTexture)->GetDesc()->Format);
         MapTextureFormatToViewFormat(&creationFormat, &srvFormat, &rtvFormat, &dsvFormat);
         dsvDesc.Format = dsvFormat;
         dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-        dsvDesc.Flags = 0;
+        dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
         dsvDesc.Texture2D.MipSlice = pDesc->MipLevel;
         break;
 
+#if 0
     case GPU_RESOURCE_TYPE_TEXTURE2DARRAY:
         pD3DResource = static_cast<D3D12GPUTexture2DArray *>(pTexture)->GetD3DTexture();
         creationFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2DArray *>(pTexture)->GetDesc()->Format);
@@ -449,7 +667,7 @@ D3D12GPUComputeView::D3D12GPUComputeView(GPUResource *pResource, const GPU_COMPU
 
 D3D12GPUComputeView::~D3D12GPUComputeView()
 {
-    D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(&m_descriptorHandle);
+    D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(m_descriptorHandle);
 }
 
 void D3D12GPUComputeView::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const

@@ -61,7 +61,7 @@ private:
     bool CreateConstantStorage();
 
     // vars
-    IDXGIFactory3 *m_pDXGIFactory;
+    IDXGIFactory4 *m_pDXGIFactory;
     IDXGIAdapter3 *m_pDXGIAdapter;
 
     ID3D12Device *m_pD3DDevice;

@@ -6,7 +6,7 @@
 #include "Engine/EngineCVars.h"
 Log_SetChannel(D3D12RenderBackend);
 
-D3D12GPUDevice::D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory3 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice, DXGI_FORMAT outputBackBufferFormat, DXGI_FORMAT outputDepthStencilFormat)
+D3D12GPUDevice::D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice, DXGI_FORMAT outputBackBufferFormat, DXGI_FORMAT outputDepthStencilFormat)
     : m_pBackend(pBackend)
     , m_pDXGIFactory(pDXGIFactory)
     , m_pDXGIAdapter(pDXGIAdapter)

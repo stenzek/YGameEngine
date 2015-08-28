@@ -135,6 +135,7 @@ public:
 
     // accessors
     ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
+    ID3D12CommandQueue *GetD3DCommandQueue() const { return m_pCommandQueue; }
     ID3D12GraphicsCommandList *GetCurrentCommandList() const { return m_pCurrentCommandList; }
     D3D12GPUShaderProgram *GetD3D12ShaderProgram() const { return m_pCurrentShaderProgram; }
 
@@ -148,7 +149,6 @@ public:
     void SetShaderUAVs(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
 
     // synchronize the states with the d3d context
-    void SynchronizeVertexBuffers();
     void SynchronizeRenderTargetsAndUAVs();
 
     // temporarily disable predication to force a call to go through
@@ -181,7 +181,7 @@ private:
     GPUContextConstants *m_pConstants;
 
     // Current command list
-    ID3D12CommandQueue *m_pCurrentCommandQueue;
+    ID3D12CommandQueue *m_pCommandQueue;
     ID3D12GraphicsCommandList *m_pCurrentCommandList;
     D3D12ScratchBuffer *m_pCurrentScratchBuffer;
 
@@ -189,7 +189,6 @@ private:
     struct DCommandQueue
     {
         ID3D12CommandAllocator *pCommandAllocator;
-        ID3D12CommandQueue *pCommandQueue;
         ID3D12GraphicsCommandList *pCommandList;
         ID3D12Fence *pFence;
         D3D12ScratchBuffer *pScratchBuffer;

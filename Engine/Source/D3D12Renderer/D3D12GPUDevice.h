@@ -65,7 +65,7 @@ private:
 class D3D12GPUDevice : public GPUDevice
 {
 public:
-    D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory3 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice, DXGI_FORMAT outputBackBufferFormat, DXGI_FORMAT outputDepthStencilFormat);
+    D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice, DXGI_FORMAT outputBackBufferFormat, DXGI_FORMAT outputDepthStencilFormat);
     virtual ~D3D12GPUDevice();
 
     // private methods
@@ -117,7 +117,7 @@ public:
 
 private:
     D3D12RenderBackend *m_pBackend;
-    IDXGIFactory3 *m_pDXGIFactory;
+    IDXGIFactory4 *m_pDXGIFactory;
     IDXGIAdapter3 *m_pDXGIAdapter;
     ID3D12Device *m_pD3DDevice;
     D3D12GPUContext *m_pGPUContext;

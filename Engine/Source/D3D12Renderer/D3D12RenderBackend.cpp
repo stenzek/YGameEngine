@@ -38,6 +38,15 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
 {
     HRESULT hResult;
 
+    // select formats
+    m_outputBackBufferFormat = D3D11TypeConversion::PixelFormatToDXGIFormat(pCreateParameters->BackBufferFormat);
+    m_outputDepthStencilFormat = (pCreateParameters->DepthStencilBufferFormat != PIXEL_FORMAT_UNKNOWN) ? D3D11TypeConversion::PixelFormatToDXGIFormat(pCreateParameters->DepthStencilBufferFormat) : DXGI_FORMAT_UNKNOWN;
+    if (m_outputBackBufferFormat == DXGI_FORMAT_UNKNOWN || (pCreateParameters->DepthStencilBufferFormat != PIXEL_FORMAT_UNKNOWN && m_outputDepthStencilFormat == DXGI_FORMAT_UNKNOWN))
+    {
+        Log_ErrorPrintf("D3D12RenderBackend::Create: Invalid swap chain format (%s / %s)", NameTable_GetNameString(NameTables::PixelFormat, pCreateParameters->BackBufferFormat), NameTable_GetNameString(NameTables::PixelFormat, pCreateParameters->DepthStencilBufferFormat));
+        return false;
+    }
+
     // load d3d12 library
     DebugAssert(s_hD3D12DLL == nullptr);
     s_hD3D12DLL = LoadLibraryA("d3d12.dll");
@@ -56,55 +65,67 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
         return false;
     }
 
-    // select formats
-    m_outputBackBufferFormat = D3D11TypeConversion::PixelFormatToDXGIFormat(pCreateParameters->BackBufferFormat);
-    m_outputDepthStencilFormat = (pCreateParameters->DepthStencilBufferFormat != PIXEL_FORMAT_UNKNOWN) ? D3D11TypeConversion::PixelFormatToDXGIFormat(pCreateParameters->DepthStencilBufferFormat) : DXGI_FORMAT_UNKNOWN;
-    if (m_outputBackBufferFormat == DXGI_FORMAT_UNKNOWN || (pCreateParameters->DepthStencilBufferFormat != PIXEL_FORMAT_UNKNOWN && m_outputDepthStencilFormat == DXGI_FORMAT_UNKNOWN))
+    // acquire debug interface
+    if (CVars::r_use_debug_device.GetBool())
     {
-        Log_ErrorPrintf("D3D12RenderBackend::Create: Invalid swap chain format (%s / %s)", NameTable_GetNameString(NameTables::PixelFormat, pCreateParameters->BackBufferFormat), NameTable_GetNameString(NameTables::PixelFormat, pCreateParameters->DepthStencilBufferFormat));
-        return false;
+        Log_PerfPrintf("Enabling Direct3D 12 debug layer, performance will suffer as a result.");
+        ID3D12Debug *pD3D12Debug;
+        hResult = fnD3D12GetDebugInterface(__uuidof(ID3D12Debug), (void **)&pD3D12Debug);
+        if (SUCCEEDED(hResult))
+        {
+            pD3D12Debug->EnableDebugLayer();
+            pD3D12Debug->Release();
+        }
+        else
+        {
+            Log_WarningPrintf("D3D12GetDebugInterface failed with hResult %08X. Debug layer will not be enabled.", hResult);
+        }
     }
 
-//     // determine driver type
-//     D3D_DRIVER_TYPE driverType;
-//     if (CVars::r_d3d12_force_ref.GetBool())
-//         driverType = D3D_DRIVER_TYPE_REFERENCE;
-//     else if (CVars::r_d3d12_force_warp.GetBool())
-//         driverType = D3D_DRIVER_TYPE_WARP;
-//     else
-//         driverType = D3D_DRIVER_TYPE_HARDWARE;
-
-    // todo: get adapter based on driver type
-    hResult = CreateDXGIFactory2((CVars::r_use_debug_device.GetBool()) ? DXGI_CREATE_FACTORY_DEBUG : 0, __uuidof(IDXGIFactory3), (void **)&m_pDXGIFactory);
+    // create dxgi factory
+    hResult = CreateDXGIFactory2((CVars::r_use_debug_device.GetBool()) ? DXGI_CREATE_FACTORY_DEBUG : 0, __uuidof(IDXGIFactory4), (void **)&m_pDXGIFactory);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("D3D12RenderBackend::Create: Failed to create DXGI factory with hResult %08X", hResult);
         return false;
     }
 
-    // iterate over adapters
-    for (uint32 adapterIndex = 0; ; adapterIndex++)
+    // find adapter
+    if (CVars::r_d3d12_force_warp.GetBool())
     {
-        IDXGIAdapter *pAdapter;
-        hResult = m_pDXGIFactory->EnumAdapters(adapterIndex, &pAdapter);
-        if (hResult == DXGI_ERROR_NOT_FOUND)
-            break;
-
-        if (SUCCEEDED(hResult))
+        hResult = m_pDXGIFactory->EnumWarpAdapter(IID_PPV_ARGS(&m_pDXGIAdapter));
+        if (FAILED(hResult))
         {
-            hResult = pAdapter->QueryInterface(__uuidof(IDXGIAdapter3), (void **)&m_pDXGIAdapter);
-            if (FAILED(hResult))
+            Log_ErrorPrintf("IDXGIFactory::EnumWarpAdapter failed with hResult %08X", hResult);
+            return false;
+        }
+    }
+    else
+    {
+        // iterate over adapters
+        for (uint32 adapterIndex = 0; ; adapterIndex++)
+        {
+            IDXGIAdapter *pAdapter;
+            hResult = m_pDXGIFactory->EnumAdapters(adapterIndex, &pAdapter);
+            if (hResult == DXGI_ERROR_NOT_FOUND)
+                break;
+
+            if (SUCCEEDED(hResult))
             {
-                Log_ErrorPrintf("D3D12RenderBackend::Create: IDXGIAdapter::QueryInterface(IDXGIAdapter3) failed.");
+                hResult = pAdapter->QueryInterface(__uuidof(IDXGIAdapter3), (void **)&m_pDXGIAdapter);
+                if (FAILED(hResult))
+                {
+                    Log_ErrorPrintf("D3D12RenderBackend::Create: IDXGIAdapter::QueryInterface(IDXGIAdapter3) failed.");
+                    pAdapter->Release();
+                    return false;
+                }
+
                 pAdapter->Release();
-                return false;
+                break;
             }
 
-            pAdapter->Release();
-            break;
+            Log_WarningPrintf("IDXGIFactory::EnumAdapters(%u) failed with hResult %08X", adapterIndex, hResult);
         }
-
-        Log_WarningPrintf("IDXGIFactory::EnumAdapters(%u) failed with hResult %08X", hResult);
     }
 
     // found an adapter
@@ -124,23 +145,6 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
         char deviceName[128];
         WideCharToMultiByte(CP_ACP, 0, DXGIAdapterDesc.Description, -1, deviceName, countof(deviceName), NULL, NULL);
         Log_InfoPrintf("D3D12 render backend using DXGI Adapter: %s.", deviceName);
-    }
-
-    // acquire debug interface
-    if (CVars::r_use_debug_device.GetBool())
-    {
-        Log_PerfPrintf("Enabling Direct3D 12 debug layer, performance will suffer as a result.");
-        ID3D12Debug *pD3D12Debug;
-        hResult = fnD3D12GetDebugInterface(__uuidof(ID3D12Debug), (void **)&pD3D12Debug);
-        if (SUCCEEDED(hResult))
-        {
-            pD3D12Debug->EnableDebugLayer();
-            pD3D12Debug->Release();
-        }
-        else
-        {
-            Log_WarningPrintf("D3D12GetDebugInterface failed with hResult %08X. Debug layer will not be enabled.", hResult);
-        }
     }
 
     // create the device

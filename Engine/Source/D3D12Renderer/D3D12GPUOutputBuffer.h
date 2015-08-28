@@ -13,7 +13,7 @@ public:
     virtual void SetVSyncType(RENDERER_VSYNC_TYPE vsyncType) override;
 
     // creation
-    static D3D12GPUOutputBuffer *Create(D3D12RenderBackend *pBackend, IDXGIFactory3 *pDXGIFactory, ID3D12Device *pD3DDevice, HWND hWnd, DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType);
+    static D3D12GPUOutputBuffer *Create(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, ID3D12Device *pD3DDevice, ID3D12CommandQueue *pCommandQueue, HWND hWnd, DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType);
 
     // views
     HWND GetHWND() const { return m_hWnd; }

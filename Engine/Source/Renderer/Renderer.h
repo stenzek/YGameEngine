@@ -367,6 +367,7 @@ public:
     RENDERER_FULLSCREEN_STATE GetFullscreenState() const { return m_fullscreenState; }
     void SetFullscreenState(RENDERER_FULLSCREEN_STATE state) { m_fullscreenState = state; }
     void SetDimensions(uint32 width, uint32 height) { m_width = width; m_height = height; }
+    void SetOutputBuffer(GPUOutputBuffer *pBuffer) { m_pOutputBuffer = pBuffer; }
     int32 GetPositionX() const { return m_positionX; }
     int32 GetPositionY() const { return m_positionY; }
     uint32 GetWidth() const { return m_width; }

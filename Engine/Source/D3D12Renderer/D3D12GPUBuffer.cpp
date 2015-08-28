@@ -56,7 +56,7 @@ GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
     ID3D12Resource *pResource;
     D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
     D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, pDesc->Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
-    HRESULT hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resourceDesc, initialResourceState, nullptr, IID_PPV_ARGS(&pResource));
+    HRESULT hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialResourceState, nullptr, IID_PPV_ARGS(&pResource));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateCommitedResource for main resource failed with hResult %08X", hResult);
@@ -116,7 +116,7 @@ ID3D12Resource *D3D12GPUBuffer::CreateUploadResource(ID3D12Device *pD3DDevice, u
     ID3D12Resource *pResource;
     D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
     D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE };
-    HRESULT hResult = pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resourceDesc, D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr, IID_PPV_ARGS(&pResource));
+    HRESULT hResult = pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&pResource));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateCommitedResource for upload resource failed with hResult %08X", hResult);
@@ -131,7 +131,7 @@ ID3D12Resource *D3D12GPUBuffer::CreateReadbackResource(ID3D12Device *pD3DDevice,
     ID3D12Resource *pResource;
     D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_READBACK, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
     D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE };
-    HRESULT hResult = pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pResource));
+    HRESULT hResult = pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pResource));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateCommitedResource for readback resource failed with hResult %08X", hResult);

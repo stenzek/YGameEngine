@@ -94,8 +94,11 @@ RendererOutputWindow::RendererOutputWindow(SDL_Window *pSDLWindow, GPUOutputBuff
 RendererOutputWindow::~RendererOutputWindow()
 {
     // Buffer should no longer be used
-    uint32 bufferReferenceCount = m_pOutputBuffer->Release();
-    Assert(bufferReferenceCount == 0);
+    if (m_pOutputBuffer != nullptr)
+    {
+        uint32 bufferReferenceCount = m_pOutputBuffer->Release();
+        Assert(bufferReferenceCount == 0);
+    }
 
     // Destroy window itself
     SDL_DestroyWindow(m_pSDLWindow);
@@ -364,10 +367,6 @@ bool Renderer::Create(const RendererInitializationParameters *pCreateParameters)
         // do base startup
         if (!g_pRenderer->BaseOnStart())
         {
-            // hold a reference to the output window to prevent it getting deleted until after shutdown
-            if (pOutputWindow != nullptr)
-                pOutputWindow->AddRef();
-
             // cleanup renderer
             Log_ErrorPrintf(" Renderer backend creation succeeded, but renderer startup failed.");
             g_pRenderer->BaseOnShutdown();
@@ -379,7 +378,14 @@ bool Renderer::Create(const RendererInitializationParameters *pCreateParameters)
             // cleanup backend
             pGPUContext->Release();
             pGPUDevice->Release();
+            if (pOutputBuffer != nullptr)
+            {
+                pOutputWindow->SetOutputBuffer(nullptr);
+                pOutputBuffer->Release();
+            }
+
             pBackendInterface->Shutdown();
+
             if (pOutputWindow != nullptr)
                 pOutputWindow->Release();
 
@@ -417,9 +423,8 @@ void Renderer::Shutdown()
     {
         // save backend interface pointer
         RenderBackend *pBackendInterface = g_pRenderer->m_pBackendInterface;
-        RendererOutputWindow *pImplicitWindow = g_pRenderer->m_pImplicitOutputWindow;
-        if (pImplicitWindow != nullptr)
-            pImplicitWindow->AddRef();
+        RendererOutputWindow *pOutputWindow = g_pRenderer->m_pImplicitOutputWindow;
+        GPUOutputBuffer *pOutputBuffer = pOutputWindow->GetOutputBuffer();
 
         // shutdown renderer part
         g_pRenderer->BaseOnShutdown();
@@ -431,9 +436,14 @@ void Renderer::Shutdown()
         s_pCurrentThreadGPUContext = nullptr;
         s_pCurrentThreadGPUDevice->Release();
         s_pCurrentThreadGPUDevice = nullptr;
+        if (pOutputWindow != nullptr)
+        {
+            pOutputWindow->SetOutputBuffer(nullptr);
+            pOutputBuffer->Release();
+        }
         pBackendInterface->Shutdown();
-        if (pImplicitWindow != nullptr)
-            pImplicitWindow->Release();
+        if (pOutputWindow != nullptr)
+            pOutputWindow->Release();
     });
 
     Log_InfoPrint("-----------------------------------");   
@@ -457,7 +467,7 @@ Renderer::Renderer(RenderBackend *pBackendInterface, RendererOutputWindow *pOutp
 
 Renderer::~Renderer()
 {
-    m_pImplicitOutputWindow->Release();
+
 }
 
 bool Renderer::BaseOnStart()

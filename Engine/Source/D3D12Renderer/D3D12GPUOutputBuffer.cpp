@@ -1,6 +1,7 @@
 #include "D3D12Renderer/PrecompiledHeader.h"
 #include "D3D12Renderer/D3D12GPUOutputBuffer.h"
 #include "D3D12Renderer/D3D12GPUDevice.h"
+#include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
 #include "Engine/SDLHeaders.h"
 Log_SetChannel(D3D12GPUOutputBuffer);
@@ -15,13 +16,23 @@ static const char *SDL_D3D11_RENDERER_OUTPUT_WINDOW_POINTER_STRING = "D3D12Rende
 
 static uint32 CalculateDXGISwapChainBufferCount(bool exclusiveFullscreen, RENDERER_VSYNC_TYPE vsyncType)
 {
-    return 1 + 
-           ((IsCompositionActive() == FALSE || exclusiveFullscreen) ? 1 : 0) + 
-           ((vsyncType == RENDERER_VSYNC_TYPE_TRIPLE_BUFFERING) ? 1 : 0);
+    //DebugAssert(D3D12RenderBackend::GetInstance()->GetFrameLatency() > 0);
+    //return 2 + (D3D12RenderBackend::GetInstance()->GetFrameLatency() - 1) + ((vsyncType == RENDERER_VSYNC_TYPE_TRIPLE_BUFFERING) ? 1 : 0);
+    return 2 + ((vsyncType == RENDERER_VSYNC_TYPE_TRIPLE_BUFFERING) ? 1 : 0);
 }
 
 D3D12GPUOutputBuffer::D3D12GPUOutputBuffer(D3D12RenderBackend *pBackend, ID3D12Device *pD3DDevice, IDXGISwapChain3 *pDXGISwapChain, HWND hWnd, uint32 width, uint32 height, DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType)
     : GPUOutputBuffer(vsyncType)
+    , m_pBackend(pBackend)
+    , m_pD3DDevice(pD3DDevice)
+    , m_pDXGISwapChain(pDXGISwapChain)
+    , m_hWnd(hWnd)
+    , m_width(width)
+    , m_height(height)
+    , m_backBufferFormat(backBufferFormat)
+    , m_depthStencilFormat(depthStencilFormat)
+    , m_currentBackBufferIndex(pDXGISwapChain->GetCurrentBackBufferIndex())
+    , m_pDepthStencilBuffer(nullptr)
 {
 
 }
@@ -34,7 +45,7 @@ D3D12GPUOutputBuffer::~D3D12GPUOutputBuffer()
     m_pD3DDevice->Release();
 }
 
-D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend, IDXGIFactory3 *pDXGIFactory, ID3D12Device *pD3DDevice, HWND hWnd, DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType)
+D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, ID3D12Device *pD3DDevice, ID3D12CommandQueue *pCommandQueue, HWND hWnd, DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType)
 {
     HRESULT hResult;
 
@@ -53,17 +64,17 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     swapChainDesc.Stereo = FALSE;
     swapChainDesc.SampleDesc.Count = 1;
     swapChainDesc.SampleDesc.Quality = 0;
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_BACK_BUFFER;
     swapChainDesc.BufferCount = CalculateDXGISwapChainBufferCount(false, vsyncType);
     swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-    swapChainDesc.Scaling = DXGI_SCALING_NONE;
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+    swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
     swapChainDesc.Flags = 0;
 
     // create the swapchain
     IDXGISwapChain1 *pDXGISwapChain1;
-    hResult = pDXGIFactory->CreateSwapChainForHwnd(pD3DDevice, hWnd, &swapChainDesc, nullptr, nullptr, &pDXGISwapChain1);
+    hResult = pDXGIFactory->CreateSwapChainForHwnd(pCommandQueue, hWnd, &swapChainDesc, nullptr, nullptr, &pDXGISwapChain1);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("D3D12RendererOutputWindow::Create: CreateSwapChainForHwnd failed with hResult %08X.", hResult);
@@ -201,9 +212,9 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
     if (m_depthStencilFormat != DXGI_FORMAT_UNKNOWN)
     {
         // create resource
-        D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
+        D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
         D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, m_width, m_height, 1, 1, m_depthStencilFormat,{ 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL };
-        hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES, &resourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, nullptr, __uuidof(ID3D12Resource), (void **)&m_pDepthStencilBuffer);
+        hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, nullptr, __uuidof(ID3D12Resource), (void **)&m_pDepthStencilBuffer);
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("D3D12RendererOutputBuffer::InternalCreateBuffers: CreateCommittedResource for DepthStencil failed with hResult %08X", hResult);
@@ -259,7 +270,9 @@ void D3D12GPUOutputBuffer::SetVSyncType(RENDERER_VSYNC_TYPE vsyncType)
 
 GPUOutputBuffer *D3D12GPUDevice::CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType)
 {
-    return D3D12GPUOutputBuffer::Create(m_pBackend, m_pDXGIFactory, m_pD3DDevice, (HWND)hWnd, m_outputBackBufferFormat, m_outputDepthStencilFormat, vsyncType);
+    // can only be done on the render thread
+    DebugAssert(m_pGPUContext != nullptr);
+    return D3D12GPUOutputBuffer::Create(m_pBackend, m_pDXGIFactory, m_pD3DDevice, m_pGPUContext->GetD3DCommandQueue(), (HWND)hWnd, m_outputBackBufferFormat, m_outputDepthStencilFormat, vsyncType);
 }
 
 GPUOutputBuffer *D3D12GPUDevice::CreateOutputBuffer(SDL_Window *pSDLWindow, RENDERER_VSYNC_TYPE vsyncType)
@@ -273,5 +286,5 @@ GPUOutputBuffer *D3D12GPUDevice::CreateOutputBuffer(SDL_Window *pSDLWindow, REND
         return false;
     }
 
-    return D3D12GPUOutputBuffer::Create(m_pBackend, m_pDXGIFactory, m_pD3DDevice, info.info.win.window, m_outputBackBufferFormat, m_outputDepthStencilFormat, vsyncType);
+    return CreateOutputBuffer((RenderSystemWindowHandle)info.info.win.window, vsyncType);
 }

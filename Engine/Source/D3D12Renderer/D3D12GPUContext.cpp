@@ -15,6 +15,9 @@ D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *p
     , m_pDevice(pDevice)
     , m_pD3DDevice(pD3DDevice)
     , m_pConstants(nullptr)
+    , m_pCommandQueue(nullptr)
+    , m_pCurrentCommandList(nullptr)
+    , m_pCurrentScratchBuffer(nullptr)
     , m_currentCommandQueueIndex(0)
     , m_nextFenceValue(0)
     , m_currentCommandListExecuted(false)
@@ -70,9 +73,12 @@ D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *p
 D3D12GPUContext::~D3D12GPUContext()
 {
     // move to next frame, executing all commands
-    ExecuteCurrentCommandList();
-    MoveToNextCommandQueue();
-    FinishPendingCommands();
+    if (m_pCurrentCommandList != nullptr)
+    {
+        ExecuteCurrentCommandList();
+        MoveToNextCommandQueue();
+        FinishPendingCommands();
+    }
 
 #if 0
     // clear any state
@@ -88,6 +94,7 @@ D3D12GPUContext::~D3D12GPUContext()
         m_pCurrentPredicateD3D = nullptr;
     }
     SAFE_RELEASE(m_pCurrentPredicate);
+#endif
 
     // release our references to states and targets. d3d references will die when the device goes down.
     for (uint32 i = 0; i < countof(m_pCurrentVertexBuffers); i++) {
@@ -96,6 +103,7 @@ D3D12GPUContext::~D3D12GPUContext()
     SAFE_RELEASE(m_pCurrentIndexBuffer);
 
     SAFE_RELEASE(m_pCurrentShaderProgram);
+#if 0
     for (uint32 stage = 0; stage < SHADER_PROGRAM_STAGE_COUNT; stage++)
     {
         ShaderStageState &state = m_shaderStates[stage];
@@ -117,12 +125,11 @@ D3D12GPUContext::~D3D12GPUContext()
         }
     }
 
+#endif
+
     for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
     {
         ConstantBuffer *constantBuffer = &m_constantBuffers[i];
-        if (constantBuffer->pGPUBuffer != nullptr)
-            constantBuffer->pGPUBuffer->Release();
-
         delete[] constantBuffer->pLocalMemory;
     }
 
@@ -135,11 +142,9 @@ D3D12GPUContext::~D3D12GPUContext()
     }
     SAFE_RELEASE(m_pCurrentDepthBufferView);
 
-#endif
-
     delete m_pConstants;
 
-    //SAFE_RELEASE(m_pCurrentSwapChain);
+    SAFE_RELEASE(m_pCurrentSwapChain);
     m_pDevice->SetGPUContext(nullptr);
     m_pDevice->Release();
 }
@@ -213,6 +218,16 @@ bool D3D12GPUContext::CreateInternalCommandLists()
     m_commandQueues.Resize(frameLatency);
     m_commandQueues.ZeroContents();
 
+    // allocate command queue
+    D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 0 };
+    hResult = m_pD3DDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_pCommandQueue));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateCommandQueue failed with hResult %08X", hResult);
+        return false;
+    }
+
+    // allocate command lists
     for (uint32 i = 0; i < frameLatency; i++)
     {
         DCommandQueue *pFrameData = &m_commandQueues[i];
@@ -224,15 +239,6 @@ bool D3D12GPUContext::CreateInternalCommandLists()
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("CreateCommandAllocator failed with hResult %08X", hResult);
-            return false;
-        }
-
-        // allocate command queue
-        D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 0 };
-        hResult = m_pD3DDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pFrameData->pCommandQueue));
-        if (FAILED(hResult))
-        {
-            Log_ErrorPrintf("CreateCommandQueue failed with hResult %08X", hResult);
             return false;
         }
 
@@ -273,7 +279,6 @@ bool D3D12GPUContext::CreateInternalCommandLists()
     m_currentCommandQueueIndex = 0;
     m_pCurrentScratchBuffer = m_commandQueues[m_currentCommandQueueIndex].pScratchBuffer;
     m_pCurrentCommandList = m_commandQueues[m_currentCommandQueueIndex].pCommandList;
-    m_pCurrentCommandQueue = m_commandQueues[m_currentCommandQueueIndex].pCommandQueue;
     m_nextFenceValue = 1;
     return true;
 }
@@ -306,7 +311,7 @@ void D3D12GPUContext::ExecuteCurrentCommandList()
     HRESULT hResult = m_pCurrentCommandList->Close();
     if (SUCCEEDED(hResult))
     {
-        m_pCurrentCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pCurrentCommandList);
+        m_pCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pCurrentCommandList);
     }
     else
     {
@@ -322,7 +327,7 @@ void D3D12GPUContext::MoveToNextCommandQueue()
     DCommandQueue *pFrameData = &m_commandQueues[m_currentCommandQueueIndex];
     ResetEvent(pFrameData->FenceReachedEvent);
     pFrameData->pFence->SetEventOnCompletion(pFrameData->FenceValue, pFrameData->FenceReachedEvent);
-    pFrameData->pCommandQueue->Signal(pFrameData->pFence, pFrameData->FenceValue);
+    m_pCommandQueue->Signal(pFrameData->pFence, pFrameData->FenceValue);
     pFrameData->Pending = true;
 
     // next frame
@@ -336,7 +341,6 @@ void D3D12GPUContext::MoveToNextCommandQueue()
 
     // update pointers
     pFrameData->FenceValue = m_nextFenceValue++;
-    m_pCurrentCommandQueue = pFrameData->pCommandQueue;
     m_pCurrentCommandList = pFrameData->pCommandList;
     m_pCurrentScratchBuffer = pFrameData->pScratchBuffer;
     m_currentCommandListExecuted = false;
@@ -355,7 +359,7 @@ void D3D12GPUContext::FinishPendingCommands()
 
 void D3D12GPUContext::WaitForCommandQueue(uint32 index)
 {
-    DCommandQueue *pFrameData = &m_commandQueues[m_currentCommandQueueIndex];
+    DCommandQueue *pFrameData = &m_commandQueues[index];
     DebugAssert(pFrameData->Pending);
 
     WaitForSingleObject(pFrameData->FenceReachedEvent, INFINITE);
@@ -1600,7 +1604,7 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     if (!UpdatePipelineState())
         return;
 
-    // can use scratch buffer directly. NOTE: needs a resource barrier
+    // can use scratch buffer directly. 
     // this probably should use a threshold to go to an upload buffer..
     uint32 bufferSpaceRequired = vertexSize * nVertices;
     ID3D12Resource *pScratchBufferResource;
@@ -1612,7 +1616,6 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
 
     // set vertex buffer
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-    ResourceBarrier(pScratchBufferResource, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
     vertexBufferView.BufferLocation = scratchBufferGPUPointer;
     vertexBufferView.SizeInBytes = bufferSpaceRequired;
     vertexBufferView.StrideInBytes = vertexSize;
@@ -1633,9 +1636,6 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     {
         m_pCurrentCommandList->IASetVertexBuffers(0, 1, nullptr);
     }
-
-    // restore scratch buffer state
-    ResourceBarrier(pScratchBufferResource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_SOURCE);
 }
 
 

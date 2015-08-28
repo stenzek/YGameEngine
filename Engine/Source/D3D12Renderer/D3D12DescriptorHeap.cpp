@@ -52,6 +52,7 @@ bool D3D12DescriptorHeap::Allocate(D3D12DescriptorHandle *handle)
     }
 
     // flag as allocated
+    DebugAssert(!m_allocationMap.TestBit(index));
     m_allocationMap.SetBit(index);
     m_mutex.Unlock();
 
@@ -79,7 +80,10 @@ bool D3D12DescriptorHeap::AllocateRange(uint32 count, D3D12DescriptorHandle *han
 
     // flag as allocated
     for (uint32 i = 0; i < count; i++)
+    {
+        DebugAssert(!m_allocationMap.TestBit(startIndex + i));
         m_allocationMap.SetBit(startIndex + i);
+    }
     m_mutex.Unlock();
 
     // create handle

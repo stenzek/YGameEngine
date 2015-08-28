@@ -246,6 +246,7 @@ bool ResourceCompiler::CompileShader(ResourceCompilerCallbacks *pCallbacks, cons
     {
 #ifdef Y_PLATFORM_WINDOWS
     case RENDERER_PLATFORM_D3D11:
+    case RENDERER_PLATFORM_D3D12:
         pShaderCompiler = ShaderCompiler::CreateD3D11ShaderCompiler(pCallbacks, pParameters);
         break;
 #endif

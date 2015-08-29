@@ -5,7 +5,8 @@ Log_SetChannel(ScriptManager);
 static void lua_Log_Write(lua_State *L, LOGLEVEL level)
 {
     const char *msg = lua_tostring(L, 1);
-    Log::GetInstance().Write("Script", level, (msg != nullptr) ? msg : "(null)");
+    const char *funcname = "";      // @TODO
+    Log::GetInstance().Write("Script", "", level, (msg != nullptr) ? msg : "(null)");
 }
 
 static int lua_Log_Error(lua_State *L)

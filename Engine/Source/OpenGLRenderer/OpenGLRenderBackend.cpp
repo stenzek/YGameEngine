@@ -129,7 +129,7 @@ static void APIENTRY GLDebugCallback(GLenum source, GLenum type, GLuint id, GLen
     Y_memcpy(tempStr, message, copyLength);
     tempStr[copyLength] = 0;
 
-    Log::GetInstance().Writef(___LogChannel___, outputLogLevel, "*** OpenGL Debug: src: %s, type: %s, id: %u, msg: %s ***", sourceStr, typeStr, id, tempStr);
+    Log::GetInstance().Writef(___LogChannel___, LOG_MESSAGE_FUNCTION_NAME, outputLogLevel, "*** OpenGL Debug: src: %s, type: %s, id: %u, msg: %s ***", sourceStr, typeStr, id, tempStr);
 }
 
 static bool SetSDLGLColorAttributes(PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilBufferFormat)

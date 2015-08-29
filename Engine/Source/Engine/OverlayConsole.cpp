@@ -84,15 +84,20 @@ void OverlayConsole::SetDisplayLogLevel(LOGLEVEL level)
 
 }
 
-void OverlayConsole::LogCallbackTrampoline(void *userParam, const char *channelName, LOGLEVEL level, const char *message)
+void OverlayConsole::LogCallbackTrampoline(void *pUserParam, const char *channelName, const char *functionName, LOGLEVEL level, const char *message)
 {
-    OverlayConsole *pThis = reinterpret_cast<OverlayConsole *>(userParam);
-    pThis->LogCallback(channelName, level, message);
+    OverlayConsole *pThis = reinterpret_cast<OverlayConsole *>(pUserParam);
+    pThis->LogCallback(channelName, functionName, level, message);
 }
 
-void OverlayConsole::LogCallback(const char *channelName, LOGLEVEL level, const char *message)
+void OverlayConsole::LogCallback(const char *channelName, const char *functionName, LOGLEVEL level, const char *message)
 {
-    uint32 messageLength = Min(Y_strlen(message), m_maxMessageLength);
+    SmallString formattedMessage;
+    Log::FormatLogMessageForDisplay(channelName, functionName, level, message, [](const char *text, void *str) {
+        ((String *)str)->AppendString(text);
+    }, (void *)&formattedMessage);
+
+    uint32 messageLength = Min(formattedMessage.GetLength(), m_maxMessageLength);
     MutexLock lock(m_lock);
 
     // protect this since it is converted to a char
@@ -109,7 +114,7 @@ void OverlayConsole::LogCallback(const char *channelName, LOGLEVEL level, const 
         }
 
         LogDisplayEntry *pEntry = new LogDisplayEntry;
-        pEntry->Message = message;
+        pEntry->Message = formattedMessage;
         pEntry->Color = (level < countof(m_messageColors)) ? m_messageColors[level] : m_messageColors[0];
         pEntry->TimeRemaining = m_logDisplayTime;
         m_logDisplayEntries.Add(pEntry);
@@ -140,7 +145,7 @@ void OverlayConsole::LogCallback(const char *channelName, LOGLEVEL level, const 
         for (uint32 i = 0; i < messageLength; i++)
         {
             // character range 240-255 are reserved for internal use, so replace these characters with a .
-            char ch = message[i];
+            char ch = formattedMessage[i];
             if (ch <= 0 || ch == '\n')
                 continue;
 

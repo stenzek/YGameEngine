@@ -73,8 +73,8 @@ private:
     void DrawPartial(MiniGUIContext *pGUIContext) const;
 
     // log callback
-    static void LogCallbackTrampoline(void *userParam, const char *channelName, LOGLEVEL level, const char *message);
-    void LogCallback(const char *channelName, LOGLEVEL level, const char *message);
+    static void LogCallbackTrampoline(void *pUserParam, const char *channelName, const char *functionName, LOGLEVEL level, const char *message);
+    void LogCallback(const char *channelName, const char *functionName, LOGLEVEL level, const char *message);
 
     // anything is pretty much locked
     mutable Mutex m_lock;

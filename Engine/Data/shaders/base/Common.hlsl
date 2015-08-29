@@ -2,15 +2,15 @@
 
 // Constant buffer wrapper, used when compiling for OpenGL ES
 #if __OPENGL_ES__ && __GLSL__ < 300
-    #define BEGIN_CONSTANT_BUFFER(BufferName, InstanceName) struct BufferName
+    #define BEGIN_CONSTANT_BUFFER(BufferName, InstanceName, Register) struct BufferName
     #define END_CONSTANT_BUFFER(BufferName, InstanceName) ; uniform BufferName InstanceName;
-#else
-    #define BEGIN_CONSTANT_BUFFER(BufferName, InstanceName) cbuffer BufferName { struct BufferName##_s
+    #else
+    #define BEGIN_CONSTANT_BUFFER(BufferName, InstanceName, Register) cbuffer BufferName : register(Register) { struct BufferName##_s
     #define END_CONSTANT_BUFFER(BufferName, InstanceName) InstanceName; }
 #endif
 
 // Constant buffers
-BEGIN_CONSTANT_BUFFER(ObjectConstantsBuffer, ObjectConstants)
+BEGIN_CONSTANT_BUFFER(ObjectConstantsBuffer, ObjectConstants, b1)
 {
     float4x4 WorldMatrix;
     float4x4 InverseWorldMatrix;
@@ -19,7 +19,7 @@ BEGIN_CONSTANT_BUFFER(ObjectConstantsBuffer, ObjectConstants)
 END_CONSTANT_BUFFER(ObjectConstantsBuffer, ObjectConstants)
 
 // Camera Constants
-BEGIN_CONSTANT_BUFFER(ViewConstantsBuffer, ViewConstants)
+BEGIN_CONSTANT_BUFFER(ViewConstantsBuffer, ViewConstants, b2)
 {
     float4x4 ViewMatrix;
     float4x4 InverseViewMatrix;
@@ -29,30 +29,19 @@ BEGIN_CONSTANT_BUFFER(ViewConstantsBuffer, ViewConstants)
     float4x4 InverseViewProjectionMatrix;
     float4x4 ScreenProjectionMatrix;
     float3 EyePosition;
-    float2 ZRatio;
+    float WorldTime;
+    float ZRatioNumerator;
+    float ZRatioDenominator;
     float ZNear;
     float ZFar;
     float PerspectiveAspectRatio;
     float PerspectiveFOV;
-}
-END_CONSTANT_BUFFER(ViewConstantsBuffer, ViewConstants)
-
-// Viewport Constants
-BEGIN_CONSTANT_BUFFER(ViewportConstantsBuffer, ViewportConstants)
-{
     float2 ViewportOffset;
     float2 ViewportSize;
     float2 ViewportOffsetFraction;
     float2 InverseViewportSize;
 }
-END_CONSTANT_BUFFER(ViewportConstantsBuffer, ViewportConstants)
-
-// World Constants
-BEGIN_CONSTANT_BUFFER(WorldConstantsBuffer, WorldConstants)
-{
-    float WorldTime;
-}
-END_CONSTANT_BUFFER(WorldConstantsBuffer, WorldConstants)
+END_CONSTANT_BUFFER(ViewConstantsBuffer, ViewConstants)
 
 // Packs a vector in the range of [-1, 1] to [0, 1].
 // Assumes the input vector has been normalized.
@@ -119,7 +108,8 @@ float CalculateBlinnPhongSpecular(float3 surfaceNormal, float specularExponent, 
 float LinearizeDepth(float depthBufferValue)
 {
     //return 1.0f / (ViewConstants.ZRatio.x * depthBufferValue + ViewConstants.ZRatio.y);
-    return ViewConstants.ZRatio.y / (depthBufferValue - ViewConstants.ZRatio.x);
+    //return ViewConstants.ZRatio.y / (depthBufferValue - ViewConstants.ZRatio.x);
+    return ViewConstants.ZRatioDenominator / (depthBufferValue - ViewConstants.ZRatioNumerator);
 }
 
 // reconstruct view-space position from a depth buffer sample, expects texture coordinates in [0..1]

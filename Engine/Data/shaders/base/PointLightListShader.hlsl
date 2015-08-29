@@ -24,7 +24,7 @@ struct PointLight
 
 // Input variables.
 
-cbuffer PointLightListParameters { struct
+cbuffer PointLightListParameters : register(b3) { struct
 {
     PointLight Lights[MAX_LIGHTS];
     uint ActiveLightCount;

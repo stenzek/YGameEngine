@@ -13,7 +13,7 @@
 #include "Material.hlsl"
 
 // Shader options
-cbuffer VolumetricLightParameters { struct
+cbuffer VolumetricLightParameters : register(b3) { struct
 {
     float3 LightColor;
     float3 LightPosition;

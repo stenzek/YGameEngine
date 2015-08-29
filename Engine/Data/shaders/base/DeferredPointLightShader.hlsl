@@ -9,7 +9,7 @@ static const float SHADOW_MAP_DEPTH_BIAS = 0.001f;
 static const float SHADOW_MAP_Z_NEAR = 0.1f;
 
 // Input variables.
-cbuffer DeferredPointLightParameters { struct
+cbuffer DeferredPointLightParameters : register(b3) { struct
 {
     float3 LightColor;
     float3 LightPosition;

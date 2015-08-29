@@ -13,7 +13,7 @@ static const float SHADOW_MAP_EPSILON_VALUE = 0.001;
 static const float3 SHADOW_MAP_SHOW_CASCADE_COLORS[CASCADE_COUNT] = { float3(1.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.0f), float3(0.0f, 0.0f, 1.0f) };
 
 // Input variables.
-cbuffer DeferredDirectionalLightParameters { struct
+cbuffer DeferredDirectionalLightParameters : register(b3) { struct
 {
     float3 LightVector;
     float3 LightColor;

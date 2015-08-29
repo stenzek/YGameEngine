@@ -17,7 +17,7 @@
 static const float SHADOW_MAP_EPSILON_VALUE = 0.001;
 
 // Input variables.
-BEGIN_CONSTANT_BUFFER(MobileDirectionalLightParametersBuffer, MobileDirectionalLightParameters)
+BEGIN_CONSTANT_BUFFER(MobileDirectionalLightParametersBuffer, MobileDirectionalLightParameters, b3)
 {
     float3 LightVector;
     float3 LightColor;

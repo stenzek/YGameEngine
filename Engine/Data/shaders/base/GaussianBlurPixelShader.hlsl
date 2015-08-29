@@ -19,7 +19,7 @@ void Main(in float2 in_screenTexCoord : TEXCOORD,
         float fi = (float)i;
         float g = 1.0f / sqrt(2.0f * 3.14159f * BlurSigma * BlurSigma);
         float weight = (g * exp(-(fi * fi) / (2.0f * BlurSigma * BlurSigma)));
-        float2 texCoord = ((float2(fi, fi) / ViewportConstants.ViewportSize) * BlurDirection) + in_screenTexCoord;
+        float2 texCoord = ((float2(fi, fi) / ViewConstants.ViewportSize) * BlurDirection) + in_screenTexCoord;
         float3 sample = SourceTexture.SampleLevel(SourceTexture_SamplerState, texCoord, 0);
         outColor += sample * weight;
     }

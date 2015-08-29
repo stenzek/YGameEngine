@@ -33,7 +33,7 @@ struct Light
     float3 Color;
     float FalloffExponent;
 };
-cbuffer DeferredTiledPointLightShaderLightBuffer { Light LightParameters[MAX_LIGHTS_PER_DISPATCH]; };
+cbuffer DeferredTiledPointLightShaderLightBuffer : register(b3) { Light LightParameters[MAX_LIGHTS_PER_DISPATCH]; };
 uint ActiveLightCount;
 
 // Per-group shared memory

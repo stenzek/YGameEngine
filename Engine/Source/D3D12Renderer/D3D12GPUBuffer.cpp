@@ -3,6 +3,7 @@
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
+#include "D3D12Renderer/D3D12Helpers.h"
 Log_SetChannel(D3D12RenderBackend);
 
 D3D12GPUBuffer::D3D12GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, ID3D12Resource *pD3DResource, D3D12_RESOURCE_STATES defaultResourceState)

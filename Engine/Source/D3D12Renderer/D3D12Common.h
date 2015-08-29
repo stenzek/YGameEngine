@@ -34,7 +34,9 @@ class D3D12GPURenderTargetView;
 class D3D12GPUDepthStencilBufferView;
 class D3D12GPUComputeView;
 class D3D12RenderBackend;
+class D3D12DescriptorHeap;
+struct D3D12DescriptorHandle;
 
+// Defines
 #include "D3D12Renderer/D3D12Defines.h"
-#include "D3D12Renderer/D3D12CVars.h"
 

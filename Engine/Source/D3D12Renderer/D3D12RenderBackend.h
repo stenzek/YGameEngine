@@ -28,6 +28,10 @@ public:
     D3D12DescriptorHeap *GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) { return m_pDescriptorHeaps[type]; }
     uint32 GetFrameLatency() const { return m_frameLatency; }
 
+    // legacy root signatures
+    ID3D12RootSignature *GetLegacyGraphicsRootSignature() const { return m_pLegacyGraphicsRootSignature; }
+    ID3D12RootSignature *GetLegacyComputeRootSignature() const { return m_pLegacyComputeRootSignature; }
+
     // constant buffer management
     ID3D12Resource *GetConstantBufferResource(uint32 index);
     const D3D12DescriptorHandle *GetConstantBufferDescriptor(uint32 index) const;
@@ -54,6 +58,9 @@ public:
     virtual void Shutdown() override final;
 
 private:
+    // create legacy root signatures
+    bool CreateLegacyRootSignatures();
+
     // create descriptor heaps
     bool CreateDescriptorHeaps();
 
@@ -70,14 +77,19 @@ private:
     RENDERER_FEATURE_LEVEL m_featureLevel;
     TEXTURE_PLATFORM m_texturePlatform;
 
-    DXGI_FORMAT m_outputBackBufferFormat;
-    DXGI_FORMAT m_outputDepthStencilFormat;
+    PIXEL_FORMAT m_outputBackBufferFormat;
+    PIXEL_FORMAT m_outputDepthStencilFormat;
 
     uint32 m_frameLatency;
 
     // device
     D3D12GPUDevice *m_pGPUDevice;
     D3D12GPUContext *m_pGPUContext;
+
+    // Legacy root signature
+    ID3D12RootSignature *m_pLegacyGraphicsRootSignature;
+    ID3D12RootSignature *m_pLegacyComputeRootSignature;
+    PFN_D3D12_SERIALIZE_ROOT_SIGNATURE m_fnD3D12SerializeRootSignature;
 
     // descriptor heaps
     D3D12DescriptorHeap *m_pDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];

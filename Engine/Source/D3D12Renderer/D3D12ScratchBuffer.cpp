@@ -75,3 +75,50 @@ void D3D12ScratchBuffer::Reset()
 {
     m_position = 0;
 }
+
+D3D12ScratchDescriptorHeap::D3D12ScratchDescriptorHeap(ID3D12DescriptorHeap *pHeap, uint32 count, uint32 incrementSize)
+    : m_pD3DHeap(pHeap)
+    , m_cpuHandleStart(pHeap->GetCPUDescriptorHandleForHeapStart())
+    , m_gpuHandleStart(pHeap->GetGPUDescriptorHandleForHeapStart())
+    , m_size(count)
+    , m_position(0)
+    , m_incrementSize(incrementSize)
+{
+
+}
+
+D3D12ScratchDescriptorHeap *D3D12ScratchDescriptorHeap::Create(ID3D12Device *pDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count)
+{
+    ID3D12DescriptorHeap *pDescriptorHeap;
+    D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = { type, count, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+    HRESULT hResult = pDevice->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&pDescriptorHeap));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("D3D12ScratchDescriptorHeap::Create: CreateDescriptorHeap failed with hResult %08X", hResult);
+        return nullptr;
+    }
+
+    return new D3D12ScratchDescriptorHeap(pDescriptorHeap, count, pDevice->GetDescriptorHandleIncrementSize(type));
+}
+
+D3D12ScratchDescriptorHeap::~D3D12ScratchDescriptorHeap()
+{
+    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(m_pD3DHeap);
+}
+
+bool D3D12ScratchDescriptorHeap::Allocate(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle)
+{
+    DebugAssert(count > 0);
+    if ((m_position + count) > m_size)
+        return false;
+
+    pOutCPUHandle->ptr = m_cpuHandleStart.ptr + m_incrementSize * m_position;
+    pOutGPUHandle->ptr = m_gpuHandleStart.ptr + m_incrementSize * m_position;
+    m_position += count;
+    return true;
+}
+
+void D3D12ScratchDescriptorHeap::Reset()
+{
+    m_position = 0;
+}

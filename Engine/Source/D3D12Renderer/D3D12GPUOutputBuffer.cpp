@@ -3,6 +3,7 @@
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
+#include "D3D12Renderer/D3D12Helpers.h"
 #include "Engine/SDLHeaders.h"
 Log_SetChannel(D3D12GPUOutputBuffer);
 
@@ -21,7 +22,7 @@ static uint32 CalculateDXGISwapChainBufferCount(bool exclusiveFullscreen, RENDER
     return 2 + ((vsyncType == RENDERER_VSYNC_TYPE_TRIPLE_BUFFERING) ? 1 : 0);
 }
 
-D3D12GPUOutputBuffer::D3D12GPUOutputBuffer(D3D12RenderBackend *pBackend, ID3D12Device *pD3DDevice, IDXGISwapChain3 *pDXGISwapChain, HWND hWnd, uint32 width, uint32 height, DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType)
+D3D12GPUOutputBuffer::D3D12GPUOutputBuffer(D3D12RenderBackend *pBackend, ID3D12Device *pD3DDevice, IDXGISwapChain3 *pDXGISwapChain, HWND hWnd, uint32 width, uint32 height, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilFormat, DXGI_FORMAT backBufferDXGIFormat, DXGI_FORMAT depthStencilDXGIFormat, RENDERER_VSYNC_TYPE vsyncType)
     : GPUOutputBuffer(vsyncType)
     , m_pBackend(pBackend)
     , m_pD3DDevice(pD3DDevice)
@@ -31,6 +32,8 @@ D3D12GPUOutputBuffer::D3D12GPUOutputBuffer(D3D12RenderBackend *pBackend, ID3D12D
     , m_height(height)
     , m_backBufferFormat(backBufferFormat)
     , m_depthStencilFormat(depthStencilFormat)
+    , m_backBufferDXGIFormat(backBufferDXGIFormat)
+    , m_depthStencilDXGIFormat(depthStencilDXGIFormat)
     , m_currentBackBufferIndex(pDXGISwapChain->GetCurrentBackBufferIndex())
     , m_pDepthStencilBuffer(nullptr)
 {
@@ -45,9 +48,18 @@ D3D12GPUOutputBuffer::~D3D12GPUOutputBuffer()
     m_pD3DDevice->Release();
 }
 
-D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, ID3D12Device *pD3DDevice, ID3D12CommandQueue *pCommandQueue, HWND hWnd, DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType)
+D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, ID3D12Device *pD3DDevice, ID3D12CommandQueue *pCommandQueue, HWND hWnd, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType)
 {
     HRESULT hResult;
+
+    // select formats
+    DXGI_FORMAT backBufferDXGIFormat = D3D12Helpers::PixelFormatToDXGIFormat(backBufferFormat);
+    DXGI_FORMAT depthStencilDXGIFormat = (depthStencilFormat != PIXEL_FORMAT_UNKNOWN) ? D3D12Helpers::PixelFormatToDXGIFormat(depthStencilFormat) : DXGI_FORMAT_UNKNOWN;
+    if (backBufferDXGIFormat == DXGI_FORMAT_UNKNOWN || (depthStencilFormat != PIXEL_FORMAT_UNKNOWN && depthStencilDXGIFormat == DXGI_FORMAT_UNKNOWN))
+    {
+        Log_ErrorPrintf("D3D12GPUOutputBuffer::Create: Invalid swap chain format (%s / %s)", NameTable_GetNameString(NameTables::PixelFormat, backBufferFormat), NameTable_GetNameString(NameTables::PixelFormat, depthStencilFormat));
+        return false;
+    }
 
     // get client rect of the window
     RECT clientRect;
@@ -60,7 +72,7 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     Y_memzero(&swapChainDesc, sizeof(swapChainDesc));
     swapChainDesc.Width = width;
     swapChainDesc.Height = height;
-    swapChainDesc.Format = backBufferFormat;
+    swapChainDesc.Format = backBufferDXGIFormat;
     swapChainDesc.Stereo = FALSE;
     swapChainDesc.SampleDesc.Count = 1;
     swapChainDesc.SampleDesc.Quality = 0;
@@ -104,7 +116,7 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     pDXGISwapChain1->Release();
 
     // create object
-    D3D12GPUOutputBuffer *pOutputBuffer = new D3D12GPUOutputBuffer(pBackend, pD3DDevice, pDXGISwapChain, hWnd, width, height, backBufferFormat, depthStencilFormat, vsyncType);
+    D3D12GPUOutputBuffer *pOutputBuffer = new D3D12GPUOutputBuffer(pBackend, pD3DDevice, pDXGISwapChain, hWnd, width, height, backBufferFormat, depthStencilFormat, backBufferDXGIFormat, depthStencilDXGIFormat, vsyncType);
 
     // create buffers
     if (!pOutputBuffer->InternalCreateBuffers())
@@ -117,13 +129,13 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     return pOutputBuffer;
 }
 
-ID3D12Resource *D3D12GPUOutputBuffer::GetCurrentBackBuffer() const
+ID3D12Resource *D3D12GPUOutputBuffer::GetCurrentBackBufferResource() const
 {
     DebugAssert(m_currentBackBufferIndex < m_backBuffers.GetSize());
     return m_backBuffers[m_currentBackBufferIndex];
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE D3D12GPUOutputBuffer::GetCurrentBackBufferViewDescriptor() const
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12GPUOutputBuffer::GetCurrentBackBufferViewDescriptorCPUHandle() const
 {
     return m_renderTargetViewsDescriptorStart.GetOffsetCPUHandle(m_currentBackBufferIndex);
 }
@@ -152,7 +164,7 @@ void D3D12GPUOutputBuffer::InternalResizeBuffers(uint32 width, uint32 height, RE
     Log_DevPrintf("D3D12RendererOutputBuffer::InternalResizeBuffers: New buffer count = %u", bufferCount);
 
     // invoke resize
-    hResult = m_pDXGISwapChain->ResizeBuffers(bufferCount, width, height, m_backBufferFormat, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+    hResult = m_pDXGISwapChain->ResizeBuffers(bufferCount, width, height, m_backBufferDXGIFormat, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
     if (FAILED(hResult))
         Panic("D3D12RendererOutputBuffer::InternalResizeBuffers: IDXGISwapChain::ResizeBuffers failed.");
 
@@ -187,7 +199,7 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
 
     // create render target views
     D3D12_RENDER_TARGET_VIEW_DESC rtvDesc;
-    rtvDesc.Format = m_backBufferFormat;
+    rtvDesc.Format = m_backBufferDXGIFormat;
     rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
     rtvDesc.Texture2D.MipSlice = 0;
     rtvDesc.Texture2D.PlaneSlice = 0;
@@ -209,11 +221,11 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
     }
 
     // allocate depth stencil buffer
-    if (m_depthStencilFormat != DXGI_FORMAT_UNKNOWN)
+    if (m_depthStencilDXGIFormat != DXGI_FORMAT_UNKNOWN)
     {
         // create resource
         D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
-        D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, m_width, m_height, 1, 1, m_depthStencilFormat,{ 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL };
+        D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, m_width, m_height, 1, 1, m_depthStencilDXGIFormat,{ 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL };
         hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, nullptr, __uuidof(ID3D12Resource), (void **)&m_pDepthStencilBuffer);
         if (FAILED(hResult))
         {
@@ -233,7 +245,7 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
 
         // create depth stencil buffer views
         D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-        dsvDesc.Format = m_depthStencilFormat;
+        dsvDesc.Format = m_depthStencilDXGIFormat;
         dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
         dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
         dsvDesc.Texture2D.MipSlice = 0;

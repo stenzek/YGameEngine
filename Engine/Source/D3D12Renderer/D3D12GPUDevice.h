@@ -65,7 +65,7 @@ private:
 class D3D12GPUDevice : public GPUDevice
 {
 public:
-    D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice, DXGI_FORMAT outputBackBufferFormat, DXGI_FORMAT outputDepthStencilFormat);
+    D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat);
     virtual ~D3D12GPUDevice();
 
     // private methods
@@ -132,6 +132,6 @@ private:
     uint32 m_offThreadCopyQueueLength;
     uint32 m_offThreadCopyQueueEnabled;
 
-    DXGI_FORMAT m_outputBackBufferFormat;
-    DXGI_FORMAT m_outputDepthStencilFormat;
+    PIXEL_FORMAT m_outputBackBufferFormat;
+    PIXEL_FORMAT m_outputDepthStencilFormat;
 };

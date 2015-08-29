@@ -2,17 +2,8 @@
 #include "D3D12Renderer/D3D12Common.h"
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUTexture.h"
+#include "D3D12Renderer/D3D12Helpers.h"
 Log_SetChannel(D3D12RenderBackend);
-
-// Conflicts with D3D11
-// Y_Define_NameTable(NameTables::D3DFeatureLevels)
-//     Y_NameTable_VEntry(D3D_FEATURE_LEVEL_9_1,    "D3D_FEATURE_LEVEL_9_1")
-//     Y_NameTable_VEntry(D3D_FEATURE_LEVEL_9_2,    "D3D_FEATURE_LEVEL_9_2")
-//     Y_NameTable_VEntry(D3D_FEATURE_LEVEL_9_3,    "D3D_FEATURE_LEVEL_9_3")
-//     Y_NameTable_VEntry(D3D_FEATURE_LEVEL_10_0,   "D3D_FEATURE_LEVEL_10_0")
-//     Y_NameTable_VEntry(D3D_FEATURE_LEVEL_10_1,   "D3D_FEATURE_LEVEL_10_1")
-//     Y_NameTable_VEntry(D3D_FEATURE_LEVEL_11_0,   "D3D_FEATURE_LEVEL_11_0")
-// Y_NameTable_End()
 
 static const DXGI_FORMAT s_PixelFormatToDXGIFormat[PIXEL_FORMAT_COUNT] =
 {
@@ -100,12 +91,12 @@ static const D3D12_COMPARISON_FUNC s_D3D12ComparisonFuncs[GPU_COMPARISON_FUNC_CO
     D3D12_COMPARISON_FUNC_ALWAYS,            // RENDERER_COMPARISON_FUNC_ALWAYS
 };
 
-DXGI_FORMAT D3D12TypeConversion::PixelFormatToDXGIFormat(PIXEL_FORMAT Format)
+DXGI_FORMAT D3D12Helpers::PixelFormatToDXGIFormat(PIXEL_FORMAT Format)
 {
     return (Format < PIXEL_FORMAT_COUNT) ? s_PixelFormatToDXGIFormat[Format] : DXGI_FORMAT_UNKNOWN;
 }
 
-PIXEL_FORMAT D3D12TypeConversion::DXGIFormatToPixelFormat(DXGI_FORMAT Format)
+PIXEL_FORMAT D3D12Helpers::DXGIFormatToPixelFormat(DXGI_FORMAT Format)
 {
     uint32 i;
     for (i = 0; i < PIXEL_FORMAT_COUNT; i++)
@@ -115,6 +106,15 @@ PIXEL_FORMAT D3D12TypeConversion::DXGIFormatToPixelFormat(DXGI_FORMAT Format)
     }
 
     return PIXEL_FORMAT_UNKNOWN;
+}
+
+void D3D12Helpers::SetD3D12DeviceChildDebugName(ID3D12DeviceChild *pDeviceChild, const char *debugName)
+{
+#ifdef Y_BUILD_CONFIG_DEBUG
+    uint32 nameLength = Y_strlen(debugName);
+    if (nameLength > 0)
+        pDeviceChild->SetPrivateData(WKPDID_D3DDebugObjectName, nameLength, debugName);
+#endif
 }
 
 bool D3D12Helpers::FillD3D12RasterizerStateDesc(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerState, D3D12_RASTERIZER_DESC *pOutRasterizerDesc)
@@ -236,7 +236,7 @@ bool D3D12Helpers::FillD3D12BlendStateDesc(const RENDERER_BLEND_STATE_DESC *pBle
     for (uint32 i = 0; i < 8; i++)
     {
         pOutBlendDesc->RenderTarget[i].BlendEnable = pBlendState->BlendEnable ? TRUE : FALSE;
-        pOutBlendDesc->RenderTarget[i].RenderTargetWriteMask = pBlendState->ColorWriteEnable ? D3D10_COLOR_WRITE_ENABLE_ALL : 0;
+        pOutBlendDesc->RenderTarget[i].RenderTargetWriteMask = pBlendState->ColorWriteEnable ? D3D12_COLOR_WRITE_ENABLE_ALL : 0;
         pOutBlendDesc->RenderTarget[i].SrcBlend = D3D12BlendOptions[pBlendState->SrcBlend];
         pOutBlendDesc->RenderTarget[i].BlendOp = D3D12BlendOps[pBlendState->BlendOp];
         pOutBlendDesc->RenderTarget[i].DestBlend = D3D12BlendOptions[pBlendState->DestBlend];
@@ -300,79 +300,90 @@ bool D3D12Helpers::FillD3D12SamplerStateDesc(const GPU_SAMPLER_STATE_DESC *pSamp
     return true;
 }
 
-// ID3D11ShaderResourceView *D3D12Helpers::GetResourceShaderResourceView(GPUResource *pResource)
-// {
-//     if (pResource == nullptr)
-//         return nullptr;
-// 
-//     switch (pResource->GetResourceType())
-//     {
-//     case GPU_RESOURCE_TYPE_TEXTURE1D:
-//         return static_cast<D3D11GPUTexture1D *>(pResource)->GetD3DSRV();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURE1DARRAY:
-//         return static_cast<D3D11GPUTexture1DArray *>(pResource)->GetD3DSRV();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURE2D:
-//         return static_cast<D3D11GPUTexture2D *>(pResource)->GetD3DSRV();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURE2DARRAY:
-//         return static_cast<D3D11GPUTexture2DArray *>(pResource)->GetD3DSRV();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURE3D:
-//         return static_cast<D3D11GPUTexture3D *>(pResource)->GetD3DSRV();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURECUBE:
-//         return static_cast<D3D11GPUTextureCube *>(pResource)->GetD3DSRV();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURECUBEARRAY:
-//         return static_cast<D3D11GPUTextureCubeArray *>(pResource)->GetD3DSRV();
-//     }
-// 
-//     return nullptr;
-// }
-// 
-// ID3D11SamplerState *D3D12Helpers::GetResourceSamplerState(GPUResource *pResource)
-// {
-//     if (pResource == nullptr)
-//         return nullptr;
-// 
-//     switch (pResource->GetResourceType())
-//     {
-//     case GPU_RESOURCE_TYPE_SAMPLER_STATE:
-//         return static_cast<D3D12SamplerState *>(pResource)->GetD3DSamplerState();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURE1D:
-//         return static_cast<D3D11GPUTexture1D *>(pResource)->GetD3DSamplerState();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURE1DARRAY:
-//         return static_cast<D3D11GPUTexture1DArray *>(pResource)->GetD3DSamplerState();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURE2D:
-//         return static_cast<D3D11GPUTexture2D *>(pResource)->GetD3DSamplerState();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURE2DARRAY:
-//         return static_cast<D3D11GPUTexture2DArray *>(pResource)->GetD3DSamplerState();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURE3D:
-//         return static_cast<D3D11GPUTexture3D *>(pResource)->GetD3DSamplerState();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURECUBE:
-//         return static_cast<D3D11GPUTextureCube *>(pResource)->GetD3DSamplerState();
-// 
-//     case GPU_RESOURCE_TYPE_TEXTURECUBEARRAY:
-//         return static_cast<D3D11GPUTextureCubeArray *>(pResource)->GetD3DSamplerState();
-//     }
-// 
-//     return nullptr;
-// }
-
-void D3D12Helpers::SetD3D12DeviceChildDebugName(ID3D12DeviceChild *pDeviceChild, const char *debugName)
+bool D3D12Helpers::GetResourceSRVHandle(GPUResource *pResource, D3D12DescriptorHandle *pHandle)
 {
-#ifdef Y_BUILD_CONFIG_DEBUG
-    uint32 nameLength = Y_strlen(debugName);
-    if (nameLength > 0)
-        pDeviceChild->SetPrivateData(WKPDID_D3DDebugObjectName, nameLength, debugName);
+    if (pResource == nullptr)
+        return false;
+
+    switch (pResource->GetResourceType())
+    {
+#if 0
+    case GPU_RESOURCE_TYPE_TEXTURE1D:
+        *pHandle = static_cast<D3D12GPUTexture1D *>(pResource)->GetD3DSRV();
+        return (!pHandle->IsNull());
+
+    case GPU_RESOURCE_TYPE_TEXTURE1DARRAY:
+        *pHandle = static_cast<D3D12GPUTexture1DArray *>(pResource)->GetD3DSRV();
+        return (!pHandle->IsNull());
+
 #endif
+
+    case GPU_RESOURCE_TYPE_TEXTURE2D:
+        *pHandle = static_cast<D3D12GPUTexture2D *>(pResource)->GetSRVHandle();
+        return (!pHandle->IsNull());
+
+#if 0
+    case GPU_RESOURCE_TYPE_TEXTURE2DARRAY:
+        *pHandle = static_cast<D3D12GPUTexture2DArray *>(pResource)->GetSRVHandle();
+        return (!pHandle->IsNull());
+
+    case GPU_RESOURCE_TYPE_TEXTURE3D:
+        *pHandle = static_cast<D3D12GPUTexture3D *>(pResource)->GetSRVHandle();
+        return (!pHandle->IsNull());
+
+    case GPU_RESOURCE_TYPE_TEXTURECUBE:
+        *pHandle = static_cast<D3D12GPUTextureCube *>(pResource)->GetSRVHandle();
+        return (!pHandle->IsNull());
+
+    case GPU_RESOURCE_TYPE_TEXTURECUBEARRAY:
+        *pHandle = static_cast<D3D12GPUTextureCubeArray *>(pResource)->GetSRVHandle();
+        return (!pHandle->IsNull());
+#endif
+    }
+
+    return false;
 }
 
+bool D3D12Helpers::GetResourceSamplerHandle(GPUResource *pResource, D3D12DescriptorHandle *pHandle)
+{
+    if (pResource == nullptr)
+        return false;
+
+    switch (pResource->GetResourceType())
+    {
+#if 0
+    case GPU_RESOURCE_TYPE_TEXTURE1D:
+        *pHandle = static_cast<D3D12GPUTexture1D *>(pResource)->GetSamplerHandle();
+        return (!pHandle->IsNull());
+
+    case GPU_RESOURCE_TYPE_TEXTURE1DARRAY:
+        *pHandle = static_cast<D3D12GPUTexture1DArray *>(pResource)->GetSamplerHandle();
+        return (!pHandle->IsNull());
+
+#endif
+
+    case GPU_RESOURCE_TYPE_TEXTURE2D:
+        *pHandle = static_cast<D3D12GPUTexture2D *>(pResource)->GetSamplerHandle();
+        return (!pHandle->IsNull());
+
+#if 0
+    case GPU_RESOURCE_TYPE_TEXTURE2DARRAY:
+        *pHandle = static_cast<D3D12GPUTexture2DArray *>(pResource)->GetSamplerHandle();
+        return (!pHandle->IsNull());
+
+    case GPU_RESOURCE_TYPE_TEXTURE3D:
+        *pHandle = static_cast<D3D12GPUTexture3D *>(pResource)->GetSamplerHandle();
+        return (!pHandle->IsNull());
+
+    case GPU_RESOURCE_TYPE_TEXTURECUBE:
+        *pHandle = static_cast<D3D12GPUTextureCube *>(pResource)->GetSamplerHandle();
+        return (!pHandle->IsNull());
+
+    case GPU_RESOURCE_TYPE_TEXTURECUBEARRAY:
+        *pHandle = static_cast<D3D12GPUTextureCubeArray *>(pResource)->GetSamplerHandle();
+        return (!pHandle->IsNull());
+#endif
+    }
+
+    return false;
+}

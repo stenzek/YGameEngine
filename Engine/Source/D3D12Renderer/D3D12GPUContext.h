@@ -1,5 +1,6 @@
 #pragma once
 #include "D3D12Renderer/D3D12Common.h"
+#include "D3D12Renderer/D3D12DescriptorHeap.h"
 #include "D3D12Renderer/D3D12ScratchBuffer.h"
 
 class D3D12GPUContext : public GPUContext
@@ -143,10 +144,10 @@ public:
     bool Create();
 
     // access to shader states for the shader mutators to modify
-    void SetShaderConstantBuffers(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
-    void SetShaderResources(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
-    void SetShaderSamplers(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
-    void SetShaderUAVs(SHADER_PROGRAM_STAGE stage, uint32 index, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle);
+    void SetShaderConstantBuffers(SHADER_PROGRAM_STAGE stage, uint32 index, const D3D12DescriptorHandle &handle);
+    void SetShaderResources(SHADER_PROGRAM_STAGE stage, uint32 index, const D3D12DescriptorHandle &handle);
+    void SetShaderSamplers(SHADER_PROGRAM_STAGE stage, uint32 index, const D3D12DescriptorHandle &handle);
+    void SetShaderUAVs(SHADER_PROGRAM_STAGE stage, uint32 index, const D3D12DescriptorHandle &handle);
 
     // synchronize the states with the d3d context
     void SynchronizeRenderTargetsAndUAVs();
@@ -163,8 +164,9 @@ private:
     // preallocate constant buffers
     void CreateConstantBuffers();
     bool CreateInternalCommandLists();
+    void ActivateCommandQueue(uint32 index);
     void WaitForCommandQueue(uint32 index);
-    void ExecuteCurrentCommandList();
+    void ExecuteCurrentCommandList(bool reopen);
     void MoveToNextCommandQueue();
     void FinishPendingCommands();
     void ClearCommandListDependantState();
@@ -173,6 +175,8 @@ private:
 
     // allocate from scratch buffer
     bool AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress);
+    bool AllocateScratchView(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle);
+    bool AllocateScratchSamplers(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle);
 
     D3D12RenderBackend *m_pBackend;
     D3D12GPUDevice *m_pDevice;
@@ -184,6 +188,9 @@ private:
     ID3D12CommandQueue *m_pCommandQueue;
     ID3D12GraphicsCommandList *m_pCurrentCommandList;
     D3D12ScratchBuffer *m_pCurrentScratchBuffer;
+    D3D12ScratchDescriptorHeap *m_pCurrentScratchViewHeap;
+    D3D12ScratchDescriptorHeap *m_pCurrentScratchSamplerHeap;
+    PODArray<ID3D12DescriptorHeap *> m_currentDescriptorHeaps;
 
     // Pool of command lists - DCommandQueue because of CommandQueue class that will be removed
     struct DCommandQueue
@@ -192,6 +199,8 @@ private:
         ID3D12GraphicsCommandList *pCommandList;
         ID3D12Fence *pFence;
         D3D12ScratchBuffer *pScratchBuffer;
+        D3D12ScratchDescriptorHeap *pScratchViewHeap;
+        D3D12ScratchDescriptorHeap *pScratchSamplerHeap;
         HANDLE FenceReachedEvent;
         uint64 FenceValue;
         bool Pending;
@@ -199,12 +208,12 @@ private:
     MemArray<DCommandQueue> m_commandQueues;
     uint32 m_currentCommandQueueIndex;
     uint64 m_nextFenceValue;
-    bool m_currentCommandListExecuted;
 
     // state
     RENDERER_VIEWPORT m_currentViewport;
     RENDERER_SCISSOR_RECT m_scissorRect;
     DRAW_TOPOLOGY m_currentTopology;
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE m_currentD3DTopologyType;
 
     D3D12GPUBuffer *m_pCurrentVertexBuffers[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
     uint32 m_currentVertexBufferOffsets[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
@@ -228,32 +237,36 @@ private:
     MemArray<ConstantBuffer> m_constantBuffers;
 
     // shader stage state
-    // we can cheat this in d3d by storing pointers to the d3d objects themselves,
-    // since they're reference counted by the runtime. even if our wrapper object is
-    // deleted by release, the runtime will hold its own reference.
     struct ShaderStageState
     {
-        D3D12_GPU_DESCRIPTOR_HANDLE ConstantBuffers[D3D12_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT];
+        bool ConstantBuffersDirty;
+        bool ResourcesDirty;
+        bool SamplersDirty;
+        bool UAVsDirty;
+
+        D3D12_CPU_DESCRIPTOR_HANDLE CBVTableCPUHandle;
+        D3D12_CPU_DESCRIPTOR_HANDLE SRVTableCPUHandle;
+        D3D12_CPU_DESCRIPTOR_HANDLE SamplerTableCPUHandle;
+        D3D12_CPU_DESCRIPTOR_HANDLE UAVTableCPUHandle;
+        D3D12_GPU_DESCRIPTOR_HANDLE CBVTableGPUHandle;
+        D3D12_GPU_DESCRIPTOR_HANDLE SRVTableGPUHandle;
+        D3D12_GPU_DESCRIPTOR_HANDLE SamplerTableGPUHandle;
+        D3D12_GPU_DESCRIPTOR_HANDLE UAVTableGPUHandle;
+
+        D3D12DescriptorHandle ConstantBuffers[D3D12_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT];
         uint32 ConstantBufferBindCount;
-        int32 ConstantBufferDirtyLowerBounds;
-        int32 ConstantBufferDirtyUpperBounds;
 
-        D3D12_GPU_DESCRIPTOR_HANDLE Resources[D3D12_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT];
+        D3D12DescriptorHandle Resources[D3D12_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT];
         uint32 ResourceBindCount;
-        int32 ResourceDirtyLowerBounds;
-        int32 ResourceDirtyUpperBounds;
 
-        D3D12_GPU_DESCRIPTOR_HANDLE Samplers[D3D12_COMMONSHADER_SAMPLER_SLOT_COUNT];
+        D3D12DescriptorHandle Samplers[D3D12_COMMONSHADER_SAMPLER_SLOT_COUNT];
         uint32 SamplerBindCount;
-        int32 SamplerDirtyLowerBounds;
-        int32 SamplerDirtyUpperBounds;
 
-        D3D12_GPU_DESCRIPTOR_HANDLE UAVs[D3D12_PS_CS_UAV_REGISTER_COUNT];
+        // @TODO move, since it's shared between stages
+        D3D12DescriptorHandle UAVs[D3D12_PS_CS_UAV_REGISTER_COUNT];
         uint32 UAVBindCount;
-        int32 UAVDirtyLowerBounds;
-        int32 UAVDirtyUpperBounds;
     };
-    ShaderStageState m_shaderStates[SHADER_PROGRAM_STAGE_COUNT];
+    MemArray<ShaderStageState> m_shaderStates;
 
     D3D12GPURasterizerState *m_pCurrentRasterizerState;
     D3D12GPUDepthStencilState *m_pCurrentDepthStencilState;

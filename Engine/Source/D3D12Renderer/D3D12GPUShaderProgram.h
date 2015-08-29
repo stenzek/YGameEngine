@@ -42,7 +42,7 @@ public:
     bool Create(D3D12GPUDevice *pDevice, const GPU_VERTEX_ELEMENT_DESC *pVertexAttributes, uint32 nVertexAttributes, ByteStream *pByteCodeStream);
 
     // switch context to a new shader
-    bool Switch(ID3D12GraphicsCommandList *pCommandList, const PipelineStateKey *pKey);
+    bool Switch(D3D12GPUContext *pContext, ID3D12GraphicsCommandList *pCommandList, const PipelineStateKey *pKey);
 
     // --- internal query api ---
     uint32 InternalGetParameterCount() const { return m_parameters.GetSize(); }
@@ -89,5 +89,8 @@ protected:
 
     // copies of bytecode for all shader stages
     BinaryBlob *m_pStageByteCode[SHADER_PROGRAM_STAGE_COUNT];
+
+    // debug name
+    String m_debugName;
 };
 

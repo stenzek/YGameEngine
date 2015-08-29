@@ -2,7 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Source\D3D12Renderer\PrecompiledHeader.cpp" />
-    <ClCompile Include="Source\D3D12Renderer\D3D12Defines.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12CVars.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12RenderBackend.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12GPUOutputBuffer.cpp" />
@@ -14,10 +13,10 @@
     <ClCompile Include="Source\D3D12Renderer\D3D12GPUQuery.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12GPUBuffer.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12GPUShaderProgram.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12Helpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\D3D12Renderer\PrecompiledHeader.h" />
-    <ClInclude Include="Source\D3D12Renderer\D3D12Defines.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12Common.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12CVars.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12RenderBackend.h" />
@@ -30,5 +29,7 @@
     <ClInclude Include="Source\D3D12Renderer\D3D12GPUTexture.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12GPUBuffer.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12GPUShaderProgram.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12Helpers.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12Defines.h" />
   </ItemGroup>
 </Project>

@@ -24,6 +24,10 @@ struct D3D12DescriptorHandle
     // Get this handle
     operator D3D12_CPU_DESCRIPTOR_HANDLE () const { return CPUHandle; }
     operator D3D12_GPU_DESCRIPTOR_HANDLE () const { return GPUHandle; }
+
+    // Comparisons
+    bool operator==(const D3D12DescriptorHandle &handle) const { return (CPUHandle.ptr == handle.CPUHandle.ptr && Type == handle.Type); }
+    bool operator|=(const D3D12DescriptorHandle &handle) const { return (CPUHandle.ptr != handle.CPUHandle.ptr || Type != handle.Type); }
 };
 
 class D3D12DescriptorHeap
@@ -32,6 +36,8 @@ public:
     ~D3D12DescriptorHeap();
 
     static D3D12DescriptorHeap *Create(ID3D12Device *pDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 descriptorCount);
+
+    ID3D12DescriptorHeap *GetD3DHeap() const { return m_pD3DDescriptorHeap; }
 
     bool Allocate(D3D12DescriptorHandle *handle);
     bool AllocateRange(uint32 count, D3D12DescriptorHandle *handle);

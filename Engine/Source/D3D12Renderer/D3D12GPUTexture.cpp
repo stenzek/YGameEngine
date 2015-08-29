@@ -3,6 +3,7 @@
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
+#include "D3D12Renderer/D3D12Helpers.h"
 Log_SetChannel(D3D12RenderBackend);
 
 static void MapTextureFormatToViewFormat(DXGI_FORMAT *pCreationFormat, DXGI_FORMAT *pSRVFormat, DXGI_FORMAT *pRTVFormat, DXGI_FORMAT *pDSVFormat)
@@ -127,7 +128,7 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
 
     // validate pixel formats.
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
-    DXGI_FORMAT creationFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(pTextureDesc->Format);
+    DXGI_FORMAT creationFormat = D3D12Helpers::PixelFormatToDXGIFormat(pTextureDesc->Format);
     DebugAssert(pPixelFormatInfo != nullptr && creationFormat != DXGI_FORMAT_UNKNOWN);
     UNREFERENCED_PARAMETER(pPixelFormatInfo);
 
@@ -236,7 +237,7 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         ID3D12Resource *pUploadResource;
         D3D12_HEAP_PROPERTIES uploadHeapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
         D3D12_RESOURCE_DESC uploadResourceDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, pTextureDesc->Width, pTextureDesc->Height, 1, (UINT16)pTextureDesc->MipLevels, creationFormat, { 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE };
-        hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES, &resourceDesc, D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr, IID_PPV_ARGS(&pUploadResource));
+        hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr, IID_PPV_ARGS(&pUploadResource));
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("CreateCommittedResource for upload resource failed with hResult %08X", hResult);
@@ -448,7 +449,7 @@ GPURenderTargetView *D3D12GPUDevice::CreateRenderTargetView(GPUTexture *pTexture
 
     case GPU_RESOURCE_TYPE_TEXTURE2D:
         pD3DResource = static_cast<D3D12GPUTexture2D *>(pTexture)->GetD3DResource();
-        creationFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2D *>(pTexture)->GetDesc()->Format);
+        creationFormat = D3D12Helpers::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2D *>(pTexture)->GetDesc()->Format);
         MapTextureFormatToViewFormat(&creationFormat, &srvFormat, &rtvFormat, &dsvFormat);
         rtvDesc.Format = rtvFormat;
         rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -586,7 +587,7 @@ GPUDepthStencilBufferView *D3D12GPUDevice::CreateDepthStencilBufferView(GPUTextu
 
     case GPU_RESOURCE_TYPE_TEXTURE2D:
         pD3DResource = static_cast<D3D12GPUTexture2D *>(pTexture)->GetD3DResource();
-        creationFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2D *>(pTexture)->GetDesc()->Format);
+        creationFormat = D3D12Helpers::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2D *>(pTexture)->GetDesc()->Format);
         MapTextureFormatToViewFormat(&creationFormat, &srvFormat, &rtvFormat, &dsvFormat);
         dsvDesc.Format = dsvFormat;
         dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;

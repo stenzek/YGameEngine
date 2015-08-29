@@ -3,6 +3,8 @@
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12GPUOutputBuffer.h"
+#include "D3D12Renderer/D3D12Helpers.h"
+#include "D3D12Renderer/D3D12CVars.h"
 #include "Engine/EngineCVars.h"
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(D3D12GPUDevice);
@@ -17,10 +19,15 @@ D3D12RenderBackend::D3D12RenderBackend()
     , m_D3DFeatureLevel(D3D_FEATURE_LEVEL_11_0)
     , m_featureLevel(RENDERER_FEATURE_LEVEL_COUNT)
     , m_texturePlatform(NUM_TEXTURE_PLATFORMS)
-    , m_outputBackBufferFormat(DXGI_FORMAT_UNKNOWN)
-    , m_outputDepthStencilFormat(DXGI_FORMAT_UNKNOWN)
+    , m_outputBackBufferFormat(PIXEL_FORMAT_UNKNOWN)
+    , m_outputDepthStencilFormat(PIXEL_FORMAT_UNKNOWN)
+    , m_frameLatency(0)
     , m_pGPUDevice(nullptr)
     , m_pGPUContext(nullptr)
+    , m_pLegacyGraphicsRootSignature(nullptr)
+    , m_pLegacyComputeRootSignature(nullptr)
+    , m_pConstantBufferStorageHeap(nullptr)
+    , m_currentCleanupFenceValue(0)
 {
     Y_memzero(m_pDescriptorHeaps, sizeof(m_pDescriptorHeaps));
 
@@ -38,15 +45,6 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
 {
     HRESULT hResult;
 
-    // select formats
-    m_outputBackBufferFormat = D3D11TypeConversion::PixelFormatToDXGIFormat(pCreateParameters->BackBufferFormat);
-    m_outputDepthStencilFormat = (pCreateParameters->DepthStencilBufferFormat != PIXEL_FORMAT_UNKNOWN) ? D3D11TypeConversion::PixelFormatToDXGIFormat(pCreateParameters->DepthStencilBufferFormat) : DXGI_FORMAT_UNKNOWN;
-    if (m_outputBackBufferFormat == DXGI_FORMAT_UNKNOWN || (pCreateParameters->DepthStencilBufferFormat != PIXEL_FORMAT_UNKNOWN && m_outputDepthStencilFormat == DXGI_FORMAT_UNKNOWN))
-    {
-        Log_ErrorPrintf("D3D12RenderBackend::Create: Invalid swap chain format (%s / %s)", NameTable_GetNameString(NameTables::PixelFormat, pCreateParameters->BackBufferFormat), NameTable_GetNameString(NameTables::PixelFormat, pCreateParameters->DepthStencilBufferFormat));
-        return false;
-    }
-
     // load d3d12 library
     DebugAssert(s_hD3D12DLL == nullptr);
     s_hD3D12DLL = LoadLibraryA("d3d12.dll");
@@ -59,7 +57,8 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
     // get function entry points
     PFN_D3D12_CREATE_DEVICE fnD3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(s_hD3D12DLL, "D3D12CreateDevice");
     PFN_D3D12_GET_DEBUG_INTERFACE fnD3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(s_hD3D12DLL, "D3D12GetDebugInterface");
-    if (fnD3D12CreateDevice == nullptr || fnD3D12GetDebugInterface == nullptr)
+    PFN_D3D12_SERIALIZE_ROOT_SIGNATURE fnD3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(GetModuleHandleA("d3d12.dll"), "D3D12SerializeRootSignature");
+    if (fnD3D12CreateDevice == nullptr || fnD3D12GetDebugInterface == nullptr || fnD3D12SerializeRootSignature == nullptr)
     {
         Log_ErrorPrintf("D3D12RenderBackend::Create: Missing D3D12 device entry points.");
         return false;
@@ -230,6 +229,110 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
     return true;
 }
 
+bool D3D12RenderBackend::CreateLegacyRootSignatures()
+{
+    HRESULT hResult;
+
+    D3D12_DESCRIPTOR_RANGE descriptorRanges[] =
+    {
+        { D3D12_DESCRIPTOR_RANGE_TYPE_CBV, D3D12_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
+        { D3D12_DESCRIPTOR_RANGE_TYPE_SRV, D3D12_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
+        { D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, D3D12_COMMONSHADER_SAMPLER_SLOT_COUNT, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
+        { D3D12_DESCRIPTOR_RANGE_TYPE_UAV, D3D12_PS_CS_UAV_REGISTER_COUNT, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+    };
+
+    D3D12_ROOT_PARAMETER graphicsRootParameters[] =
+    {
+        // VS
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[0] }, D3D12_SHADER_VISIBILITY_VERTEX },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[1] }, D3D12_SHADER_VISIBILITY_VERTEX },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[2] }, D3D12_SHADER_VISIBILITY_VERTEX },
+
+        // HS
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[0] }, D3D12_SHADER_VISIBILITY_HULL },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[1] }, D3D12_SHADER_VISIBILITY_HULL },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[2] }, D3D12_SHADER_VISIBILITY_HULL },
+
+        // DS
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[0] }, D3D12_SHADER_VISIBILITY_DOMAIN },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[1] }, D3D12_SHADER_VISIBILITY_DOMAIN },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[2] }, D3D12_SHADER_VISIBILITY_DOMAIN },
+
+        // GS
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[0] }, D3D12_SHADER_VISIBILITY_GEOMETRY },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[1] }, D3D12_SHADER_VISIBILITY_GEOMETRY },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[2] }, D3D12_SHADER_VISIBILITY_GEOMETRY },
+
+        // PS
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[0] }, D3D12_SHADER_VISIBILITY_PIXEL },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[1] }, D3D12_SHADER_VISIBILITY_PIXEL },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[2] }, D3D12_SHADER_VISIBILITY_PIXEL },
+
+        // UAVs
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[3] }, D3D12_SHADER_VISIBILITY_PIXEL }
+    };
+
+    D3D12_ROOT_PARAMETER computeRootParameters[] = 
+    {
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[0] }, D3D12_SHADER_VISIBILITY_ALL },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[1] }, D3D12_SHADER_VISIBILITY_ALL },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[2] }, D3D12_SHADER_VISIBILITY_ALL },
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[3] }, D3D12_SHADER_VISIBILITY_ALL }
+    };
+    
+    D3D12_ROOT_SIGNATURE_DESC graphicsRootSignatureDesc = { 1, graphicsRootParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT };
+    D3D12_ROOT_SIGNATURE_DESC computeRootSignatureDesc = { 1, graphicsRootParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS };
+
+    // serialize it
+    ID3DBlob *pRootSignatureBlob;
+    ID3DBlob *pErrorBlob;
+
+    // for graphics
+    hResult = m_fnD3D12SerializeRootSignature(&graphicsRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pRootSignatureBlob, &pErrorBlob);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("D3D12SerializeRootSignature for graphics failed with hResult %08X", hResult);
+        if (pErrorBlob != nullptr)
+        {
+            Log_ErrorPrint((const char *)pErrorBlob->GetBufferPointer());
+            pErrorBlob->Release();
+        }
+        return false;
+    }
+    SAFE_RELEASE(pErrorBlob);
+    hResult = m_pD3DDevice->CreateRootSignature(0, pRootSignatureBlob->GetBufferPointer(), pRootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_pLegacyGraphicsRootSignature));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateRootSignature for graphics failed with hResult %08X", hResult);
+        pRootSignatureBlob->Release();
+        return false;
+    }
+    pRootSignatureBlob->Release();
+
+    // for compute
+    hResult = m_fnD3D12SerializeRootSignature(&computeRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pRootSignatureBlob, &pErrorBlob);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("D3D12SerializeRootSignature for compute failed with hResult %08X", hResult);
+        if (pErrorBlob != nullptr)
+        {
+            Log_ErrorPrint((const char *)pErrorBlob->GetBufferPointer());
+            pErrorBlob->Release();
+        }
+        return false;
+    }
+    SAFE_RELEASE(pErrorBlob);
+    hResult = m_pD3DDevice->CreateRootSignature(0, pRootSignatureBlob->GetBufferPointer(), pRootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_pLegacyComputeRootSignature));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateRootSignature for compute failed with hResult %08X", hResult);
+        pRootSignatureBlob->Release();
+        return false;
+    }
+    pRootSignatureBlob->Release();
+    return true;
+}
+
 bool D3D12RenderBackend::CreateDescriptorHeaps()
 {
     static const uint32 initialDescriptorHeapSize[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
@@ -335,13 +438,17 @@ void D3D12RenderBackend::Shutdown()
     SAFE_RELEASE(m_pGPUContext);
     SAFE_RELEASE(m_pGPUDevice);
 
+    // remove any scheduled resources (descriptors will be dropped anyways)
+    for (uint32 i = 0; i < m_pendingDeletionResources.GetSize(); i++)
+        m_pendingDeletionResources[i].pResource->Release();
+
     // cleanup constant buffers
     for (ConstantBufferStorage &constantBufferStorage : m_constantBufferStorage)
     {
         if (constantBufferStorage.pResource != nullptr)
             constantBufferStorage.pResource->Release();
     }
-    m_pConstantBufferStorageHeap->Release();
+    SAFE_RELEASE(m_pConstantBufferStorageHeap);
 
     // remove descriptor heaps
     for (uint32 i = 0; i < countof(m_pDescriptorHeaps); i++)
@@ -349,6 +456,10 @@ void D3D12RenderBackend::Shutdown()
         if (m_pDescriptorHeaps[i] != nullptr)
             delete m_pDescriptorHeaps[i];
     }
+
+    // signatures
+    SAFE_RELEASE(m_pLegacyComputeRootSignature);
+    SAFE_RELEASE(m_pLegacyGraphicsRootSignature);
 
     // cleanup
     SAFE_RELEASE(m_pD3DDevice);
@@ -391,7 +502,7 @@ void D3D12RenderBackend::Shutdown()
 
 bool D3D12RenderBackend::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat /*= NULL*/) const
 {
-    DXGI_FORMAT DXGIFormat = D3D11TypeConversion::PixelFormatToDXGIFormat(PixelFormat);
+    DXGI_FORMAT DXGIFormat = D3D12Helpers::PixelFormatToDXGIFormat(PixelFormat);
     if (DXGIFormat == DXGI_FORMAT_UNKNOWN)
     {
         // use r8g8b8a8

@@ -2243,8 +2243,6 @@ void Renderer::FixedResources::ReleaseResources()
 // constant buffer declarations
 DECLARE_SHADER_CONSTANT_BUFFER(cbObjectConstants);
 DECLARE_SHADER_CONSTANT_BUFFER(cbViewConstants);
-DECLARE_SHADER_CONSTANT_BUFFER(cbViewportConstants);
-DECLARE_SHADER_CONSTANT_BUFFER(cbWorldConstants);
 
 // constant buffer definitions
 BEGIN_SHADER_CONSTANT_BUFFER(cbObjectConstants, "ObjectConstantsBuffer", "ObjectConstants", RENDERER_PLATFORM_COUNT, RENDERER_FEATURE_LEVEL_COUNT)
@@ -2261,21 +2259,18 @@ BEGIN_SHADER_CONSTANT_BUFFER(cbViewConstants, "ViewConstantsBuffer", "ViewConsta
     SHADER_CONSTANT_BUFFER_FIELD("InverseViewProjectionMatrix", SHADER_PARAMETER_TYPE_FLOAT4X4, 1)
     SHADER_CONSTANT_BUFFER_FIELD("ScreenProjectionMatrix", SHADER_PARAMETER_TYPE_FLOAT4X4, 1)
     SHADER_CONSTANT_BUFFER_FIELD("EyePosition", SHADER_PARAMETER_TYPE_FLOAT3, 1)
-    SHADER_CONSTANT_BUFFER_FIELD("ZRatio", SHADER_PARAMETER_TYPE_FLOAT2, 1)
+    SHADER_CONSTANT_BUFFER_FIELD("WorldTime", SHADER_PARAMETER_TYPE_FLOAT, 1)
+    SHADER_CONSTANT_BUFFER_FIELD("ZRatioNumerator", SHADER_PARAMETER_TYPE_FLOAT, 1)
+    SHADER_CONSTANT_BUFFER_FIELD("ZRatioDenominator", SHADER_PARAMETER_TYPE_FLOAT, 1)
     SHADER_CONSTANT_BUFFER_FIELD("ZNear", SHADER_PARAMETER_TYPE_FLOAT, 1)
     SHADER_CONSTANT_BUFFER_FIELD("ZFar", SHADER_PARAMETER_TYPE_FLOAT, 1)
     SHADER_CONSTANT_BUFFER_FIELD("PerspectiveAspectRatio", SHADER_PARAMETER_TYPE_FLOAT, 1)
     SHADER_CONSTANT_BUFFER_FIELD("PerspectiveFOV", SHADER_PARAMETER_TYPE_FLOAT, 1)
-END_SHADER_CONSTANT_BUFFER(cbViewConstants)
-BEGIN_SHADER_CONSTANT_BUFFER(cbViewportConstants, "ViewportConstantsBuffer", "ViewportConstants", RENDERER_PLATFORM_COUNT, RENDERER_FEATURE_LEVEL_COUNT)
     SHADER_CONSTANT_BUFFER_FIELD("ViewportOffset", SHADER_PARAMETER_TYPE_FLOAT2, 1)
     SHADER_CONSTANT_BUFFER_FIELD("ViewportSize", SHADER_PARAMETER_TYPE_FLOAT2, 1)
     SHADER_CONSTANT_BUFFER_FIELD("ViewportOffsetFraction", SHADER_PARAMETER_TYPE_FLOAT2, 1)
     SHADER_CONSTANT_BUFFER_FIELD("InverseViewportSize", SHADER_PARAMETER_TYPE_FLOAT2, 1)
-END_SHADER_CONSTANT_BUFFER(cbViewportConstants)
-BEGIN_SHADER_CONSTANT_BUFFER(cbWorldConstants, "WorldConstantsBuffer", "WorldConstants", RENDERER_PLATFORM_COUNT, RENDERER_FEATURE_LEVEL_COUNT)
-    SHADER_CONSTANT_BUFFER_FIELD("WorldTime", SHADER_PARAMETER_TYPE_FLOAT, 1)
-END_SHADER_CONSTANT_BUFFER(cbWorldConstants)
+END_SHADER_CONSTANT_BUFFER(cbViewConstants)
 DECLARE_RAW_SHADER_CONSTANT_BUFFER(cbGlobalConstants);
 DEFINE_RAW_SHADER_CONSTANT_BUFFER(cbGlobalConstants, "$Globals", "", 65536, RENDERER_PLATFORM_COUNT, RENDERER_FEATURE_LEVEL_SM4);
 
@@ -2384,11 +2379,12 @@ void GPUContextConstants::SetFromCamera(const Camera &camera, bool commit /*= tr
     float2 zRatioValue(camera.GetFarPlaneDistance() / (camera.GetFarPlaneDistance() - camera.GetNearPlaneDistance()), (camera.GetFarPlaneDistance() * camera.GetNearPlaneDistance()) / (camera.GetFarPlaneDistance() - camera.GetNearPlaneDistance()));
 
     // set the remaining fields directly to the constant buffer
-    cbViewConstants.SetFieldFloat2(m_pContext, 8, zRatioValue, false);
-    cbViewConstants.SetFieldFloat(m_pContext, 9, camera.GetNearPlaneDistance(), false);
-    cbViewConstants.SetFieldFloat(m_pContext, 10, camera.GetFarPlaneDistance(), false);
-    cbViewConstants.SetFieldFloat(m_pContext, 11, camera.GetPerspectiveAspect(), false);
-    cbViewConstants.SetFieldFloat(m_pContext, 12, Math::DegreesToRadians(camera.GetPerspectiveFieldOfView()), false);
+    cbViewConstants.SetFieldFloat(m_pContext, 9, zRatioValue.x, false);
+    cbViewConstants.SetFieldFloat(m_pContext, 10, zRatioValue.y, false);
+    cbViewConstants.SetFieldFloat(m_pContext, 11, camera.GetNearPlaneDistance(), false);
+    cbViewConstants.SetFieldFloat(m_pContext, 12, camera.GetFarPlaneDistance(), false);
+    cbViewConstants.SetFieldFloat(m_pContext, 13, camera.GetPerspectiveAspect(), false);
+    cbViewConstants.SetFieldFloat(m_pContext, 14, Math::DegreesToRadians(camera.GetPerspectiveFieldOfView()), false);
 
     // commit
     if (commit)
@@ -2402,7 +2398,7 @@ void GPUContextConstants::SetViewportOffset(float offsetX, float offsetY, bool c
         return;
 
     m_viewportOffset = viewportOffset;
-    cbViewportConstants.SetFieldFloat2(m_pContext, 0, viewportOffset, false);
+    cbViewConstants.SetFieldFloat2(m_pContext, 15, viewportOffset, false);
     m_recalculateViewportFractions = true;
 
     if (commit)
@@ -2416,7 +2412,7 @@ void GPUContextConstants::SetViewportSize(float width, float height, bool commit
         return;
 
     m_viewportSize = viewportSize;
-    cbViewportConstants.SetFieldFloat2(m_pContext, 1, viewportSize, false);
+    cbViewConstants.SetFieldFloat2(m_pContext, 16, viewportSize, false);
     m_recalculateViewportFractions = true;
 
     if (commit)
@@ -2429,7 +2425,7 @@ void GPUContextConstants::SetWorldTime(float worldTime, bool commit /*= true*/)
         return;
 
     m_worldTime = worldTime;
-    cbWorldConstants.SetFieldFloat(m_pContext, 0, worldTime, false);
+    cbViewConstants.SetFieldFloat(m_pContext, 8, worldTime, false);
 
     if (commit)
         CommitChanges();
@@ -2471,8 +2467,8 @@ void GPUContextConstants::CommitChanges()
         float2 vpSizeF((float)m_viewportSize.x, (float)m_viewportSize.y);
         float2 invVPSizeF(vpSizeF.Reciprocal());
         float2 offsetFraction(float2((float)m_viewportOffset.x, (float)m_viewportOffset.y) * invVPSizeF);
-        cbViewportConstants.SetFieldFloat2(m_pContext, 2, offsetFraction, false);
-        cbViewportConstants.SetFieldFloat2(m_pContext, 3, invVPSizeF, false);
+        cbViewConstants.SetFieldFloat2(m_pContext, 17, offsetFraction, false);
+        cbViewConstants.SetFieldFloat2(m_pContext, 18, invVPSizeF, false);
 
         // create ortho projection matrix
         float texelOffset = g_pRenderer->GetTexelOffset();
@@ -2486,12 +2482,6 @@ void GPUContextConstants::CommitChanges()
 
     // commit view buffer
     cbViewConstants.CommitChanges(m_pContext);
-
-    // commit viewport buffer
-    cbViewportConstants.CommitChanges(m_pContext);
-
-    // commit world buffer
-    cbWorldConstants.CommitChanges(m_pContext);
 }
 
 void GPUContextConstants::CommitGlobalConstantBufferChanges()

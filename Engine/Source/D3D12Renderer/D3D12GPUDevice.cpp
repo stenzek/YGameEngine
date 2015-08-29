@@ -3,10 +3,11 @@
 #include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12GPUOutputBuffer.h"
+#include "D3D12Renderer/D3D12Helpers.h"
 #include "Engine/EngineCVars.h"
 Log_SetChannel(D3D12RenderBackend);
 
-D3D12GPUDevice::D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice, DXGI_FORMAT outputBackBufferFormat, DXGI_FORMAT outputDepthStencilFormat)
+D3D12GPUDevice::D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat)
     : m_pBackend(pBackend)
     , m_pDXGIFactory(pDXGIFactory)
     , m_pDXGIAdapter(pDXGIAdapter)

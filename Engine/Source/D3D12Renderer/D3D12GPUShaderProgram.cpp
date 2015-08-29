@@ -3,7 +3,9 @@
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
+#include "D3D12Renderer/D3D12Helpers.h"
 #include "Renderer/ShaderConstantBuffer.h"
+#include "Engine/EngineCVars.h"
 #include "Core/ThirdParty/MurmurHash3.h"
 Log_SetChannel(D3D12RenderBackend);
 
@@ -84,18 +86,97 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
     // fill new details
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineDesc;
     Y_memzero(&pipelineDesc, sizeof(pipelineDesc));
-    // @TODO
+
+    // stage bytecode
+    if (m_pStageByteCode[SHADER_PROGRAM_STAGE_VERTEX_SHADER] != nullptr)
+    {
+        pipelineDesc.VS.pShaderBytecode = m_pStageByteCode[SHADER_PROGRAM_STAGE_VERTEX_SHADER]->GetDataPointer();
+        pipelineDesc.VS.BytecodeLength = m_pStageByteCode[SHADER_PROGRAM_STAGE_VERTEX_SHADER]->GetDataSize();
+    }
+    else
+    {
+        pipelineDesc.VS.pShaderBytecode = nullptr;
+        pipelineDesc.VS.BytecodeLength = 0;
+    }
+    if (m_pStageByteCode[SHADER_PROGRAM_STAGE_HULL_SHADER] != nullptr)
+    {
+        pipelineDesc.HS.pShaderBytecode = m_pStageByteCode[SHADER_PROGRAM_STAGE_HULL_SHADER]->GetDataPointer();
+        pipelineDesc.HS.BytecodeLength = m_pStageByteCode[SHADER_PROGRAM_STAGE_HULL_SHADER]->GetDataSize();
+    }
+    else
+    {
+        pipelineDesc.HS.pShaderBytecode = nullptr;
+        pipelineDesc.HS.BytecodeLength = 0;
+    }
+    if (m_pStageByteCode[SHADER_PROGRAM_STAGE_DOMAIN_SHADER] != nullptr)
+    {
+        pipelineDesc.DS.pShaderBytecode = m_pStageByteCode[SHADER_PROGRAM_STAGE_DOMAIN_SHADER]->GetDataPointer();
+        pipelineDesc.DS.BytecodeLength = m_pStageByteCode[SHADER_PROGRAM_STAGE_DOMAIN_SHADER]->GetDataSize();
+    }
+    else
+    {
+        pipelineDesc.DS.pShaderBytecode = nullptr;
+        pipelineDesc.DS.BytecodeLength = 0;
+    }
+    if (m_pStageByteCode[SHADER_PROGRAM_STAGE_GEOMETRY_SHADER] != nullptr)
+    {
+        pipelineDesc.GS.pShaderBytecode = m_pStageByteCode[SHADER_PROGRAM_STAGE_GEOMETRY_SHADER]->GetDataPointer();
+        pipelineDesc.GS.BytecodeLength = m_pStageByteCode[SHADER_PROGRAM_STAGE_GEOMETRY_SHADER]->GetDataSize();
+    }
+    else
+    {
+        pipelineDesc.GS.pShaderBytecode = nullptr;
+        pipelineDesc.GS.BytecodeLength = 0;
+    }
+    if (m_pStageByteCode[SHADER_PROGRAM_STAGE_PIXEL_SHADER] != nullptr)
+    {
+        pipelineDesc.PS.pShaderBytecode = m_pStageByteCode[SHADER_PROGRAM_STAGE_PIXEL_SHADER]->GetDataPointer();
+        pipelineDesc.PS.BytecodeLength = m_pStageByteCode[SHADER_PROGRAM_STAGE_PIXEL_SHADER]->GetDataSize();
+    }
+    else
+    {
+        pipelineDesc.PS.pShaderBytecode = nullptr;
+        pipelineDesc.PS.BytecodeLength = 0;
+    }
+
+    // streamout
+    Y_memzero(&pipelineDesc.StreamOutput, sizeof(pipelineDesc.StreamOutput));
+
+    // states
+    Y_memcpy(&pipelineDesc.BlendState, &pKey->BlendState, sizeof(pipelineDesc.BlendState));
+    Y_memcpy(&pipelineDesc.RasterizerState, &pKey->RasterizerState, sizeof(pipelineDesc.RasterizerState));
+    Y_memcpy(&pipelineDesc.DepthStencilState, &pKey->RasterizerState, sizeof(pipelineDesc.DepthStencilState));
+    pipelineDesc.InputLayout.NumElements = m_vertexAttributes.GetSize();
+    pipelineDesc.InputLayout.pInputElementDescs = m_vertexAttributes.GetBasePointer();
+    pipelineDesc.SampleMask = 0xFFFFFFFF;
+    pipelineDesc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF;
+    pipelineDesc.NumRenderTargets = pKey->RenderTargetCount;
+    for (uint32 i = 0; i < pKey->RenderTargetCount; i++)
+        pipelineDesc.RTVFormats[i] = D3D12Helpers::PixelFormatToDXGIFormat(pKey->RTVFormats[i]);
+    for (uint32 i = pKey->RenderTargetCount; i < 8; i++)
+        pipelineDesc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+    pipelineDesc.DSVFormat = D3D12Helpers::PixelFormatToDXGIFormat(pKey->DSVFormat);
+    pipelineDesc.SampleDesc.Count = 1;
+    pipelineDesc.SampleDesc.Quality = 0;
+    pipelineDesc.NodeMask = 0;
+    pipelineDesc.CachedPSO.pCachedBlob = nullptr;
+    pipelineDesc.CachedPSO.CachedBlobSizeInBytes = 0;
+    pipelineDesc.Flags = (CVars::r_use_debug_shaders.GetBool()) ? D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG : D3D12_PIPELINE_STATE_FLAG_NONE;
 
     // create it
     ID3D12PipelineState *pPipelineState;
     HRESULT hResult = D3D12RenderBackend::GetInstance()->GetD3DDevice()->CreateGraphicsPipelineState(&pipelineDesc, __uuidof(ID3D12PipelineState), (void **)&pPipelineState);
-    if (FAILED(hResult))
+    if (SUCCEEDED(hResult))
+    {
+        // set debug name
+        if (!m_debugName.IsEmpty())
+            D3D12Helpers::SetD3D12DeviceChildDebugName(pPipelineState, m_debugName);
+    }
+    else
     {
         Log_ErrorPrintf("CreateGraphicsPipelineState failed with hResult %08X", hResult);
         pPipelineState = nullptr;
     }
-
-    // @TODO set debug name
 
     // store it
     PipelineState ps;
@@ -133,7 +214,7 @@ void D3D12GPUShaderProgram::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMe
 
 void D3D12GPUShaderProgram::SetDebugName(const char *name)
 {
-
+    m_debugName = name;
 }
 
 bool D3D12GPUShaderProgram::Create(D3D12GPUDevice *pDevice, const GPU_VERTEX_ELEMENT_DESC *pVertexAttributes, uint32 nVertexAttributes, ByteStream *pByteCodeStream)
@@ -262,7 +343,7 @@ bool D3D12GPUShaderProgram::Create(D3D12GPUDevice *pDevice, const GPU_VERTEX_ELE
     return true;
 }
 
-bool D3D12GPUShaderProgram::Switch(ID3D12GraphicsCommandList *pCommandList, const PipelineStateKey *pKey)
+bool D3D12GPUShaderProgram::Switch(D3D12GPUContext *pContext, ID3D12GraphicsCommandList *pCommandList, const PipelineStateKey *pKey)
 {
     // get pipeline state
     ID3D12PipelineState *pPipelineState = GetPipelineState(pKey);
@@ -271,8 +352,23 @@ bool D3D12GPUShaderProgram::Switch(ID3D12GraphicsCommandList *pCommandList, cons
 
     pCommandList->SetPipelineState(pPipelineState);
     
-    // @TODO switch to program root
-    // @TODO bind constant buffers
+    // bind constant buffers
+    for (ShaderParameter &parameter : m_parameters)
+    {
+        if (parameter.Type == SHADER_PARAMETER_TYPE_CONSTANT_BUFFER)
+        {
+            DebugAssert(parameter.BindTarget == D3D_SHADER_BIND_TARGET_CONSTANT_BUFFER);
+            for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
+            {
+                if (parameter.BindPoint[stageIndex] < 0)
+                    continue;
+
+                const D3D12DescriptorHandle *pHandle = D3D12RenderBackend::GetInstance()->GetConstantBufferDescriptor(parameter.ConstantBufferIndex);
+                if (pHandle != nullptr)
+                    pContext->SetShaderConstantBuffers((SHADER_PROGRAM_STAGE)stageIndex, parameter.BindPoint[stageIndex], *pHandle);
+            }
+        }
+    }
 
     // done
     return true;
@@ -327,68 +423,48 @@ void D3D12GPUShaderProgram::InternalSetParameterStructArray(GPUContext *pContext
 
 void D3D12GPUShaderProgram::InternalSetParameterResource(D3D12GPUContext *pContext, uint32 parameterIndex, GPUResource *pResource, GPUSamplerState *pLinkedSamplerState)
 {
-#if 0
     const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
-
-//     // handle type mismatches
-//     if (pResource != nullptr)
-//     {
-//         GPU_RESOURCE_TYPE expectedResourceType = ShaderParameterResourceType(parameterInfo->Type);
-//         if (pResource->GetResourceType() != expectedResourceType)
-//         {
-//             Log_WarningPrintf("D3D12GPUShaderProgram::InternalSetParameterResource: Parameter %u type mismatch (expecting %s, got %s for ptype %s), setting to null", parameterIndex, NameTable_GetNameString(NameTables::GPUResourceType, expectedResourceType), NameTable_GetNameString(NameTables::GPUResourceType, pResource->GetResourceType()), NameTable_GetNameString(NameTables::ShaderParameterType, parameterInfo->Type));
-//             return;
-//         }
-//     }
 
     // branch out according to target
     switch (parameterInfo->BindTarget)
     {
-    case D3D12_SHADER_BIND_TARGET_CONSTANT_BUFFER:
+    case D3D_SHADER_BIND_TARGET_RESOURCE:
         {
-            ID3D12Buffer *pD3DBuffer = (pResource != nullptr) ? static_cast<D3D12GPUBuffer *>(pResource)->GetD3DBuffer() : nullptr;
+            D3D12DescriptorHandle handle;
+            D3D12Helpers::GetResourceSRVHandle(pResource, &handle);
+
             for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
             {
                 int32 bindPoint = parameterInfo->BindPoint[stageIndex];
                 if (bindPoint >= 0)
-                    pContext->SetShaderConstantBuffers((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, pD3DBuffer);
+                    pContext->SetShaderResources((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, handle);
             }
         }
         break;
 
-    case D3D12_SHADER_BIND_TARGET_RESOURCE:
+    case D3D_SHADER_BIND_TARGET_SAMPLER:
         {
-            ID3D12ShaderResourceView *pD3DSRV = (pResource != nullptr) ? D3D12Helpers::GetResourceShaderResourceView(pResource) : nullptr;
+            D3D12DescriptorHandle handle;
+            D3D12Helpers::GetResourceSamplerHandle(pResource, &handle);
+
             for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
             {
                 int32 bindPoint = parameterInfo->BindPoint[stageIndex];
                 if (bindPoint >= 0)
-                    pContext->SetShaderResources((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, pD3DSRV);
+                    pContext->SetShaderSamplers((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, handle);
             }
         }
         break;
 
-    case D3D12_SHADER_BIND_TARGET_SAMPLER:
+    case D3D_SHADER_BIND_TARGET_UNORDERED_ACCESS_VIEW:
         {
-            ID3D12SamplerState *pD3DSamplerState = (pResource != nullptr) ? D3D12Helpers::GetResourceSamplerState(pResource) : nullptr;
-            for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
-            {
-                int32 bindPoint = parameterInfo->BindPoint[stageIndex];
-                if (bindPoint >= 0)
-                    pContext->SetShaderSamplers((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, pD3DSamplerState);
-            }
-        }
-        break;
-
-    case D3D12_SHADER_BIND_TARGET_UNORDERED_ACCESS_VIEW:
-        {
-            ID3D12UnorderedAccessView *pD3DUAV = (pResource != nullptr && pResource->GetResourceType() == GPU_RESOURCE_TYPE_COMPUTE_VIEW) ? static_cast<D3D12GPUComputeView *>(pResource)->GetD3DUAV() : nullptr;
-            for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
-            {
-                int32 bindPoint = parameterInfo->BindPoint[stageIndex];
-                if (bindPoint >= 0)
-                    pContext->SetShaderUAVs((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, pD3DUAV);
-            }
+//             ID3D12UnorderedAccessView *pD3DUAV = (pResource != nullptr && pResource->GetResourceType() == GPU_RESOURCE_TYPE_COMPUTE_VIEW) ? static_cast<D3D12GPUComputeView *>(pResource)->GetD3DUAV() : nullptr;
+//             for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
+//             {
+//                 int32 bindPoint = parameterInfo->BindPoint[stageIndex];
+//                 if (bindPoint >= 0)
+//                     pContext->SetShaderUAVs((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, pD3DUAV);
+//             }
         }
         break;
     }
@@ -397,18 +473,19 @@ void D3D12GPUShaderProgram::InternalSetParameterResource(D3D12GPUContext *pConte
     if (parameterInfo->LinkedSamplerIndex >= 0)
     {
         const ShaderParameter *samplerParameterInfo = &m_parameters[parameterInfo->LinkedSamplerIndex];
-        DebugAssert(samplerParameterInfo->Type == SHADER_PARAMETER_TYPE_SAMPLER_STATE && samplerParameterInfo->BindTarget == D3D12_SHADER_BIND_TARGET_SAMPLER);
+        DebugAssert(samplerParameterInfo->Type == SHADER_PARAMETER_TYPE_SAMPLER_STATE && samplerParameterInfo->BindTarget == D3D_SHADER_BIND_TARGET_SAMPLER);
 
         // write to stages
-        ID3D12SamplerState *pD3DSamplerState = (pResource != nullptr) ? D3D12Helpers::GetResourceSamplerState((pLinkedSamplerState != nullptr) ? pLinkedSamplerState : pResource) : nullptr;
+        D3D12DescriptorHandle handle;
+        D3D12Helpers::GetResourceSamplerHandle(pResource, &handle);
+
         for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
         {
             int32 bindPoint = samplerParameterInfo->BindPoint[stageIndex];
             if (bindPoint >= 0)
-                pContext->SetShaderSamplers((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, pD3DSamplerState);
+                pContext->SetShaderSamplers((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, handle);
         }
     }
-#endif
 }
 
 uint32 D3D12GPUShaderProgram::GetParameterCount() const

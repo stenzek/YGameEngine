@@ -145,6 +145,8 @@ bool D3D12Helpers::FillD3D12RasterizerStateDesc(const RENDERER_RASTERIZER_STATE_
     //pOutRasterizerDesc->ScissorEnable = pRasterizerState->ScissorEnable ? TRUE : FALSE;
     pOutRasterizerDesc->MultisampleEnable = FALSE;
     pOutRasterizerDesc->AntialiasedLineEnable = FALSE;
+    pOutRasterizerDesc->ForcedSampleCount = 0;
+    pOutRasterizerDesc->ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
     return true;
 }
 
@@ -236,14 +238,16 @@ bool D3D12Helpers::FillD3D12BlendStateDesc(const RENDERER_BLEND_STATE_DESC *pBle
     for (uint32 i = 0; i < 8; i++)
     {
         pOutBlendDesc->RenderTarget[i].BlendEnable = pBlendState->BlendEnable ? TRUE : FALSE;
-        pOutBlendDesc->RenderTarget[i].RenderTargetWriteMask = pBlendState->ColorWriteEnable ? D3D12_COLOR_WRITE_ENABLE_ALL : 0;
+        pOutBlendDesc->RenderTarget[i].LogicOpEnable = FALSE;
         pOutBlendDesc->RenderTarget[i].SrcBlend = D3D12BlendOptions[pBlendState->SrcBlend];
         pOutBlendDesc->RenderTarget[i].BlendOp = D3D12BlendOps[pBlendState->BlendOp];
         pOutBlendDesc->RenderTarget[i].DestBlend = D3D12BlendOptions[pBlendState->DestBlend];
         pOutBlendDesc->RenderTarget[i].SrcBlendAlpha = D3D12BlendOptions[pBlendState->SrcBlendAlpha];
         pOutBlendDesc->RenderTarget[i].BlendOpAlpha = D3D12BlendOps[pBlendState->BlendOpAlpha];
         pOutBlendDesc->RenderTarget[i].DestBlendAlpha = D3D12BlendOptions[pBlendState->DestBlendAlpha];
-    }  
+        pOutBlendDesc->RenderTarget[i].LogicOp = D3D12_LOGIC_OP_CLEAR;
+        pOutBlendDesc->RenderTarget[i].RenderTargetWriteMask = pBlendState->ColorWriteEnable ? D3D12_COLOR_WRITE_ENABLE_ALL : 0;
+    }
 
     return true;
 }

@@ -4,6 +4,7 @@
 #include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12Helpers.h"
+#include "D3D12Renderer/D3D12CVars.h"
 #include "Renderer/ShaderConstantBuffer.h"
 #include "Engine/EngineCVars.h"
 #include "Core/ThirdParty/MurmurHash3.h"
@@ -161,7 +162,7 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
     pipelineDesc.NodeMask = 0;
     pipelineDesc.CachedPSO.pCachedBlob = nullptr;
     pipelineDesc.CachedPSO.CachedBlobSizeInBytes = 0;
-    pipelineDesc.Flags = (CVars::r_use_debug_shaders.GetBool()) ? D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG : D3D12_PIPELINE_STATE_FLAG_NONE;
+    pipelineDesc.Flags = (CVars::r_use_debug_shaders.GetBool() && CVars::r_d3d12_force_warp.GetBool()) ? D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG : D3D12_PIPELINE_STATE_FLAG_NONE;
 
     // create it
     ID3D12PipelineState *pPipelineState;

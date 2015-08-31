@@ -29,9 +29,8 @@ D3D12ScratchBuffer *D3D12ScratchBuffer::Create(ID3D12Device *pDevice, uint32 siz
     }
 
     // map it
-    D3D12_RANGE mapRange = { 0, size - 1 };
     byte *pMappedPointer;
-    hResult = pResource->Map(0, &mapRange, (void**)&pMappedPointer);
+    hResult = pResource->Map(0, nullptr, (void**)&pMappedPointer);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("D3D12ScratchBuffer::Create: Mapping new buffer failed with hResult %08X", hResult);
@@ -44,8 +43,7 @@ D3D12ScratchBuffer *D3D12ScratchBuffer::Create(ID3D12Device *pDevice, uint32 siz
 
 D3D12ScratchBuffer::~D3D12ScratchBuffer()
 {
-    D3D12_RANGE unmapRange = { 0, m_size - 1 };
-    m_pResource->Unmap(0, &unmapRange);
+    m_pResource->Unmap(0, nullptr);
     D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(m_pResource);
 }
 

@@ -184,8 +184,12 @@ private:
 
     GPUContextConstants *m_pConstants;
 
-    // Current command list
+    // Created once
     ID3D12CommandQueue *m_pCommandQueue;
+    ID3D12Fence *m_pFence;
+    HANDLE m_fenceEvent;
+
+    // Current command list
     ID3D12GraphicsCommandList *m_pCurrentCommandList;
     D3D12ScratchBuffer *m_pCurrentScratchBuffer;
     D3D12ScratchDescriptorHeap *m_pCurrentScratchViewHeap;
@@ -197,11 +201,9 @@ private:
     {
         ID3D12CommandAllocator *pCommandAllocator;
         ID3D12GraphicsCommandList *pCommandList;
-        ID3D12Fence *pFence;
         D3D12ScratchBuffer *pScratchBuffer;
         D3D12ScratchDescriptorHeap *pScratchViewHeap;
         D3D12ScratchDescriptorHeap *pScratchSamplerHeap;
-        HANDLE FenceReachedEvent;
         uint64 FenceValue;
         bool Pending;
     };

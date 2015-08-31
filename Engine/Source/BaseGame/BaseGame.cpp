@@ -1034,6 +1034,8 @@ void BaseGame::RendererShutdown()
 
     m_fpsCounter.ReleaseGPUResources();
 
+    g_pResourceManager->ReleaseDeviceResources();
+
     m_pOutputWindow = nullptr;
     m_pGPUContext = nullptr;
     g_pRenderer->DisableResourceCreationForCurrentThread();

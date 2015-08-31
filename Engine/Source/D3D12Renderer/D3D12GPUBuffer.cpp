@@ -83,9 +83,8 @@ GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
         BeginResourceBatchUpload();
 
         // map the upload resource
-        D3D12_RANGE mapRange = { 0, pDesc->Size - 1 };
         void *pMappedPointer;
-        hResult = pUploadResource->Map(0, &mapRange, &pMappedPointer);
+        hResult = pUploadResource->Map(0, nullptr, &pMappedPointer);
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("Map for upload resource failed with hResult %08X", hResult);
@@ -96,7 +95,7 @@ GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
 
         // fill it
         Y_memcpy(pMappedPointer, pInitialData, pDesc->Size);
-        pUploadResource->Unmap(0, &mapRange);
+        pUploadResource->Unmap(0, nullptr);
 
         // copy from the upload buffer to the real buffer
         GetCommandList()->CopyBufferRegion(pResource, 0, pUploadResource, 0, pDesc->Size);
@@ -164,9 +163,8 @@ bool D3D12GPUContext::ReadBuffer(GPUBuffer *pBuffer, void *pDestination, uint32 
     ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, pD3D12Buffer->GetDefaultResourceState());
 
     // map the readback buffer
-    D3D12_RANGE mapRange = { 0, count - 1 };
     void *pMappedPointer;
-    HRESULT hResult = pReadbackBuffer->Map(0, &mapRange, &pMappedPointer);
+    HRESULT hResult = pReadbackBuffer->Map(0, nullptr, &pMappedPointer);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("Failed to map readback buffer: %08X", hResult);
@@ -176,7 +174,7 @@ bool D3D12GPUContext::ReadBuffer(GPUBuffer *pBuffer, void *pDestination, uint32 
 
     // copy the contents over, and unmap the buffer
     Y_memcpy(pDestination, pMappedPointer, count);
-    pReadbackBuffer->Unmap(0, &mapRange);
+    pReadbackBuffer->Unmap(0, nullptr);
     pReadbackBuffer->Release();
     return true;
 }
@@ -216,9 +214,8 @@ bool D3D12GPUContext::WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint3
         return false;
 
     // map the upload buffer
-    D3D12_RANGE mapRange = { 0, count - 1 };
     void *pMappedPointer;
-    HRESULT hResult = pUploadBuffer->Map(0, &mapRange, &pMappedPointer);
+    HRESULT hResult = pUploadBuffer->Map(0, nullptr, &pMappedPointer);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("Failed to map upload buffer: %08X", hResult);
@@ -228,7 +225,7 @@ bool D3D12GPUContext::WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint3
 
     // copy the contents over, and unmap the buffer
     Y_memcpy(pMappedPointer, pSource, count);
-    pUploadBuffer->Unmap(0, &mapRange);
+    pUploadBuffer->Unmap(0, nullptr);
 
     // transition to copy state, and queue a copy from the upload buffer
     ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
@@ -279,8 +276,7 @@ bool D3D12GPUContext::MapBuffer(GPUBuffer *pBuffer, GPU_MAP_TYPE mapType, void *
     }
 
     // map the buffer
-    D3D12_RANGE mapRange = { 0, bufferSize - 1 };
-    HRESULT hResult = pMapBuffer->Map(0, &mapRange, ppPointer);
+    HRESULT hResult = pMapBuffer->Map(0, nullptr, ppPointer);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("Failed to map buffer: %08X", hResult);

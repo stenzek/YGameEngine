@@ -12,6 +12,32 @@ Log_SetChannel(D3D12GPUDevice);
 D3D12RenderBackend *D3D12RenderBackend::s_pInstance = nullptr;
 static HMODULE s_hD3D12DLL = nullptr;
 
+static void DumpActiveObjects()
+{
+#ifdef Y_BUILD_CONFIG_DEBUG
+    // dump remaining objects
+{
+    HMODULE hDXGIDebugModule = GetModuleHandleA("dxgidebug.dll");
+    if (hDXGIDebugModule != NULL)
+    {
+        HRESULT(WINAPI *pDXGIGetDebugInterface)(REFIID riid, void **ppDebug);
+        pDXGIGetDebugInterface = (HRESULT(WINAPI *)(REFIID, void **))GetProcAddress(hDXGIDebugModule, "DXGIGetDebugInterface");
+        if (pDXGIGetDebugInterface != NULL)
+        {
+            IDXGIDebug *pDXGIDebug;
+            if (SUCCEEDED(pDXGIGetDebugInterface(__uuidof(pDXGIDebug), reinterpret_cast<void **>(&pDXGIDebug))))
+            {
+                Log_DevPrint("=== Begin remaining DXGI and D3D object dump ===");
+                pDXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+                Log_DevPrint("=== End remaining DXGI and D3D object dump ===");
+                pDXGIDebug->Release();
+            }
+        }
+    }
+}
+#endif
+}
+
 D3D12RenderBackend::D3D12RenderBackend()
     : m_pDXGIFactory(nullptr)
     , m_pDXGIAdapter(nullptr)
@@ -490,33 +516,18 @@ void D3D12RenderBackend::Shutdown()
     SAFE_RELEASE(m_pLegacyComputeRootSignature);
     SAFE_RELEASE(m_pLegacyGraphicsRootSignature);
 
-    // cleanup
-    SAFE_RELEASE_LAST(m_pD3DDevice);
-    SAFE_RELEASE_LAST(m_pDXGIAdapter);
-    SAFE_RELEASE_LAST(m_pDXGIFactory);
+    // dump objects before teardown
+    Log_DevPrintf("Dumping active objects before teardown");
+    DumpActiveObjects();
 
-#ifdef Y_BUILD_CONFIG_DEBUG
-    // dump remaining objects
-    {
-        HMODULE hDXGIDebugModule = GetModuleHandleA("dxgidebug.dll");
-        if (hDXGIDebugModule != NULL)
-        {
-            HRESULT(WINAPI *pDXGIGetDebugInterface)(REFIID riid, void **ppDebug);
-            pDXGIGetDebugInterface = (HRESULT(WINAPI *)(REFIID, void **))GetProcAddress(hDXGIDebugModule, "DXGIGetDebugInterface");
-            if (pDXGIGetDebugInterface != NULL)
-            {
-                IDXGIDebug *pDXGIDebug;
-                if (SUCCEEDED(pDXGIGetDebugInterface(__uuidof(pDXGIDebug), reinterpret_cast<void **>(&pDXGIDebug))))
-                {
-                    Log_DevPrint("=== Begin remaining DXGI and D3D object dump ===");
-                    pDXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
-                    Log_DevPrint("=== End remaining DXGI and D3D object dump ===");
-                    pDXGIDebug->Release();
-                }
-            }
-        }
-    }
-#endif
+    // cleanup
+    SAFE_RELEASE(m_pDXGIAdapter);
+    SAFE_RELEASE(m_pDXGIFactory);
+    SAFE_RELEASE_LAST(m_pD3DDevice);
+
+    // dump objects before teardown
+    Log_DevPrintf("Dumping active objects after teardown");
+    DumpActiveObjects();
 
     // release handle to d3d12
     if (s_hD3D12DLL != nullptr)

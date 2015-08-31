@@ -613,6 +613,9 @@ bool Renderer::EnableResourceCreationForCurrentThread()
 
 void Renderer::DisableResourceCreationForCurrentThread()
 {
+    if (s_pCurrentThreadGPUDevice == nullptr)
+        return;
+
     DebugAssert(s_pCurrentThreadGPUDevice != nullptr);
     if (s_pCurrentThreadGPUDevice->Release() == 0)
         s_pCurrentThreadGPUDevice = nullptr;

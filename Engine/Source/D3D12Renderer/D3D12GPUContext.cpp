@@ -16,6 +16,8 @@ D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *p
     , m_pD3DDevice(pD3DDevice)
     , m_pConstants(nullptr)
     , m_pCommandQueue(nullptr)
+    , m_pFence(nullptr)
+    , m_fenceEvent(NULL)
     , m_pCurrentCommandList(nullptr)
     , m_pCurrentScratchBuffer(nullptr)
     , m_currentCommandQueueIndex(0)
@@ -79,12 +81,9 @@ D3D12GPUContext::~D3D12GPUContext()
     for (uint32 i = 0; i < m_commandQueues.GetSize(); i++)
     {
         DCommandQueue *pQueue = &m_commandQueues[i];
-        if (pQueue->FenceReachedEvent != NULL)
-            CloseHandle(pQueue->FenceReachedEvent);
         delete pQueue->pScratchSamplerHeap;
         delete pQueue->pScratchViewHeap;
         delete pQueue->pScratchBuffer;
-        SAFE_RELEASE(pQueue->pFence);
         SAFE_RELEASE(pQueue->pCommandList);
         SAFE_RELEASE(pQueue->pCommandAllocator);
     }
@@ -95,6 +94,9 @@ D3D12GPUContext::~D3D12GPUContext()
     m_pCurrentScratchViewHeap = nullptr;
     m_pCurrentScratchSamplerHeap = nullptr;
     m_currentDescriptorHeaps.Obliterate();
+    if (m_fenceEvent != NULL)
+        CloseHandle(m_fenceEvent);
+    SAFE_RELEASE(m_pFence);
     SAFE_RELEASE(m_pCommandQueue);
 
 #if 0
@@ -221,6 +223,22 @@ bool D3D12GPUContext::CreateInternalCommandLists()
         return false;
     }
 
+    // allocate fence
+    hResult = m_pD3DDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_pFence));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("ID3D12Device::CreateFence failed with hResult %08X", hResult);
+        return false;
+    }
+
+    // allocate reached event
+    m_fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+    if (m_fenceEvent == NULL)
+    {
+        Log_ErrorPrintf("CreateEvent failed (%u).", GetLastError());
+        return false;
+    }
+
     // allocate command lists
     for (uint32 i = 0; i < frameLatency; i++)
     {
@@ -252,14 +270,6 @@ bool D3D12GPUContext::CreateInternalCommandLists()
             return false;
         }
 
-        // allocate fence
-        hResult = m_pD3DDevice->CreateFence(pFrameData->FenceValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&pFrameData->pFence));
-        if (FAILED(hResult))
-        {
-            Log_ErrorPrintf("ID3D12Device::CreateFence failed with hResult %08X", hResult);
-            return false;
-        }
-
         // allocate scratch buffer
         pFrameData->pScratchBuffer = D3D12ScratchBuffer::Create(m_pD3DDevice, 16 * 1024 * 1024);
         if (pFrameData->pScratchBuffer == nullptr)
@@ -274,14 +284,6 @@ bool D3D12GPUContext::CreateInternalCommandLists()
         if (pFrameData->pScratchViewHeap == nullptr || pFrameData->pScratchSamplerHeap == nullptr)
         {
             Log_ErrorPrintf("Failed to allocate scratch descriptor heaps.");
-            return false;
-        }
-
-        // allocate reached event
-        pFrameData->FenceReachedEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-        if (pFrameData->FenceReachedEvent == INVALID_HANDLE_VALUE)
-        {
-            Log_ErrorPrintf("CreateEvent failed (%u).", GetLastError());
             return false;
         }
     }
@@ -400,9 +402,11 @@ void D3D12GPUContext::MoveToNextCommandQueue()
 {
     // set up fence for the next time round (for the current command list)
     DCommandQueue *pFrameData = &m_commandQueues[m_currentCommandQueueIndex];
-    ResetEvent(pFrameData->FenceReachedEvent);
-    pFrameData->pFence->SetEventOnCompletion(pFrameData->FenceValue, pFrameData->FenceReachedEvent);
-    m_pCommandQueue->Signal(pFrameData->pFence, pFrameData->FenceValue);
+    HRESULT hResult = m_pCommandQueue->Signal(m_pFence, pFrameData->FenceValue);
+    if (FAILED(hResult))
+        Log_ErrorPrintf("ID3D12CommandQueue::Signal failed with hResult %08X", hResult);
+
+    // mark as needing to catch up before we can re-use this queue
     pFrameData->Pending = true;
 
     // next frame
@@ -432,8 +436,13 @@ void D3D12GPUContext::WaitForCommandQueue(uint32 index)
     DCommandQueue *pFrameData = &m_commandQueues[index];
     DebugAssert(pFrameData->Pending);
 
-    WaitForSingleObject(pFrameData->FenceReachedEvent, INFINITE);
-    ResetEvent(pFrameData->FenceReachedEvent);
+    // wait for the gpu to catch up if it's behind
+    if (m_pFence->GetCompletedValue() < pFrameData->FenceValue)
+    {
+        Log_DevPrintf("Waiting for gpu catchup.");
+        m_pFence->SetEventOnCompletion(pFrameData->FenceValue, m_fenceEvent);
+        WaitForSingleObject(m_fenceEvent, INFINITE);
+    }
 
     // release resources
     m_pBackend->DeletePendingResources(pFrameData->FenceValue);

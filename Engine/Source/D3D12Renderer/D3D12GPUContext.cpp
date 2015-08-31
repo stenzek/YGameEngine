@@ -774,6 +774,10 @@ void D3D12GPUContext::SetFullViewport(GPUTexture *pForRenderTarget /* = NULL */)
     viewport.MaxDepth = 1.0f;
 
     SetViewport(&viewport);
+
+    RENDERER_SCISSOR_RECT scissorRect;
+    scissorRect.Set(0, 0, viewport.Width - 1, viewport.Height - 1);
+    SetScissorRect(&scissorRect);
 }
 
 const RENDERER_SCISSOR_RECT *D3D12GPUContext::GetScissorRect()

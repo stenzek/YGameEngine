@@ -1,4 +1,3 @@
-r_windowed_width
 #include "BaseGame/PrecompiledHeader.h"
 #include "BaseGame/BaseGame.h"
 #include "Engine/InputManager.h"
@@ -374,6 +373,19 @@ void BaseGame::EndModalGameState()
     Log_DevPrintf("BaseGame::EndModalGameState()");
     Assert(m_gameStateStack.GetSize() > 0);
     m_gameStateEndModal = true;
+}
+
+void BaseGame::CriticalError(const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    SmallString message;
+    message.FormatVA(format, ap);
+    va_end(ap);
+
+    Log_ErrorPrint("*** CRITICAL ERROR ***");
+    Log_ErrorPrint(message);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Critical error", message, nullptr);
 }
 
 void BaseGame::SetRelativeMouseMovement(bool enabled)
@@ -1193,7 +1205,7 @@ int32 BaseGame::MainEntryPoint()
     // initialize SDL first
     if (SDL_Init(0) < 0)
     {
-        Log_ErrorPrintf("SDL initialization failed: %s", SDL_GetError());
+        CriticalError("SDL initialization failed: %s", SDL_GetError());
         exitCode = -1;
         goto RETURN_LABEL;
     }
@@ -1213,7 +1225,7 @@ int32 BaseGame::MainEntryPoint()
     Log_InfoPrint("Initializing virtual file system...");
     if (!g_pVirtualFileSystem->Initialize())
     {
-        Log_InfoPrint("Virtual file system initialization failed. Cannot continue.");
+        CriticalError("Virtual file system initialization failed. Cannot continue.");
         exitCode = -2;
         goto SHUTDOWN_SDL_LABEL;
     }
@@ -1223,21 +1235,28 @@ int32 BaseGame::MainEntryPoint()
     g_pEngine->RegisterEngineTypes();
     OnRegisterTypes();
 
+    // fix this...
+    if (!g_pEngine->Startup())
+    {
+        exitCode = -3;
+        goto SHUTDOWN_VFS_LABEL;
+    }
+
     // start renderer
     Log_InfoPrint("Starting renderer...");
     if (!RendererStart())
     {
-        Log_ErrorPrint("Failed to start renderer.");
-        exitCode = -3;
-        goto SHUTDOWN_VFS_LABEL;
+        CriticalError("Failed to start renderer.");
+        exitCode = -4;
+        goto SHUTDOWN_RESOURCES_LABEL;
     }
 
     // start input system
     Log_InfoPrint("Starting input subsystem...");
     if (!g_pInputManager->Startup())
     {
-        Log_ErrorPrint("Failed to start input subsystem.");
-        exitCode = -4;
+        CriticalError("Failed to start input subsystem.");
+        exitCode = -5;
         goto SHUTDOWN_RENDERER_LABEL;
     }
 
@@ -1245,16 +1264,9 @@ int32 BaseGame::MainEntryPoint()
     Log_InfoPrint("Starting script subsystem...");
     if (!g_pScriptManager->Startup())
     {
-        Log_ErrorPrint("Failed to start script subsystem.");
-        exitCode = -5;
-        goto SHUTDOWN_INPUT_LABEL;
-    }
-
-    // fix this...
-    if (!g_pEngine->Startup())
-    {
+        CriticalError("Failed to start script subsystem.");
         exitCode = -6;
-        goto SHUTDOWN_SCRIPT_LABEL;
+        goto SHUTDOWN_INPUT_LABEL;
     }
 
 #ifdef WITH_PROFILER
@@ -1271,9 +1283,9 @@ int32 BaseGame::MainEntryPoint()
     Log_InfoPrint("Initializing game...");
     if (!OnStart())
     {
-        Log_ErrorPrint("Failed to initialize game.");
+        CriticalError("Failed to initialize game.");
         exitCode = -999;
-        goto SHUTDOWN_RESOURCES_LABEL;
+        goto SHUTDOWN_SCRIPT_LABEL;
     }
 
 #ifndef Y_PLATFORM_HTML5
@@ -1287,12 +1299,6 @@ int32 BaseGame::MainEntryPoint()
     // shut down game
     Log_InfoPrint("Shutting down game...");
     OnExit();
-
-SHUTDOWN_RESOURCES_LABEL:
-    // release resources
-    Log_InfoPrint("Unloading resources...");
-    //g_pResourceManager->ReleaseResources();
-    g_pEngine->Shutdown();
 
     // begin shutting down
     Log_InfoPrint("Shutting down all subsystems...");
@@ -1312,6 +1318,12 @@ SHUTDOWN_RENDERER_LABEL:
     // shutdown renderer
     Log_InfoPrint("Shutting down renderer...");
     RendererShutdown();
+
+SHUTDOWN_RESOURCES_LABEL:
+    // release resources
+    Log_InfoPrint("Unloading resources...");
+    g_pResourceManager->ReleaseResources();
+    g_pEngine->Shutdown();
 
 SHUTDOWN_VFS_LABEL:
     // shutdown vfs

@@ -19,6 +19,7 @@ public:
     // Startup/shutdown
     //=================================================================================================================================================================================================
     bool IsQuitPending() const { return m_quitFlag; }
+    void CriticalError(const char *format, ...);
     int32 MainEntryPoint();
     void Quit();
 

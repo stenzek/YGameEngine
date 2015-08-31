@@ -150,13 +150,6 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
     if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_BIND_COMPUTE_WRITABLE)
         resourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-    // get heap flags
-    D3D12_HEAP_FLAGS heapFlags = D3D12_HEAP_FLAG_DENY_BUFFERS;
-    if (pTextureDesc->Flags & (GPU_TEXTURE_FLAG_BIND_RENDER_TARGET | GPU_TEXTURE_FLAG_BIND_DEPTH_STENCIL_BUFFER))
-        heapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
-    else
-        heapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
-
     // find generic state -- default to RTV/DSV only if not SRV
     D3D12_RESOURCE_STATES defaultResourceState = D3D12_RESOURCE_STATE_COMMON;
     if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_SHADER_BINDABLE)
@@ -177,7 +170,7 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
     ID3D12Resource *pD3DResource;
     D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
     D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, pTextureDesc->Width, pTextureDesc->Height, 1, (UINT16)pTextureDesc->MipLevels, creationFormat, { 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, resourceFlags };
-    hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, heapFlags, &resourceDesc, initialResourceState, nullptr, IID_PPV_ARGS(&pD3DResource));
+    hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialResourceState, nullptr, IID_PPV_ARGS(&pD3DResource));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateCommittedResource failed with hResult %08X", hResult);
@@ -196,12 +189,15 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         }
 
         // fill the descriptor
-        D3D12_RENDER_TARGET_VIEW_DESC rtvDesc;
-        rtvDesc.Format = srvFormat;
-        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-        rtvDesc.Texture2D.MipSlice = 0;
-        rtvDesc.Texture2D.PlaneSlice = 0;
-        m_pD3DDevice->CreateRenderTargetView(pD3DResource, &rtvDesc, srvHandle);
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+        srvDesc.Format = srvFormat;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        srvDesc.Texture2D.MipLevels = pTextureDesc->MipLevels;
+        srvDesc.Texture2D.PlaneSlice = 0;
+        srvDesc.Texture2D.ResourceMinLODClamp = 0;
+        m_pD3DDevice->CreateShaderResourceView(pD3DResource, &srvDesc, srvHandle);
     }
 
     // create sampler state
@@ -219,7 +215,7 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         }
 
         // allocate a descriptor
-        if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&srvHandle))
+        if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&samplerHandle))
         {
             Log_ErrorPrintf("Failed to allocator sampler descriptor.");
             m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
@@ -227,17 +223,25 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
             return false;
         }
 
-        // fill the descriptor @TODO use a pool here, since we'll have duplicates for sure..
+        // fill the descriptor @TODO use a pool here, since we'll have duplicates for sure.. also 2048 sampler per heap limit..
         m_pD3DDevice->CreateSampler(&samplerDesc, samplerHandle);
     }
 
     // create the upload resource, and do the upload
     if (ppInitialData != nullptr)
     {
+        // get the footprints of each subresource
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT *pSubResourceFootprints = (D3D12_PLACED_SUBRESOURCE_FOOTPRINT *)alloca(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) * pTextureDesc->MipLevels);
+        UINT *pRowCounts = (UINT *)alloca(sizeof(UINT) * pTextureDesc->MipLevels);
+        UINT64 *pRowPitches = (UINT64 *)alloca(sizeof(UINT64) * pTextureDesc->MipLevels);
+        UINT64 intermediateSize;
+        m_pD3DDevice->GetCopyableFootprints(&resourceDesc, 0, pTextureDesc->MipLevels, 0, pSubResourceFootprints, pRowCounts, pRowPitches, &intermediateSize);
+
+        // create upload buffer
         ID3D12Resource *pUploadResource;
-        D3D12_HEAP_PROPERTIES uploadHeapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
-        D3D12_RESOURCE_DESC uploadResourceDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, pTextureDesc->Width, pTextureDesc->Height, 1, (UINT16)pTextureDesc->MipLevels, creationFormat, { 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE };
-        hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_SOURCE, nullptr, IID_PPV_ARGS(&pUploadResource));
+        D3D12_HEAP_PROPERTIES uploadHeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
+        D3D12_RESOURCE_DESC uploadResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, intermediateSize, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+        hResult = m_pD3DDevice->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &uploadResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&pUploadResource));
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("CreateCommittedResource for upload resource failed with hResult %08X", hResult);
@@ -247,11 +251,19 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
             return false;
         }
 
-        // get the footprints of each subresource
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT *pSubResourceFootprints = (D3D12_PLACED_SUBRESOURCE_FOOTPRINT *)alloca(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) * pTextureDesc->MipLevels);
-        UINT *pRowCounts = (UINT *)alloca(sizeof(UINT) * pTextureDesc->MipLevels);
-        UINT64 *pRowPitches = (UINT64 *)alloca(sizeof(UINT64) * pTextureDesc->MipLevels);
-        m_pD3DDevice->GetCopyableFootprints(&resourceDesc, 0, pTextureDesc->MipLevels, 0, pSubResourceFootprints, pRowCounts, pRowPitches, nullptr);
+        // map the upload resource
+        D3D12_RANGE mapRange = { 0, (SIZE_T)(intermediateSize - 1) };
+        byte *pMappedPointer;
+        hResult = pUploadResource->Map(0, &mapRange, (void **)&pMappedPointer);
+        if (FAILED(hResult))
+        {
+            Log_ErrorPrintf("Map upload subresource for upload resource failed with hResult %08X", hResult);
+            pUploadResource->Release();
+            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
+            pD3DResource->Release();
+            return false;
+        }
 
         // we need to batch the uploads, even on the render thread
         BeginResourceBatchUpload();
@@ -261,34 +273,22 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         {
             // map this mip level
             UINT64 subResourceSize = pRowCounts[mipLevel] * pRowPitches[mipLevel];
-            D3D12_RANGE mapRange = { 0, (SIZE_T)(subResourceSize - 1) };
-            void *pMappedPointer;
-            hResult = pUploadResource->Map(mipLevel, &mapRange, &pMappedPointer);
-            if (FAILED(hResult))
-            {
-                Log_ErrorPrintf("Map SubResource(%u) for upload resource failed with hResult %08X", mipLevel, hResult);
-                m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
-                m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
-                EndResourceBatchUpload();
-                ScheduleUploadResourceDeletion(pUploadResource);
-                ScheduleUploadResourceDeletion(pD3DResource);
-                return false;
-            }
+            DebugAssert(pSubResourceFootprints[mipLevel].Offset + subResourceSize <= intermediateSize);
 
             // copy in data
             if (pRowPitches[mipLevel] == pInitialDataPitch[mipLevel])
-                Y_memcpy(pMappedPointer, ppInitialData[mipLevel], (size_t)pRowPitches[mipLevel] * pRowCounts[mipLevel]);
+                Y_memcpy(pMappedPointer + pSubResourceFootprints[mipLevel].Offset, ppInitialData[mipLevel], (size_t)pRowPitches[mipLevel] * pRowCounts[mipLevel]);
             else
-                Y_memcpy_stride(pMappedPointer, (size_t)pRowPitches[mipLevel], ppInitialData[mipLevel], pInitialDataPitch[mipLevel], Min((size_t)pRowPitches[mipLevel], (size_t)pInitialDataPitch[mipLevel]), pRowCounts[mipLevel]);
-
-            // release the mapping
-            pUploadResource->Unmap(mipLevel, &mapRange);
+                Y_memcpy_stride(pMappedPointer + pSubResourceFootprints[mipLevel].Offset, (size_t)pRowPitches[mipLevel], ppInitialData[mipLevel], pInitialDataPitch[mipLevel], Min((size_t)pRowPitches[mipLevel], (size_t)pInitialDataPitch[mipLevel]), pRowCounts[mipLevel]);
 
             // invoke a copy of this subresource
             D3D12_TEXTURE_COPY_LOCATION sourceCopyLocation = { pUploadResource, D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT, pSubResourceFootprints[mipLevel] };
-            D3D12_TEXTURE_COPY_LOCATION destCopyLocation = { pUploadResource, D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, mipLevel };
+            D3D12_TEXTURE_COPY_LOCATION destCopyLocation = { pD3DResource, D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, mipLevel };
             GetCommandList()->CopyTextureRegion(&destCopyLocation, 0, 0, 0, &sourceCopyLocation, nullptr);
         }
+
+        // release the mapping
+        pUploadResource->Unmap(0, &mapRange);
 
         // transition to its real resource state
         ResourceBarrier(pD3DResource, D3D12_RESOURCE_STATE_COPY_DEST, defaultResourceState);

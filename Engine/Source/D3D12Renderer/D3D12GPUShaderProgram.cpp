@@ -147,7 +147,7 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
     // states
     Y_memcpy(&pipelineDesc.BlendState, &pKey->BlendState, sizeof(pipelineDesc.BlendState));
     Y_memcpy(&pipelineDesc.RasterizerState, &pKey->RasterizerState, sizeof(pipelineDesc.RasterizerState));
-    Y_memcpy(&pipelineDesc.DepthStencilState, &pKey->RasterizerState, sizeof(pipelineDesc.DepthStencilState));
+    Y_memcpy(&pipelineDesc.DepthStencilState, &pKey->DepthStencilState, sizeof(pipelineDesc.DepthStencilState));
     pipelineDesc.InputLayout.NumElements = m_vertexAttributes.GetSize();
     pipelineDesc.InputLayout.pInputElementDescs = m_vertexAttributes.GetBasePointer();
     pipelineDesc.SampleMask = 0xFFFFFFFF;
@@ -387,8 +387,12 @@ void D3D12GPUShaderProgram::InternalSetParameterValue(D3D12GPUContext *pContext,
     uint32 valueSize = ShaderParameterValueTypeSize(parameterInfo->Type);
     DebugAssert(parameterInfo->Type == valueType && valueSize > 0);
 
+    // get constant buffer
+    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
+    const ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
+
     // write to the constant buffer
-    pContext->WriteConstantBuffer(parameterInfo->ConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
+    pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
 }
 
 void D3D12GPUShaderProgram::InternalSetParameterValueArray(D3D12GPUContext *pContext, uint32 parameterIndex, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
@@ -398,12 +402,16 @@ void D3D12GPUShaderProgram::InternalSetParameterValueArray(D3D12GPUContext *pCon
     DebugAssert(parameterInfo->Type == valueType && valueSize > 0);
     DebugAssert(numElements > 0 && (firstElement + numElements) <= parameterInfo->ArraySize);
 
+    // get constant buffer
+    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
+    const ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
+
     // if there is no padding, this can be done in a single operation
     uint32 bufferOffset = parameterInfo->ConstantBufferOffset + (firstElement * parameterInfo->ArrayStride);
     if (valueSize == parameterInfo->ArrayStride)
-        pContext->WriteConstantBuffer(parameterInfo->ConstantBufferIndex, parameterIndex, bufferOffset, valueSize * numElements, pValue);
+        pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, valueSize * numElements, pValue);
     else
-        pContext->WriteConstantBufferStrided(parameterInfo->ConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
+        pContext->WriteConstantBufferStrided(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
 }
 
 void D3D12GPUShaderProgram::InternalSetParameterStruct(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize)
@@ -411,8 +419,12 @@ void D3D12GPUShaderProgram::InternalSetParameterStruct(GPUContext *pContext, uin
     const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
     DebugAssert(parameterInfo->Type == SHADER_PARAMETER_TYPE_STRUCT && valueSize <= parameterInfo->ArrayStride);
 
+    // get constant buffer
+    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
+    const ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
+
     // write to the constant buffer
-    pContext->WriteConstantBuffer(parameterInfo->ConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
+    pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
 }
 
 void D3D12GPUShaderProgram::InternalSetParameterStructArray(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
@@ -421,12 +433,16 @@ void D3D12GPUShaderProgram::InternalSetParameterStructArray(GPUContext *pContext
     DebugAssert(parameterInfo->Type == SHADER_PARAMETER_TYPE_STRUCT && valueSize <= parameterInfo->ArrayStride);
     DebugAssert(numElements > 0 && (firstElement + numElements) <= parameterInfo->ArraySize);
 
+    // get constant buffer
+    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
+    const ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
+
     // if there is no padding, this can be done in a single operation
     uint32 bufferOffset = parameterInfo->ConstantBufferOffset + (firstElement * parameterInfo->ArrayStride);
     if (valueSize == parameterInfo->ArrayStride)
-        pContext->WriteConstantBuffer(parameterInfo->ConstantBufferIndex, parameterIndex, bufferOffset, valueSize * numElements, pValue);
+        pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, valueSize * numElements, pValue);
     else
-        pContext->WriteConstantBufferStrided(parameterInfo->ConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
+        pContext->WriteConstantBufferStrided(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
 }
 
 void D3D12GPUShaderProgram::InternalSetParameterResource(D3D12GPUContext *pContext, uint32 parameterIndex, GPUResource *pResource, GPUSamplerState *pLinkedSamplerState)

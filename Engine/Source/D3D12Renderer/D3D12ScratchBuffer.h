@@ -15,7 +15,8 @@ public:
     D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(uint32 offset) const;
 
     bool Allocate(uint32 size, uint32 *pOutOffset);
-    void Reset();
+    bool Reset(bool resetPosition);
+    void Commit();
     
 private:
     D3D12ScratchBuffer(ID3D12Resource *pResource, byte *pMappedPointer, uint32 size);
@@ -27,6 +28,7 @@ private:
 
     uint32 m_size;
     uint32 m_position;
+    uint32 m_resetPosition;
 };
 
 class D3D12ScratchDescriptorHeap

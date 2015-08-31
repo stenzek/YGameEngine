@@ -16,6 +16,9 @@ D3D12DescriptorHeap::D3D12DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32
 
 D3D12DescriptorHeap::~D3D12DescriptorHeap()
 {
+    // shouldn't have any allocations
+    size_t foundIndex;
+    Assert(!m_allocationMap.FindFirstSetBit(&foundIndex));
     m_pD3DDescriptorHeap->Release();
 }
 

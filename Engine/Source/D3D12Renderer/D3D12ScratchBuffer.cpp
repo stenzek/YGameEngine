@@ -9,6 +9,7 @@ D3D12ScratchBuffer::D3D12ScratchBuffer(ID3D12Resource *pResource, byte *pMappedP
     , m_pMappedPointer(pMappedPointer)
     , m_size(size)
     , m_position(0)
+    , m_resetPosition(0)
 {
 
 }
@@ -28,22 +29,12 @@ D3D12ScratchBuffer *D3D12ScratchBuffer::Create(ID3D12Device *pDevice, uint32 siz
         return nullptr;
     }
 
-    // map it
-    byte *pMappedPointer;
-    hResult = pResource->Map(0, nullptr, (void**)&pMappedPointer);
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("D3D12ScratchBuffer::Create: Mapping new buffer failed with hResult %08X", hResult);
-        pResource->Release();
-        return nullptr;
-    }
-
-    return new D3D12ScratchBuffer(pResource, pMappedPointer, size);
+    return new D3D12ScratchBuffer(pResource, nullptr, size);
 }
 
 D3D12ScratchBuffer::~D3D12ScratchBuffer()
 {
-    m_pResource->Unmap(0, nullptr);
+    DebugAssert(m_pMappedPointer == nullptr);
     D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(m_pResource);
 }
 
@@ -61,6 +52,7 @@ D3D12_GPU_VIRTUAL_ADDRESS D3D12ScratchBuffer::GetGPUAddress(uint32 offset) const
 
 bool D3D12ScratchBuffer::Allocate(uint32 size, uint32 *pOutOffset)
 {
+    DebugAssert(m_pMappedPointer != nullptr);
     if ((m_position + size) >= m_size)
         return false;
 
@@ -69,9 +61,32 @@ bool D3D12ScratchBuffer::Allocate(uint32 size, uint32 *pOutOffset)
     return true;
 }
 
-void D3D12ScratchBuffer::Reset()
+bool D3D12ScratchBuffer::Reset(bool resetPosition)
 {
-    m_position = 0;
+    DebugAssert(m_pMappedPointer == nullptr);
+    if (resetPosition)
+        m_position = 0;
+
+    m_resetPosition = m_position;
+
+    D3D12_RANGE readRange = { 0, 0 };
+    HRESULT hResult = m_pResource->Map(0, &readRange, (void **)&m_pMappedPointer);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("Map failed with hResult %08X", hResult);
+        return false;
+    }
+
+    return true;
+}
+
+void D3D12ScratchBuffer::Commit()
+{
+    DebugAssert(m_pMappedPointer != nullptr);
+
+    D3D12_RANGE writtenRange = { m_resetPosition, m_position };
+    m_pResource->Unmap(0, &writtenRange);
+    m_pMappedPointer = nullptr;
 }
 
 D3D12ScratchDescriptorHeap::D3D12ScratchDescriptorHeap(ID3D12DescriptorHeap *pHeap, uint32 count, uint32 incrementSize)

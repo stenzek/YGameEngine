@@ -72,6 +72,7 @@ private:
     IDXGIAdapter3 *m_pDXGIAdapter;
 
     ID3D12Device *m_pD3DDevice;
+    ID3D12InfoQueue *m_pD3DInfoQueue;
 
     D3D_FEATURE_LEVEL m_D3DFeatureLevel;
     RENDERER_FEATURE_LEVEL m_featureLevel;

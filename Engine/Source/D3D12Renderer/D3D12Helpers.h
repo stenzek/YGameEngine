@@ -13,6 +13,9 @@ namespace D3D12Helpers
     bool FillD3D12BlendStateDesc(const RENDERER_BLEND_STATE_DESC *pBlendState, D3D12_BLEND_DESC *pOutBlendDesc);
     bool FillD3D12SamplerStateDesc(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, D3D12_SAMPLER_DESC *pOutSamplerStateDesc);
 
+    D3D12_PRIMITIVE_TOPOLOGY GetD3D12PrimitiveTopology(DRAW_TOPOLOGY topology);
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE GetD3D12PrimitiveTopologyType(DRAW_TOPOLOGY topology);
+
     bool GetResourceSRVHandle(GPUResource *pResource, D3D12DescriptorHandle *pHandle);
     bool GetResourceSamplerHandle(GPUResource *pResource, D3D12DescriptorHandle *pHandle);
     bool GetOptimizedClearValue(PIXEL_FORMAT format, D3D12_CLEAR_VALUE *pValue);

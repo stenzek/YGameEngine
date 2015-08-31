@@ -354,5 +354,12 @@ bool ImGui::HandleSDLEvent(const SDL_Event *pEvent, bool forceCapture /* = false
 
 void ImGui::FreeResources()
 {
-    // todo: release font
+    // release font
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.Fonts->TexID != nullptr)
+    {
+        GPUTexture2D *pTexture = reinterpret_cast<GPUTexture2D *>(io.Fonts->TexID);
+        pTexture->Release();
+        io.Fonts->TexID = nullptr;
+    }
 }

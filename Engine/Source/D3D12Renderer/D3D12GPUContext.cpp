@@ -7,8 +7,9 @@
 #include "D3D12Renderer/D3D12GPUShaderProgram.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12GPUOutputBuffer.h"
+#include "D3D12Renderer/D3D12Helpers.h"
 #include "Renderer/ShaderConstantBuffer.h"
-Log_SetChannel(D3D12GPUContext);
+Log_SetChannel(D3D12RenderBackend);
 
 D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice)
     : m_pBackend(pBackend)
@@ -75,6 +76,7 @@ D3D12GPUContext::~D3D12GPUContext()
 
         // close the current command queue (it'll be empty)
         m_pCurrentCommandList->Close();
+        m_pCurrentScratchBuffer->Commit();
     }
 
     // nuke command queues
@@ -321,6 +323,7 @@ void D3D12GPUContext::ExecuteCurrentCommandList(bool reopen)
     HRESULT hResult = m_pCurrentCommandList->Close();
     if (SUCCEEDED(hResult))
     {
+        m_pCurrentScratchBuffer->Commit();
         m_pCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pCurrentCommandList);
     }
     else
@@ -351,6 +354,9 @@ void D3D12GPUContext::ExecuteCurrentCommandList(bool reopen)
 
     if (reopen)
     {
+        if (!m_pCurrentScratchBuffer->Reset(false))
+            Log_ErrorPrintf("Failed to reset scratch buffer.");
+
         hResult = m_pCurrentCommandList->Reset(m_commandQueues[m_currentCommandQueueIndex].pCommandAllocator, nullptr);
         if (FAILED(hResult))
             Log_WarningPrintf("ID3D12CommandList:Reset failed with hResult %08X", hResult);
@@ -381,7 +387,7 @@ void D3D12GPUContext::ActivateCommandQueue(uint32 index)
     m_pCurrentScratchViewHeap = pFrameData->pScratchViewHeap;
 
     // reset scratch buffer
-    pFrameData->pScratchBuffer->Reset();
+    pFrameData->pScratchBuffer->Reset(true);
     pFrameData->pScratchViewHeap->Reset();
     pFrameData->pScratchSamplerHeap->Reset();
 
@@ -439,7 +445,7 @@ void D3D12GPUContext::WaitForCommandQueue(uint32 index)
     // wait for the gpu to catch up if it's behind
     if (m_pFence->GetCompletedValue() < pFrameData->FenceValue)
     {
-        Log_DevPrintf("Waiting for gpu catchup.");
+        //Log_DevPrintf("Waiting for gpu catchup.");
         m_pFence->SetEventOnCompletion(pFrameData->FenceValue, m_fenceEvent);
         WaitForSingleObject(m_fenceEvent, INFINITE);
     }
@@ -468,8 +474,12 @@ void D3D12GPUContext::ClearCommandListDependantState()
     //SAFE_RELEASE(m_pCurrentPredicate);
 
     // other stuff
+    m_currentTopology = DRAW_TOPOLOGY_UNDEFINED;
+    m_currentD3DTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
     m_currentBlendStateBlendFactors.SetZero();
     m_currentDepthStencilRef = 0;
+    Y_memzero(&m_currentViewport, sizeof(m_currentViewport));
+    Y_memzero(&m_scissorRect, sizeof(m_scissorRect));
 }
 
 void D3D12GPUContext::RestoreCommandListDependantState()
@@ -480,13 +490,17 @@ void D3D12GPUContext::RestoreCommandListDependantState()
     m_pCurrentCommandList->SetComputeRootSignature(m_pBackend->GetLegacyComputeRootSignature());
 
     // pipeline state
-    m_pipelineChanged = true;
-    UpdatePipelineState();
+    UpdatePipelineState(true);
 
     // render targets
     SynchronizeRenderTargetsAndUAVs();
 
     // other stuff
+    D3D12_VIEWPORT D3D12Viewport = { (float)m_currentViewport.TopLeftX, (float)m_currentViewport.TopLeftY, (float)m_currentViewport.Width, (float)m_currentViewport.Height, m_currentViewport.MinDepth, m_currentViewport.MaxDepth };
+    D3D12_RECT D3D12ScissorRect = { (LONG)m_scissorRect.Left, (LONG)m_scissorRect.Top, (LONG)m_scissorRect.Right, (LONG)m_scissorRect.Bottom };
+    m_pCurrentCommandList->RSSetViewports(1, &D3D12Viewport);
+    m_pCurrentCommandList->RSSetScissorRects(1, &D3D12ScissorRect);
+    m_pCurrentCommandList->IASetPrimitiveTopology(D3D12Helpers::GetD3D12PrimitiveTopology(m_currentTopology));
     m_pCurrentCommandList->OMSetBlendFactor(m_currentBlendStateBlendFactors);
     m_pCurrentCommandList->OMSetStencilRef(m_currentDepthStencilRef);
 
@@ -770,14 +784,8 @@ void D3D12GPUContext::SetViewport(const RENDERER_VIEWPORT *pNewViewport)
 
     Y_memcpy(&m_currentViewport, pNewViewport, sizeof(m_currentViewport));
 
-    D3D12_VIEWPORT D3DViewport;
-    D3DViewport.TopLeftX = (float)m_currentViewport.TopLeftX;
-    D3DViewport.TopLeftY = (float)m_currentViewport.TopLeftY;
-    D3DViewport.Width = (float)m_currentViewport.Width;
-    D3DViewport.Height = (float)m_currentViewport.Height;
-    D3DViewport.MinDepth = pNewViewport->MinDepth;
-    D3DViewport.MaxDepth = pNewViewport->MaxDepth;
-    m_pCurrentCommandList->RSSetViewports(1, &D3DViewport);
+    D3D12_VIEWPORT D3D12Viewport = { (float)m_currentViewport.TopLeftX, (float)m_currentViewport.TopLeftY, (float)m_currentViewport.Width, (float)m_currentViewport.Height, m_currentViewport.MinDepth, m_currentViewport.MaxDepth };
+    m_pCurrentCommandList->RSSetViewports(1, &D3D12Viewport);
 
     // update constants
     m_pConstants->SetViewportOffset((float)m_currentViewport.TopLeftX, (float)m_currentViewport.TopLeftY, false);
@@ -836,12 +844,8 @@ void D3D12GPUContext::SetScissorRect(const RENDERER_SCISSOR_RECT *pScissorRect)
 
     Y_memcpy(&m_scissorRect, pScissorRect, sizeof(m_scissorRect));
 
-    D3D12_RECT D3DRect;
-    D3DRect.left = pScissorRect->Left;
-    D3DRect.top = pScissorRect->Top;
-    D3DRect.right = pScissorRect->Right;
-    D3DRect.bottom = pScissorRect->Bottom;
-    m_pCurrentCommandList->RSSetScissorRects(1, &D3DRect);
+    D3D12_RECT D3D12ScissorRect = { (LONG)m_scissorRect.Left, (LONG)m_scissorRect.Top, (LONG)m_scissorRect.Right, (LONG)m_scissorRect.Bottom };
+    m_pCurrentCommandList->RSSetScissorRects(1, &D3D12ScissorRect);
 }
 
 void D3D12GPUContext::ClearTargets(bool clearColor /* = true */, bool clearDepth /* = true */, bool clearStencil /* = true */, const float4 &clearColorValue /* = float4::Zero */, float clearDepthValue /* = 1.0f */, uint8 clearStencilValue /* = 0 */)
@@ -1113,36 +1117,18 @@ DRAW_TOPOLOGY D3D12GPUContext::GetDrawTopology()
 
 void D3D12GPUContext::SetDrawTopology(DRAW_TOPOLOGY topology)
 {
-    static const D3D12_PRIMITIVE_TOPOLOGY D3D12Topologies[DRAW_TOPOLOGY_COUNT] =
-    {
-        D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,           // DRAW_TOPOLOGY_UNDEFINED
-        D3D_PRIMITIVE_TOPOLOGY_POINTLIST,           // DRAW_TOPOLOGY_POINTS
-        D3D_PRIMITIVE_TOPOLOGY_LINELIST,            // DRAW_TOPOLOGY_LINE_LIST
-        D3D_PRIMITIVE_TOPOLOGY_LINESTRIP,           // DRAW_TOPOLOGY_LINE_STRIP
-        D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,        // DRAW_TOPOLOGY_TRIANGLE_LIST
-        D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,       // DRAW_TOPOLOGY_TRIANGLE_STRIP
-    };
-
-    static const D3D12_PRIMITIVE_TOPOLOGY_TYPE D3D12ToplogyTypes[DRAW_TOPOLOGY_COUNT] =
-    {
-        D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED,    // DRAW_TOPOLOGY_UNDEFINED
-        D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT,        // DRAW_TOPOLOGY_POINTS
-        D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE,         // DRAW_TOPOLOGY_LINE_LIST
-        D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE,         // DRAW_TOPOLOGY_LINE_STRIP
-        D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,     // DRAW_TOPOLOGY_TRIANGLE_LIST
-        D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,     // DRAW_TOPOLOGY_TRIANGLE_STRIP
-    };
-
     if (topology == m_currentTopology)
         return;
 
-    DebugAssert(topology < DRAW_TOPOLOGY_COUNT);
-    m_pCurrentCommandList->IASetPrimitiveTopology(D3D12Topologies[topology]);
+    D3D12_PRIMITIVE_TOPOLOGY D3DPrimitiveTopology = D3D12Helpers::GetD3D12PrimitiveTopology(topology);
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE D3DPrimitiveTopologyType = D3D12Helpers::GetD3D12PrimitiveTopologyType(topology);
+
+    m_pCurrentCommandList->IASetPrimitiveTopology(D3DPrimitiveTopology);
     m_currentTopology = topology;
 
-    if (D3D12ToplogyTypes[topology] != m_currentD3DTopologyType)
+    if (D3DPrimitiveTopologyType != m_currentD3DTopologyType)
     {
-        m_currentD3DTopologyType = D3D12ToplogyTypes[topology];
+        m_currentD3DTopologyType = D3DPrimitiveTopologyType;
         m_pipelineChanged = true;
     }
 }
@@ -1407,7 +1393,7 @@ void D3D12GPUContext::CommitConstantBuffer(uint32 bufferIndex)
 
     // queue a copy to the actual buffer
     ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
-    m_pCurrentCommandList->CopyBufferRegion(pConstantBufferResource, cbInfo->DirtyLowerBounds, pScratchBufferResource, scratchBufferOffset, modifySize);
+    //m_pCurrentCommandList->CopyBufferRegion(pConstantBufferResource, cbInfo->DirtyLowerBounds, pScratchBufferResource, scratchBufferOffset, modifySize);
     ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
     // restore predicates
@@ -1514,10 +1500,10 @@ void D3D12GPUContext::SynchronizeRenderTargetsAndUAVs()
     m_pCurrentCommandList->OMSetRenderTargets(renderTargetCount, (renderTargetCount > 0) ? renderTargetHandles : nullptr, FALSE, (hasDepthStencil) ? &depthStencilHandle : nullptr);
 }
 
-bool D3D12GPUContext::UpdatePipelineState()
+bool D3D12GPUContext::UpdatePipelineState(bool force)
 {
     // new pipeline state required?
-    if (m_pipelineChanged)
+    if (m_pipelineChanged || force)
     {
         if (m_pCurrentShaderProgram == nullptr)
             return false;
@@ -1577,7 +1563,7 @@ bool D3D12GPUContext::UpdatePipelineState()
         ShaderStageState *state = &m_shaderStates[stage];
 
         // Constant buffers
-        if (state->ConstantBuffersDirty)
+        if (state->ConstantBuffersDirty || force)
         {
             // find the new bind count
             uint32 bindCount = 0;
@@ -1599,13 +1585,13 @@ bool D3D12GPUContext::UpdatePipelineState()
             // allocate scratch descriptors and copy
             if (bindCount > 0 && AllocateScratchView(bindCount, &state->CBVTableCPUHandle, &state->CBVTableGPUHandle))
             {
-                m_pD3DDevice->CopyDescriptors(1, &state->CBVTableCPUHandle, nullptr, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 0, state->CBVTableGPUHandle);
+                //m_pD3DDevice->CopyDescriptors(1, &state->CBVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                //m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 0, state->CBVTableGPUHandle);
             }
         }
 
         // Resources
-        if (state->ResourcesDirty)
+        if (state->ResourcesDirty || force)
         {
             // find the new bind count
             uint32 bindCount = 0;
@@ -1627,13 +1613,13 @@ bool D3D12GPUContext::UpdatePipelineState()
             // allocate scratch descriptors and copy
             if (bindCount > 0 && AllocateScratchView(bindCount, &state->SRVTableCPUHandle, &state->SRVTableGPUHandle))
             {
-                m_pD3DDevice->CopyDescriptors(1, &state->SRVTableCPUHandle, nullptr, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 1, state->SRVTableGPUHandle);
+                //m_pD3DDevice->CopyDescriptors(1, &state->SRVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                //m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 1, state->SRVTableGPUHandle);
             }
         }
 
         // Samplers
-        if (state->SamplersDirty)
+        if (state->SamplersDirty || force)
         {
             // find the new bind count
             uint32 bindCount = 0;
@@ -1655,13 +1641,13 @@ bool D3D12GPUContext::UpdatePipelineState()
             // allocate scratch descriptors and copy
             if (bindCount > 0 && AllocateScratchSamplers(bindCount, &state->SamplerTableCPUHandle, &state->SamplerTableGPUHandle))
             {
-                m_pD3DDevice->CopyDescriptors(1, &state->SamplerTableCPUHandle, nullptr, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 2, state->SamplerTableGPUHandle);
+                //m_pD3DDevice->CopyDescriptors(1, &state->SamplerTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+                //m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 2, state->SamplerTableGPUHandle);
             }
         }
 
         // UAVs
-        if (stage == SHADER_PROGRAM_STAGE_PIXEL_SHADER && state->UAVsDirty)
+        if (stage == SHADER_PROGRAM_STAGE_PIXEL_SHADER && (state->UAVsDirty || force))
         {
             // find the new bind count
             uint32 bindCount = 0;
@@ -1683,8 +1669,8 @@ bool D3D12GPUContext::UpdatePipelineState()
             // allocate scratch descriptors and copy
             if (bindCount > 0 && AllocateScratchView(bindCount, &state->UAVTableCPUHandle, &state->UAVTableGPUHandle))
             {
-                m_pD3DDevice->CopyDescriptors(1, &state->UAVTableCPUHandle, nullptr, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(15, state->UAVTableGPUHandle);
+                //m_pD3DDevice->CopyDescriptors(1, &state->UAVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                //m_pCurrentCommandList->SetGraphicsRootDescriptorTable(15, state->UAVTableGPUHandle);
             }
         }
     }
@@ -1696,7 +1682,7 @@ bool D3D12GPUContext::UpdatePipelineState()
 
 void D3D12GPUContext::Draw(uint32 firstVertex, uint32 nVertices)
 {
-    if (nVertices == 0 || !UpdatePipelineState())
+    if (nVertices == 0 || !UpdatePipelineState(false))
         return;
     
     m_pCurrentCommandList->DrawInstanced(nVertices, 1, firstVertex, 0);
@@ -1705,7 +1691,7 @@ void D3D12GPUContext::Draw(uint32 firstVertex, uint32 nVertices)
 
 void D3D12GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32 nInstances)
 {
-    if (nVertices == 0 || nInstances == 0 || !UpdatePipelineState())
+    if (nVertices == 0 || nInstances == 0 || !UpdatePipelineState(false))
         return;
 
     m_pCurrentCommandList->DrawInstanced(nVertices, nInstances, firstVertex, 0);
@@ -1714,7 +1700,7 @@ void D3D12GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32
 
 void D3D12GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 baseVertex)
 {
-    if (nIndices == 0 || !UpdatePipelineState())
+    if (nIndices == 0 || !UpdatePipelineState(false))
         return;
 
     m_pCurrentCommandList->DrawIndexedInstanced(nIndices, 1, startIndex, baseVertex, 0);
@@ -1723,7 +1709,7 @@ void D3D12GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 bas
 
 void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, uint32 baseVertex, uint32 nInstances)
 {
-    if (nIndices == 0 || !UpdatePipelineState())
+    if (nIndices == 0 || !UpdatePipelineState(false))
         return;
 
     m_pCurrentCommandList->DrawIndexedInstanced(nIndices, nInstances, startIndex, baseVertex, 0);
@@ -1732,7 +1718,7 @@ void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, u
 
 void D3D12GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ)
 {
-    if (!UpdatePipelineState())
+    if (!UpdatePipelineState(false))
         return;
 
     m_pCurrentCommandList->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
@@ -1741,8 +1727,10 @@ void D3D12GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCount
 
 void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices)
 {
-    if (!UpdatePipelineState())
+    if (!UpdatePipelineState(false))
         return;
+
+#if 0
 
     // can use scratch buffer directly. 
     // this probably should use a threshold to go to an upload buffer..
@@ -1753,6 +1741,9 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     uint32 scratchBufferOffset;
     if (!AllocateScratchBufferMemory(bufferSpaceRequired, &pScratchBufferResource, &scratchBufferOffset, &pScratchBufferCPUPointer, &scratchBufferGPUPointer))
         return;
+
+    // copy the contents in
+    Y_memcpy(pScratchBufferCPUPointer, pVertices, bufferSpaceRequired);
 
     // set vertex buffer
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
@@ -1776,6 +1767,46 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     {
         m_pCurrentCommandList->IASetVertexBuffers(0, 1, nullptr);
     }
+
+#else
+    uint32 bufferSpaceRequired = vertexSize * nVertices;
+
+    ID3D12Resource *pResource;
+    D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
+    D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, bufferSpaceRequired + 1, 1, 1, 1, DXGI_FORMAT_UNKNOWN,{ 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE };
+    HRESULT hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&pResource));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateCommitedResource for upload resource failed with hResult %08X", hResult);
+        return;
+    }
+
+    // map the upload buffer
+    void *pMappedPointer;
+    D3D12_RANGE readRange = { 0, 0 };
+    hResult = pResource->Map(0, &readRange, &pMappedPointer);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("Failed to map upload buffer: %08X", hResult);
+        pResource->Release();
+        return;
+    }
+
+    // copy the contents over, and unmap the buffer
+    D3D12_RANGE writeRange = { 0, bufferSpaceRequired };
+    Y_memcpy(pMappedPointer, pVertices, bufferSpaceRequired);
+    pResource->Unmap(0, &writeRange);
+
+    // set vertex buffer
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+    vertexBufferView.BufferLocation = pResource->GetGPUVirtualAddress();
+    vertexBufferView.SizeInBytes = bufferSpaceRequired;
+    vertexBufferView.StrideInBytes = vertexSize;
+    m_pCurrentCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+    m_pCurrentCommandList->DrawInstanced(nVertices, 1, 0, 0);
+    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(pResource);
+#endif
+
 }
 
 

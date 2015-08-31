@@ -23,7 +23,7 @@ static bool RendererStart()
 
     // fill parameters
     RendererInitializationParameters initParameters;
-    initParameters.EnableThreadedRendering = CVars::r_use_render_thread.GetBool();
+    initParameters.EnableThreadedRendering = false;
     initParameters.BackBufferFormat = PIXEL_FORMAT_R8G8B8A8_UNORM;
     initParameters.DepthStencilBufferFormat = PIXEL_FORMAT_D24_UNORM_S8_UINT;
     initParameters.HideImplicitSwapChain = false;
@@ -201,7 +201,11 @@ SHUTDOWN_INPUT_LABEL:
 SHUTDOWN_RENDERER_LABEL:
     // shutdown renderer
     Log_InfoPrint("Shutting down renderer...");
+    ImGui::FreeResources();
+    g_pResourceManager->ReleaseDeviceResources();
     g_pRenderer->Shutdown();
+
+    g_pResourceManager->ReleaseResources();
 
 SHUTDOWN_VFS_LABEL:
     // shutdown vfs
@@ -297,31 +301,34 @@ static void Frame()
     CheckEvents();
 
     // imgui
-    ImGui::NewFrame(deltaTime);
+    //ImGui::NewFrame(deltaTime);
 
     // do stuff
     {
+        g_pRenderer->BeginFrame();
         g_pMainGPUContext->SetRenderTargets(0, nullptr, nullptr);
         g_pMainGPUContext->SetFullViewport();
         g_pMainGPUContext->ClearTargets(true, true, true, Vector4f(0.5f, 0.2f, 0.8f, 0.0f));
 
         MINIGUI_RECT rect(40, 140, 40, 140);
+        g_guiContext.PushManualFlush();
         g_guiContext.DrawFilledRect(&rect, MAKE_COLOR_R8G8B8_UNORM(255, 200, 150));
         rect.Set(200, 240, 40, 140);
         g_guiContext.DrawFilledRect(&rect, MAKE_COLOR_R8G8B8_UNORM(150, 255, 200));
-        g_guiContext.DrawTextAt(40, 160, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255), "Hello world");
+        //g_guiContext.DrawTextAt(40, 160, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255), "Hello world");
 
+        g_guiContext.PopManualFlush();
         g_guiContext.Flush();
 
         // draw imgui
         {
-            ImGui::ShowTestWindow(nullptr);
+            //ImGui::ShowTestWindow(nullptr);
         }
 
         // render imgui
-        ImGui::Render();
+        //ImGui::Render();
 
-        g_fpsCounter.DrawDetails(g_pRenderer->GetFixedResources()->GetDebugFont(), &g_guiContext);
+        //g_fpsCounter.DrawDetails(g_pRenderer->GetFixedResources()->GetDebugFont(), &g_guiContext);
         g_pMainGPUContext->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE);
     }
 

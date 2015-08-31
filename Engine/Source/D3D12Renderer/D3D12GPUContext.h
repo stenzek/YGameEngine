@@ -171,7 +171,7 @@ private:
     void FinishPendingCommands();
     void ClearCommandListDependantState();
     void RestoreCommandListDependantState();
-    bool UpdatePipelineState();
+    bool UpdatePipelineState(bool force);
 
     // allocate from scratch buffer
     bool AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress);

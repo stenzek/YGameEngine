@@ -34,6 +34,14 @@ static void DumpActiveObjects()
             }
         }
     }
+
+//     // real hackery, lets us paste a pointer from the above in and view it
+//     ID3D12Resource *x = nullptr;
+//     if (x != nullptr)
+//     {
+//         D3D12_RESOURCE_DESC d = x->GetDesc();
+//         Log_DevPrint("");
+//     }
 }
 #endif
 }
@@ -42,6 +50,7 @@ D3D12RenderBackend::D3D12RenderBackend()
     : m_pDXGIFactory(nullptr)
     , m_pDXGIAdapter(nullptr)
     , m_pD3DDevice(nullptr)
+    , m_pD3DInfoQueue(nullptr)
     , m_D3DFeatureLevel(D3D_FEATURE_LEVEL_11_0)
     , m_featureLevel(RENDERER_FEATURE_LEVEL_COUNT)
     , m_texturePlatform(NUM_TEXTURE_PLATFORMS)
@@ -185,17 +194,18 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
     }
 
     // debug device?
-    if (CVars::r_use_debug_device.GetBool() && CVars::r_d3d12_break_on_error.GetBool())
+    if (CVars::r_use_debug_device.GetBool())
     {
-        ID3D12InfoQueue *pD3DInfoQueue;
-        hResult = m_pD3DDevice->QueryInterface(IID_PPV_ARGS(&pD3DInfoQueue));
+        hResult = m_pD3DDevice->QueryInterface(IID_PPV_ARGS(&m_pD3DInfoQueue));
         if (SUCCEEDED(hResult))
         {
             // enable break on error
-            pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-            pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-            pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
-            pD3DInfoQueue->Release();
+            if (CVars::r_d3d12_break_on_error.GetBool() && IsDebuggerPresent())
+            {
+                m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+                m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+                m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+            }
         }
     }
 
@@ -516,14 +526,23 @@ void D3D12RenderBackend::Shutdown()
     SAFE_RELEASE(m_pLegacyComputeRootSignature);
     SAFE_RELEASE(m_pLegacyGraphicsRootSignature);
 
+//     // disable break on error, since each leaked object is a message
+//     if (m_pD3DInfoQueue != nullptr && CVars::r_d3d12_break_on_error.GetBool() && IsDebuggerPresent())
+//     {
+//         m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, FALSE);
+//         m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, FALSE);
+//         m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, FALSE);
+//     }
+
     // dump objects before teardown
-    Log_DevPrintf("Dumping active objects before teardown");
-    DumpActiveObjects();
+    //Log_DevPrintf("Dumping active objects before teardown");
+    //DumpActiveObjects();
 
     // cleanup
+    SAFE_RELEASE(m_pD3DInfoQueue);
     SAFE_RELEASE(m_pDXGIAdapter);
     SAFE_RELEASE(m_pDXGIFactory);
-    SAFE_RELEASE_LAST(m_pD3DDevice);
+    SAFE_RELEASE(m_pD3DDevice);
 
     // dump objects before teardown
     Log_DevPrintf("Dumping active objects after teardown");
@@ -653,8 +672,9 @@ void D3D12RenderBackend::DeletePendingResources(uint64 fenceValue)
             continue;
         }
 
-        m_pendingDeletionResources[i].pResource->Release();
+        ID3D12Pageable *pResource = m_pendingDeletionResources[i].pResource;
         m_pendingDeletionResources.FastRemove(i);
+        SAFE_RELEASE_LAST(pResource);
     }
 
     for (uint32 i = 0; i < m_pendingDeletionDescriptors.GetSize(); )

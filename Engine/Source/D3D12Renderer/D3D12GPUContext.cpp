@@ -1804,7 +1804,8 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     vertexBufferView.StrideInBytes = vertexSize;
     m_pCurrentCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
     m_pCurrentCommandList->DrawInstanced(nVertices, 1, 0, 0);
-    //D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(pResource);
+    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(pResource);
+    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(pResource2);
 #endif
 
 }

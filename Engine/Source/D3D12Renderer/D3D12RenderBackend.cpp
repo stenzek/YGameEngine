@@ -526,6 +526,7 @@ void D3D12RenderBackend::Shutdown()
     // cleanup constant buffers
     for (ConstantBufferStorage &constantBufferStorage : m_constantBufferStorage)
     {
+        GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(constantBufferStorage.DescriptorHandle);
         if (constantBufferStorage.pResource != nullptr)
             constantBufferStorage.pResource->Release();
     }

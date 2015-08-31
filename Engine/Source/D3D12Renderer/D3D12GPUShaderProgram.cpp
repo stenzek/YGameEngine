@@ -87,6 +87,7 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
     // fill new details
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineDesc;
     Y_memzero(&pipelineDesc, sizeof(pipelineDesc));
+    pipelineDesc.pRootSignature = D3D12RenderBackend::GetInstance()->GetLegacyGraphicsRootSignature();
 
     // stage bytecode
     if (m_pStageByteCode[SHADER_PROGRAM_STAGE_VERTEX_SHADER] != nullptr)
@@ -151,6 +152,7 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
     pipelineDesc.InputLayout.pInputElementDescs = m_vertexAttributes.GetBasePointer();
     pipelineDesc.SampleMask = 0xFFFFFFFF;
     pipelineDesc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF;
+    pipelineDesc.PrimitiveTopologyType = pKey->PrimitiveTopologyType;
     pipelineDesc.NumRenderTargets = pKey->RenderTargetCount;
     for (uint32 i = 0; i < pKey->RenderTargetCount; i++)
         pipelineDesc.RTVFormats[i] = D3D12Helpers::PixelFormatToDXGIFormat(pKey->RTVFormats[i]);

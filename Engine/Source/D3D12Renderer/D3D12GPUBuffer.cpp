@@ -11,6 +11,7 @@ D3D12GPUBuffer::D3D12GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, ID3D12Resourc
     , m_pD3DResource(pD3DResource)
     , m_pD3DMapResource(nullptr)
     , m_defaultResourceState(defaultResourceState)
+    , m_mapType(GPU_MAP_TYPE_COUNT)
 {
     // @TODO virtual call bad here, should just adjust the counter directly.
     g_pRenderer->GetStats()->OnResourceCreated(this);
@@ -309,7 +310,7 @@ void D3D12GPUContext::Unmapbuffer(GPUBuffer *pBuffer, void *pPointer)
 
         // copy to the gpu buffer
         ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
-        m_pCurrentCommandList->CopyBufferRegion(pMapBuffer, 0, pD3D12Buffer->GetD3DResource(), 0, pD3D12Buffer->GetDesc()->Size);
+        m_pCurrentCommandList->CopyBufferRegion(pD3D12Buffer->GetD3DResource(), 0, pMapBuffer, 0, pD3D12Buffer->GetDesc()->Size);
         ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
 
         // have to wait until the gpu is finished with it before releasing the buffer
@@ -320,5 +321,8 @@ void D3D12GPUContext::Unmapbuffer(GPUBuffer *pBuffer, void *pPointer)
         // this was only a read mapping, so we can just nuke the resource right now (the gpu won't touch it)
         pMapBuffer->Release();
     }
+
+    // clear pointer
+    pD3D12Buffer->SetMapResource(nullptr, GPU_MAP_TYPE_COUNT);
 }
 

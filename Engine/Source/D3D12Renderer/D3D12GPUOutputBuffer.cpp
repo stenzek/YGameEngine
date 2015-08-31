@@ -34,7 +34,7 @@ D3D12GPUOutputBuffer::D3D12GPUOutputBuffer(D3D12RenderBackend *pBackend, ID3D12D
     , m_depthStencilFormat(depthStencilFormat)
     , m_backBufferDXGIFormat(backBufferDXGIFormat)
     , m_depthStencilDXGIFormat(depthStencilDXGIFormat)
-    , m_currentBackBufferIndex(pDXGISwapChain->GetCurrentBackBufferIndex())
+    , m_currentBackBufferIndex(0xFFFFFFFF)
     , m_pDepthStencilBuffer(nullptr)
 {
 
@@ -139,14 +139,20 @@ D3D12_CPU_DESCRIPTOR_HANDLE D3D12GPUOutputBuffer::GetCurrentBackBufferViewDescri
     return m_renderTargetViewsDescriptorStart.GetOffsetCPUHandle(m_currentBackBufferIndex);
 }
 
-void D3D12GPUOutputBuffer::UpdateCurrentBackBuffer()
+bool D3D12GPUOutputBuffer::UpdateCurrentBackBuffer()
 {
     uint32 newBackBufferIndex = m_pDXGISwapChain->GetCurrentBackBufferIndex();
     DebugAssert(newBackBufferIndex < m_backBuffers.GetSize());
     if (newBackBufferIndex != m_currentBackBufferIndex)
-        Log_DevPrintf("Update backbuffer index = %u", newBackBufferIndex);
-
-    m_currentBackBufferIndex = newBackBufferIndex;
+    {
+        //Log_DevPrintf("Update backbuffer index = %u", newBackBufferIndex);
+        m_currentBackBufferIndex = newBackBufferIndex;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 void D3D12GPUOutputBuffer::InternalResizeBuffers(uint32 width, uint32 height, RENDERER_VSYNC_TYPE vsyncType)

@@ -27,7 +27,7 @@ public:
     // current backbuffer access
     ID3D12Resource *GetCurrentBackBufferResource() const;
     D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferViewDescriptorCPUHandle() const;
-    void UpdateCurrentBackBuffer();
+    bool UpdateCurrentBackBuffer();
 
     // DS access
     ID3D12Resource *GetDepthStencilBufferResource() const { return m_pDepthStencilBuffer; }

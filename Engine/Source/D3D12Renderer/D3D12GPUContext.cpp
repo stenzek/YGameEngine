@@ -291,6 +291,7 @@ bool D3D12GPUContext::CreateInternalCommandLists()
 
     // activate the first command queue
     ActivateCommandQueue(0);
+    RestoreCommandListDependantState();
     return true;
 }
 
@@ -392,7 +393,7 @@ void D3D12GPUContext::ActivateCommandQueue(uint32 index)
 
     // update destruction fence value
     m_pBackend->SetCleanupFenceValue(pFrameData->FenceValue);
-    Log_DevPrintf("Command queue %u activated.", m_currentCommandQueueIndex);
+    //Log_DevPrintf("Command queue %u activated.", m_currentCommandQueueIndex);
 }
 
 void D3D12GPUContext::MoveToNextCommandQueue()
@@ -464,6 +465,11 @@ void D3D12GPUContext::ClearCommandListDependantState()
 
 void D3D12GPUContext::RestoreCommandListDependantState()
 {
+    // graphics root
+    m_pCurrentCommandList->SetDescriptorHeaps(m_currentDescriptorHeaps.GetSize(), m_currentDescriptorHeaps.GetBasePointer());
+    m_pCurrentCommandList->SetGraphicsRootSignature(m_pBackend->GetLegacyGraphicsRootSignature());
+    m_pCurrentCommandList->SetComputeRootSignature(m_pBackend->GetLegacyComputeRootSignature());
+
     // pipeline state
     m_pipelineChanged = true;
     UpdatePipelineState();
@@ -980,14 +986,8 @@ void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
     // present the image
     m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
 
-    // move to next command list (placed after here so the present happens before the fence.
+    // move to next command list (placed after here so the present happens before the fence)
     MoveToNextCommandQueue();
-
-    // transition back
-    ResourceBarrier(m_pCurrentSwapChain->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-    // update the new backbuffer for the swap chain
-    m_pCurrentSwapChain->UpdateCurrentBackBuffer();
 
     // restore state (since new command list)
     RestoreCommandListDependantState();
@@ -1465,6 +1465,13 @@ void D3D12GPUContext::SynchronizeRenderTargetsAndUAVs()
         // using swap chain
         if (m_pCurrentSwapChain != nullptr)
         {
+            // update the render target index
+            if (m_pCurrentSwapChain->UpdateCurrentBackBuffer())
+            {
+                // it's changed, so we need a resource barrier
+                ResourceBarrier(m_pCurrentSwapChain->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            }
+
             renderTargetHandles[0] = m_pCurrentSwapChain->GetCurrentBackBufferViewDescriptorCPUHandle();
             depthStencilHandle = m_pCurrentSwapChain->GetDepthStencilBufferViewDescriptorCPUHandle();
             hasDepthStencil = m_pCurrentSwapChain->HasDepthStencilBuffer();

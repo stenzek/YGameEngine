@@ -244,6 +244,14 @@ bool D3D12GPUContext::CreateInternalCommandLists()
             return false;
         }
 
+        // command list is expected to be in the closed state
+        hResult = pFrameData->pCommandList->Close();
+        if (FAILED(hResult))
+        {
+            Log_ErrorPrintf("ID3D12CommandList::Close failed with hResult %08X", hResult);
+            return false;
+        }
+
         // allocate fence
         hResult = m_pD3DDevice->CreateFence(pFrameData->FenceValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&pFrameData->pFence));
         if (FAILED(hResult))
@@ -314,7 +322,28 @@ void D3D12GPUContext::ExecuteCurrentCommandList(bool reopen)
     }
     else
     {
-        Log_WarningPrintf("ID3D12CommandList::Close failed with hResult %08X, some may commands may not be executed.", hResult);
+        Log_ErrorPrintf("ID3D12CommandList::Close failed with hResult %08X, some may commands may not be executed. Recreating command list.", hResult);
+
+        // create a new command list (documentation says that a command list that failed Close() will forever be in an error state)
+        DCommandQueue *pFrameData = &m_commandQueues[m_currentCommandQueueIndex];
+        ID3D12GraphicsCommandList *pNewCommandList;
+        hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pFrameData->pCommandAllocator, nullptr, IID_PPV_ARGS(&pNewCommandList));
+        if (SUCCEEDED(hResult))
+        {
+            hResult = pNewCommandList->Close();
+            if (FAILED(hResult))
+                Log_ErrorPrintf("ID3D12CommandList::Close on the new command list failed with hResult %08X. Something is seriously wrong.", hResult);
+
+            // if close failed, the gpu won't be doing anything with it. right?
+            pFrameData->pCommandList->Release();
+            pFrameData->pCommandList = pNewCommandList;
+            m_pCurrentCommandList = pNewCommandList;
+        }
+        else
+        {
+            // can't do much, leave the broken command list around, try next time..
+            Log_ErrorPrintf("ID3D12Device::CreateCommandList failed with hResult %08X. Something is seriously wrong.", hResult);
+        }
     }
 
     if (reopen)
@@ -329,8 +358,17 @@ void D3D12GPUContext::ExecuteCurrentCommandList(bool reopen)
 
 void D3D12GPUContext::ActivateCommandQueue(uint32 index)
 {
+    HRESULT hResult;
     DCommandQueue *pFrameData = &m_commandQueues[index];
     m_currentCommandQueueIndex = index;
+
+    // begin recording commands
+    hResult = pFrameData->pCommandAllocator->Reset();
+    if (FAILED(hResult))
+        Log_ErrorPrintf("ID3D12CommandAllocator::Reset failed with hResult %08X", hResult);
+    hResult = pFrameData->pCommandList->Reset(pFrameData->pCommandAllocator, nullptr);
+    if (FAILED(hResult))
+        Log_ErrorPrintf("ID3D12CommandList::Reset failed with hResult %08X", hResult);
 
     // update pointers
     pFrameData->FenceValue = m_nextFenceValue++;
@@ -338,6 +376,11 @@ void D3D12GPUContext::ActivateCommandQueue(uint32 index)
     m_pCurrentScratchBuffer = pFrameData->pScratchBuffer;
     m_pCurrentScratchSamplerHeap = pFrameData->pScratchSamplerHeap;
     m_pCurrentScratchViewHeap = pFrameData->pScratchViewHeap;
+
+    // reset scratch buffer
+    pFrameData->pScratchBuffer->Reset();
+    pFrameData->pScratchViewHeap->Reset();
+    pFrameData->pScratchSamplerHeap->Reset();
 
     // add descriptor heaps
     m_currentDescriptorHeaps.Clear();
@@ -349,6 +392,7 @@ void D3D12GPUContext::ActivateCommandQueue(uint32 index)
 
     // update destruction fence value
     m_pBackend->SetCleanupFenceValue(pFrameData->FenceValue);
+    Log_DevPrintf("Command queue %u activated.", m_currentCommandQueueIndex);
 }
 
 void D3D12GPUContext::MoveToNextCommandQueue()
@@ -384,26 +428,11 @@ void D3D12GPUContext::FinishPendingCommands()
 
 void D3D12GPUContext::WaitForCommandQueue(uint32 index)
 {
-    HRESULT hResult;
     DCommandQueue *pFrameData = &m_commandQueues[index];
     DebugAssert(pFrameData->Pending);
 
     WaitForSingleObject(pFrameData->FenceReachedEvent, INFINITE);
     ResetEvent(pFrameData->FenceReachedEvent);
-
-    // reset list
-    // begin recording commands
-    hResult = pFrameData->pCommandAllocator->Reset();
-    if (FAILED(hResult))
-        Log_ErrorPrintf("ID3D12CommandAllocator::Reset failed with hResult %08X", hResult);
-    hResult = pFrameData->pCommandList->Reset(pFrameData->pCommandAllocator, nullptr);
-    if (FAILED(hResult))
-        Log_ErrorPrintf("ID3D12CommandList::Reset failed with hResult %08X", hResult);
-
-    // reset scratch buffer
-    pFrameData->pScratchBuffer->Reset();
-    pFrameData->pScratchViewHeap->Reset();
-    pFrameData->pScratchSamplerHeap->Reset();
 
     // release resources
     m_pBackend->DeletePendingResources(pFrameData->FenceValue);
@@ -951,7 +980,7 @@ void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
     // present the image
     m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
 
-    // move to next command list (placed after here so the present happens before the fence. @TODO is this behaviour needed?)
+    // move to next command list (placed after here so the present happens before the fence.
     MoveToNextCommandQueue();
 
     // transition back

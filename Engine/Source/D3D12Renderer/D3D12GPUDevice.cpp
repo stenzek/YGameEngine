@@ -22,12 +22,7 @@ D3D12GPUDevice::D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXG
     , m_outputBackBufferFormat(outputBackBufferFormat)
     , m_outputDepthStencilFormat(outputDepthStencilFormat)
 {
-    if (m_pDXGIFactory != nullptr)
-        m_pDXGIFactory->AddRef();
-    if (m_pDXGIAdapter != nullptr)
-        m_pDXGIAdapter->AddRef();
-    if (m_pD3DDevice != nullptr)
-        m_pD3DDevice->AddRef();
+
 }
 
 D3D12GPUDevice::~D3D12GPUDevice()
@@ -41,11 +36,6 @@ D3D12GPUDevice::~D3D12GPUDevice()
     SAFE_RELEASE(m_pOffThreadCommandList);
     SAFE_RELEASE(m_pOffThreadCommandQueue);
     SAFE_RELEASE(m_pOffThreadCommandAllocator);
-
-    SAFE_RELEASE(m_pD3DDevice);
-
-    SAFE_RELEASE(m_pDXGIAdapter);
-    SAFE_RELEASE(m_pDXGIFactory);
 }
 
 bool D3D12GPUDevice::CreateOffThreadResources()

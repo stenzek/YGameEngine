@@ -23,7 +23,6 @@ D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *p
 {
     // add references
     m_pDevice->SetGPUContext(this);
-    m_pDevice->AddRef();
 
     // null memory
     Y_memzero(&m_currentViewport, sizeof(m_currentViewport));
@@ -142,7 +141,6 @@ D3D12GPUContext::~D3D12GPUContext()
 
     SAFE_RELEASE(m_pCurrentSwapChain);
     m_pDevice->SetGPUContext(nullptr);
-    m_pDevice->Release();
 }
 
 void D3D12GPUContext::ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState)

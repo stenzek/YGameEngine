@@ -44,8 +44,7 @@ D3D12GPUOutputBuffer::~D3D12GPUOutputBuffer()
 {
     InternalReleaseBuffers();
 
-    m_pDXGISwapChain->Release();
-    m_pD3DDevice->Release();
+    SAFE_RELEASE(m_pDXGISwapChain);
 }
 
 D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, ID3D12Device *pD3DDevice, ID3D12CommandQueue *pCommandQueue, HWND hWnd, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType)

@@ -82,7 +82,7 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
         else
         {
             Log_WarningPrintf("D3D12GetDebugInterface failed with hResult %08X. Debug layer will not be enabled.", hResult);
-        }
+        }       
     }
 
     // create dxgi factory
@@ -151,11 +151,26 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
     }
 
     // create the device
-    hResult = fnD3D12CreateDevice(m_pDXGIAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), (void **)&m_pD3DDevice);
+    hResult = fnD3D12CreateDevice(m_pDXGIAdapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_pD3DDevice));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("D3D12RenderBackend::Create: Could not create D3D12 device: %08X.", hResult);
         return false;
+    }
+
+    // debug device?
+    if (CVars::r_use_debug_device.GetBool() && CVars::r_d3d12_break_on_error.GetBool())
+    {
+        ID3D12InfoQueue *pD3DInfoQueue;
+        hResult = m_pD3DDevice->QueryInterface(IID_PPV_ARGS(&pD3DInfoQueue));
+        if (SUCCEEDED(hResult))
+        {
+            // enable break on error
+            pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+            pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+            pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+            pD3DInfoQueue->Release();
+        }
     }
 
     // query feature levels
@@ -449,8 +464,8 @@ bool D3D12RenderBackend::CreateConstantStorage()
 void D3D12RenderBackend::Shutdown()
 {
     // cleanup our objects
-    SAFE_RELEASE(m_pGPUContext);
-    SAFE_RELEASE(m_pGPUDevice);
+    SAFE_RELEASE_LAST(m_pGPUContext);
+    SAFE_RELEASE_LAST(m_pGPUDevice);
 
     // remove any scheduled resources (descriptors will be dropped anyways)
     for (uint32 i = 0; i < m_pendingDeletionResources.GetSize(); i++)
@@ -476,9 +491,9 @@ void D3D12RenderBackend::Shutdown()
     SAFE_RELEASE(m_pLegacyGraphicsRootSignature);
 
     // cleanup
-    SAFE_RELEASE(m_pD3DDevice);
-    SAFE_RELEASE(m_pDXGIAdapter);
-    SAFE_RELEASE(m_pDXGIFactory);
+    SAFE_RELEASE_LAST(m_pD3DDevice);
+    SAFE_RELEASE_LAST(m_pDXGIAdapter);
+    SAFE_RELEASE_LAST(m_pDXGIFactory);
 
 #ifdef Y_BUILD_CONFIG_DEBUG
     // dump remaining objects
@@ -642,7 +657,7 @@ void D3D12RenderBackend::DeletePendingResources(uint64 fenceValue)
 
         DebugAssert(desc.Handle.Type < countof(m_pDescriptorHeaps));
         m_pDescriptorHeaps[desc.Handle.Type]->Free(desc.Handle);
-        m_pendingDeletionResources.FastRemove(i);
+        m_pendingDeletionDescriptors.FastRemove(i);
     }
 
     m_pendingDeletionLock.Unlock();

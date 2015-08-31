@@ -102,9 +102,12 @@ void D3D12DescriptorHeap::Free(D3D12DescriptorHandle &handle)
     if (handle.DescriptorCount == 0)
         return;
 
-    // @TODO sanity check handle is correct offset and hasn't been corrupted
+    // sanity check handle is correct offset and hasn't been corrupted
     uint32 startIndex = handle.StartIndex;
+    DebugAssert(handle.Type == m_type);
     DebugAssert(startIndex < m_descriptorCount);
+    DebugAssert((m_CPUHandleStart.ptr + startIndex * m_incrementSize) == handle.CPUHandle.ptr);
+    DebugAssert((m_GPUHandleStart.ptr + startIndex * m_incrementSize) == handle.GPUHandle.ptr);
 
     m_mutex.Lock();
     for (uint32 i = 0; i < handle.DescriptorCount; i++)

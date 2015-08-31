@@ -166,11 +166,19 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
     else
         initialResourceState = defaultResourceState;
 
+    // clear value
+    D3D12_CLEAR_VALUE optimizedClearValue;
+    D3D12_CLEAR_VALUE *pOptimizedClearValue;
+    if (pTextureDesc->Flags & (GPU_TEXTURE_FLAG_BIND_RENDER_TARGET | GPU_TEXTURE_FLAG_BIND_DEPTH_STENCIL_BUFFER) && D3D12Helpers::GetOptimizedClearValue(pTextureDesc->Format, &optimizedClearValue))
+        pOptimizedClearValue = &optimizedClearValue;
+    else
+        pOptimizedClearValue = nullptr;
+
     // create the texture resource
     ID3D12Resource *pD3DResource;
     D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
     D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, pTextureDesc->Width, pTextureDesc->Height, 1, (UINT16)pTextureDesc->MipLevels, creationFormat, { 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, resourceFlags };
-    hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialResourceState, nullptr, IID_PPV_ARGS(&pD3DResource));
+    hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialResourceState, pOptimizedClearValue, IID_PPV_ARGS(&pD3DResource));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateCommittedResource failed with hResult %08X", hResult);

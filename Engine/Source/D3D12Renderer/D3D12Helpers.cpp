@@ -387,3 +387,22 @@ bool D3D12Helpers::GetResourceSamplerHandle(GPUResource *pResource, D3D12Descrip
 
     return false;
 }
+
+bool D3D12Helpers::GetOptimizedClearValue(PIXEL_FORMAT format, D3D12_CLEAR_VALUE *pValue)
+{
+    pValue->Format = PixelFormatToDXGIFormat(format);
+    if (PixelFormatHelpers::IsDepthFormat(format))
+    {
+        pValue->DepthStencil.Depth = 1.0f;
+        pValue->DepthStencil.Stencil = 0;
+    }
+    else
+    {
+        pValue->Color[0] = 0.0f;
+        pValue->Color[1] = 0.0f;
+        pValue->Color[2] = 0.0f;
+        pValue->Color[3] = 0.0f;
+    }
+
+    return true;
+}

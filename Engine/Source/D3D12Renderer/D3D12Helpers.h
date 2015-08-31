@@ -15,4 +15,5 @@ namespace D3D12Helpers
 
     bool GetResourceSRVHandle(GPUResource *pResource, D3D12DescriptorHandle *pHandle);
     bool GetResourceSamplerHandle(GPUResource *pResource, D3D12DescriptorHandle *pHandle);
+    bool GetOptimizedClearValue(PIXEL_FORMAT format, D3D12_CLEAR_VALUE *pValue);
 }

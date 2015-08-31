@@ -227,10 +227,18 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
     // allocate depth stencil buffer
     if (m_depthStencilDXGIFormat != DXGI_FORMAT_UNKNOWN)
     {
+        // clear value
+        D3D12_CLEAR_VALUE optimizedClearValue;
+        D3D12_CLEAR_VALUE *pOptimizedClearValue;
+        if (D3D12Helpers::GetOptimizedClearValue(m_depthStencilFormat, &optimizedClearValue))
+            pOptimizedClearValue = &optimizedClearValue;
+        else
+            pOptimizedClearValue = nullptr;
+
         // create resource
         D3D12_HEAP_PROPERTIES heapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
         D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, m_width, m_height, 1, 1, m_depthStencilDXGIFormat,{ 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL };
-        hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, nullptr, __uuidof(ID3D12Resource), (void **)&m_pDepthStencilBuffer);
+        hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, pOptimizedClearValue, __uuidof(ID3D12Resource), (void **)&m_pDepthStencilBuffer);
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("CreateCommittedResource for DepthStencil failed with hResult %08X", hResult);

@@ -66,6 +66,7 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     uint32 width = Max(clientRect.right - clientRect.left, (LONG)1);
     uint32 height = Max(clientRect.bottom - clientRect.top, (LONG)1);
 
+#if 0
     // setup swap chain desc
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
     Y_memzero(&swapChainDesc, sizeof(swapChainDesc));
@@ -75,7 +76,7 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     swapChainDesc.Stereo = FALSE;
     swapChainDesc.SampleDesc.Count = 1;
     swapChainDesc.SampleDesc.Quality = 0;
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_BACK_BUFFER;
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.BufferCount = CalculateDXGISwapChainBufferCount(false, vsyncType);
     swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
     swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
@@ -91,6 +92,30 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
         Log_ErrorPrintf("CreateSwapChainForHwnd failed with hResult %08X.", hResult);
         return nullptr;
     }
+#else
+    DXGI_SWAP_CHAIN_DESC swapChainDesc;
+    Y_memzero(&swapChainDesc, sizeof(swapChainDesc));
+    swapChainDesc.BufferDesc.Width = width;
+    swapChainDesc.BufferDesc.Height = height;
+    swapChainDesc.BufferDesc.Format = backBufferDXGIFormat;
+    swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.SampleDesc.Quality = 0;
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.BufferCount = 3;
+    swapChainDesc.Flags = 0;
+    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    swapChainDesc.Flags = 0;
+    swapChainDesc.OutputWindow = hWnd;
+    swapChainDesc.Windowed = TRUE;
+
+    IDXGISwapChain *pDXGISwapChain1;
+    hResult = pDXGIFactory->CreateSwapChain(pCommandQueue, &swapChainDesc, &pDXGISwapChain1);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateSwapChain failed with hResult %08X.", hResult);
+        return nullptr;
+    }
+#endif
 
     // disable alt+enter, we handle it elsewhere
     hResult = pDXGIFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);

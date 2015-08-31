@@ -395,9 +395,6 @@ void D3D12GPUContext::ActivateCommandQueue(uint32 index)
     m_currentDescriptorHeaps.Clear();
     m_currentDescriptorHeaps.Add(m_pCurrentScratchViewHeap->GetD3DHeap());
     m_currentDescriptorHeaps.Add(m_pCurrentScratchSamplerHeap->GetD3DHeap());
-    m_pCurrentCommandList->SetDescriptorHeaps(m_currentDescriptorHeaps.GetSize(), m_currentDescriptorHeaps.GetBasePointer());
-    m_pCurrentCommandList->SetGraphicsRootSignature(m_pBackend->GetLegacyGraphicsRootSignature());
-    m_pCurrentCommandList->SetComputeRootSignature(m_pBackend->GetLegacyComputeRootSignature());
 
     // update destruction fence value
     m_pBackend->SetCleanupFenceValue(pFrameData->FenceValue);
@@ -503,9 +500,6 @@ void D3D12GPUContext::RestoreCommandListDependantState()
     m_pCurrentCommandList->IASetPrimitiveTopology(D3D12Helpers::GetD3D12PrimitiveTopology(m_currentTopology));
     m_pCurrentCommandList->OMSetBlendFactor(m_currentBlendStateBlendFactors);
     m_pCurrentCommandList->OMSetStencilRef(m_currentDepthStencilRef);
-
-    // current descriptor heaps
-    m_pCurrentCommandList->SetDescriptorHeaps(m_currentDescriptorHeaps.GetSize(), m_currentDescriptorHeaps.GetBasePointer());
 }
 
 bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress)
@@ -1393,7 +1387,7 @@ void D3D12GPUContext::CommitConstantBuffer(uint32 bufferIndex)
 
     // queue a copy to the actual buffer
     ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
-    //m_pCurrentCommandList->CopyBufferRegion(pConstantBufferResource, cbInfo->DirtyLowerBounds, pScratchBufferResource, scratchBufferOffset, modifySize);
+    m_pCurrentCommandList->CopyBufferRegion(pConstantBufferResource, cbInfo->DirtyLowerBounds, pScratchBufferResource, scratchBufferOffset, modifySize);
     ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
     // restore predicates
@@ -1585,8 +1579,8 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
             // allocate scratch descriptors and copy
             if (bindCount > 0 && AllocateScratchView(bindCount, &state->CBVTableCPUHandle, &state->CBVTableGPUHandle))
             {
-                //m_pD3DDevice->CopyDescriptors(1, &state->CBVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                //m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 0, state->CBVTableGPUHandle);
+                m_pD3DDevice->CopyDescriptors(1, &state->CBVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 0, state->CBVTableGPUHandle);
             }
         }
 
@@ -1613,8 +1607,8 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
             // allocate scratch descriptors and copy
             if (bindCount > 0 && AllocateScratchView(bindCount, &state->SRVTableCPUHandle, &state->SRVTableGPUHandle))
             {
-                //m_pD3DDevice->CopyDescriptors(1, &state->SRVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                //m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 1, state->SRVTableGPUHandle);
+                m_pD3DDevice->CopyDescriptors(1, &state->SRVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 1, state->SRVTableGPUHandle);
             }
         }
 
@@ -1641,8 +1635,8 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
             // allocate scratch descriptors and copy
             if (bindCount > 0 && AllocateScratchSamplers(bindCount, &state->SamplerTableCPUHandle, &state->SamplerTableGPUHandle))
             {
-                //m_pD3DDevice->CopyDescriptors(1, &state->SamplerTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-                //m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 2, state->SamplerTableGPUHandle);
+                m_pD3DDevice->CopyDescriptors(1, &state->SamplerTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 2, state->SamplerTableGPUHandle);
             }
         }
 
@@ -1669,8 +1663,8 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
             // allocate scratch descriptors and copy
             if (bindCount > 0 && AllocateScratchView(bindCount, &state->UAVTableCPUHandle, &state->UAVTableGPUHandle))
             {
-                //m_pD3DDevice->CopyDescriptors(1, &state->UAVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                //m_pCurrentCommandList->SetGraphicsRootDescriptorTable(15, state->UAVTableGPUHandle);
+                m_pD3DDevice->CopyDescriptors(1, &state->UAVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(15, state->UAVTableGPUHandle);
             }
         }
     }
@@ -1784,7 +1778,7 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     // map the upload buffer
     void *pMappedPointer;
     D3D12_RANGE readRange = { 0, 0 };
-    hResult = pResource->Map(0, &readRange, &pMappedPointer);
+    hResult = pResource->Map(0, nullptr/*&readRange*/, &pMappedPointer);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("Failed to map upload buffer: %08X", hResult);
@@ -1795,16 +1789,22 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     // copy the contents over, and unmap the buffer
     D3D12_RANGE writeRange = { 0, bufferSpaceRequired };
     Y_memcpy(pMappedPointer, pVertices, bufferSpaceRequired);
-    pResource->Unmap(0, &writeRange);
+    pResource->Unmap(0, nullptr/*&writeRange*/);
+
+    ID3D12Resource *pResource2;
+    heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+    hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pResource2));
+    m_pCurrentCommandList->CopyBufferRegion(pResource2, 0, pResource, 0, bufferSpaceRequired);
+    ResourceBarrier(pResource2, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
     // set vertex buffer
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-    vertexBufferView.BufferLocation = pResource->GetGPUVirtualAddress();
+    vertexBufferView.BufferLocation = pResource2->GetGPUVirtualAddress();
     vertexBufferView.SizeInBytes = bufferSpaceRequired;
     vertexBufferView.StrideInBytes = vertexSize;
     m_pCurrentCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
     m_pCurrentCommandList->DrawInstanced(nVertices, 1, 0, 0);
-    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(pResource);
+    //D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(pResource);
 #endif
 
 }

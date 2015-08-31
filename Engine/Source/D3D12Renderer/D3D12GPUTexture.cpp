@@ -262,7 +262,7 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         // map the upload resource
         byte *pMappedPointer;
         D3D12_RANGE readRange = { 0, 0 };
-        hResult = pUploadResource->Map(0, &readRange, (void **)&pMappedPointer);
+        hResult = pUploadResource->Map(0, nullptr/*&readRange*/, (void **)&pMappedPointer);
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("Map upload subresource for upload resource failed with hResult %08X", hResult);

@@ -70,7 +70,7 @@ bool D3D12ScratchBuffer::Reset(bool resetPosition)
     m_resetPosition = m_position;
 
     D3D12_RANGE readRange = { 0, 0 };
-    HRESULT hResult = m_pResource->Map(0, &readRange, (void **)&m_pMappedPointer);
+    HRESULT hResult = m_pResource->Map(0, nullptr/*&readRange*/, (void **)&m_pMappedPointer);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("Map failed with hResult %08X", hResult);
@@ -85,7 +85,7 @@ void D3D12ScratchBuffer::Commit()
     DebugAssert(m_pMappedPointer != nullptr);
 
     D3D12_RANGE writtenRange = { m_resetPosition, m_position };
-    m_pResource->Unmap(0, &writtenRange);
+    m_pResource->Unmap(0, nullptr/*&writtenRange*/);
     m_pMappedPointer = nullptr;
 }
 

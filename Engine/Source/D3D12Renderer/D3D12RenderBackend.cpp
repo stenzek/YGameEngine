@@ -121,7 +121,8 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
     }
 
     // create dxgi factory
-    hResult = CreateDXGIFactory2((CVars::r_use_debug_device.GetBool()) ? DXGI_CREATE_FACTORY_DEBUG : 0, __uuidof(IDXGIFactory4), (void **)&m_pDXGIFactory);
+    //hResult = CreateDXGIFactory2((CVars::r_use_debug_device.GetBool()) ? DXGI_CREATE_FACTORY_DEBUG : 0, __uuidof(IDXGIFactory4), (void **)&m_pDXGIFactory);
+    hResult = CreateDXGIFactory1(IID_PPV_ARGS(&m_pDXGIFactory));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("D3D12RenderBackend::Create: Failed to create DXGI factory with hResult %08X", hResult);
@@ -138,6 +139,7 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
             return false;
         }
     }
+#if 0
     else
     {
         // iterate over adapters
@@ -184,6 +186,7 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
         WideCharToMultiByte(CP_ACP, 0, DXGIAdapterDesc.Description, -1, deviceName, countof(deviceName), NULL, NULL);
         Log_InfoPrintf("D3D12 render backend using DXGI Adapter: %s.", deviceName);
     }
+#endif
 
     // create the device
     hResult = fnD3D12CreateDevice(m_pDXGIAdapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_pD3DDevice));
@@ -444,12 +447,12 @@ bool D3D12RenderBackend::CreateConstantStorage()
             continue;
 
         // set size so we know to allocate it later or on demand
-        ConstantBufferStorage *constantBufferStorage = &m_constantBufferStorage[i];
-        constantBufferStorage->Size = declaration->GetBufferSize();
+        ConstantBufferStorage *pConstantBufferStorage = &m_constantBufferStorage[i];
+        pConstantBufferStorage->Size = ALIGNED_SIZE(declaration->GetBufferSize(), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
         // align next buffer to 64kb
         memoryUsage = (memoryUsage > 0) ? ALIGNED_SIZE(memoryUsage, D3D12_CONSTANT_BUFFER_ALIGNMENT) : 0;
-        memoryUsage += constantBufferStorage->Size;
+        memoryUsage += pConstantBufferStorage->Size;
         activeCount++;
     }
 
@@ -473,16 +476,16 @@ bool D3D12RenderBackend::CreateConstantStorage()
     uint32 currentOffset = 0;
     for (uint32 i = 0; i < m_constantBufferStorage.GetSize(); i++)
     {
-        ConstantBufferStorage *constantBufferStorage = &m_constantBufferStorage[i];
-        if (constantBufferStorage->Size == 0)
+        ConstantBufferStorage *pConstantBufferStorage = &m_constantBufferStorage[i];
+        if (pConstantBufferStorage->Size == 0)
             continue;
 
         // align buffer to 64kb
         currentOffset = (currentOffset > 0) ? ALIGNED_SIZE(currentOffset, D3D12_CONSTANT_BUFFER_ALIGNMENT) : 0;
 
         // allocate resource in heap
-        D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, D3D12_CONSTANT_BUFFER_ALIGNMENT, constantBufferStorage->Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
-        hResult = m_pD3DDevice->CreatePlacedResource(m_pConstantBufferStorageHeap, currentOffset, &resourceDesc, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr, __uuidof(ID3D12Resource), (void **)&constantBufferStorage->pResource);
+        D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, D3D12_CONSTANT_BUFFER_ALIGNMENT, pConstantBufferStorage->Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+        hResult = m_pD3DDevice->CreatePlacedResource(m_pConstantBufferStorageHeap, currentOffset, &resourceDesc, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr, IID_PPV_ARGS(&pConstantBufferStorage->pResource));
         if (FAILED(hResult))
         {
             const ShaderConstantBuffer *declaration = ShaderConstantBuffer::GetRegistry()->GetTypeInfoByIndex(i);
@@ -490,8 +493,21 @@ bool D3D12RenderBackend::CreateConstantStorage()
             return false;
         }
 
+        // allocate a handle for the view
+        if (!GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Allocate(&pConstantBufferStorage->DescriptorHandle))
+        {
+            const ShaderConstantBuffer *declaration = ShaderConstantBuffer::GetRegistry()->GetTypeInfoByIndex(i);
+            Log_ErrorPrintf("Failed to allocate constant buffer %u (%s)", i, declaration->GetBufferName());
+            SAFE_RELEASE(pConstantBufferStorage->pResource);
+            return false;
+        }
+
+        // create a constant buffer view
+        D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = { pConstantBufferStorage->pResource->GetGPUVirtualAddress(), pConstantBufferStorage->Size };
+        m_pD3DDevice->CreateConstantBufferView(&constantBufferViewDesc, pConstantBufferStorage->DescriptorHandle);
+
         // move buffer forward
-        currentOffset += constantBufferStorage->Size;
+        currentOffset += pConstantBufferStorage->Size;
     }
 
     return true;

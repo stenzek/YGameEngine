@@ -106,7 +106,6 @@ private:
     };
     struct PendingDeletionDescriptor
     {
-        D3D12_DESCRIPTOR_HEAP_TYPE Type;
         D3D12DescriptorHandle Handle;
         uint64 FenceValue;
     };

@@ -26,6 +26,7 @@ D3D12RenderBackend::D3D12RenderBackend()
     , m_pGPUContext(nullptr)
     , m_pLegacyGraphicsRootSignature(nullptr)
     , m_pLegacyComputeRootSignature(nullptr)
+    , m_fnD3D12SerializeRootSignature(nullptr)
     , m_pConstantBufferStorageHeap(nullptr)
     , m_currentCleanupFenceValue(0)
 {
@@ -63,6 +64,9 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
         Log_ErrorPrintf("D3D12RenderBackend::Create: Missing D3D12 device entry points.");
         return false;
     }
+
+    // set pointer
+    m_fnD3D12SerializeRootSignature = fnD3D12SerializeRootSignature;
 
     // acquire debug interface
     if (CVars::r_use_debug_device.GetBool())
@@ -185,6 +189,16 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
 
     // other vars
     m_frameLatency = pCreateParameters->GPUFrameLatency;
+
+    // set default backbuffer formats if unspecified
+    m_outputBackBufferFormat = pCreateParameters->BackBufferFormat;
+    m_outputDepthStencilFormat = pCreateParameters->DepthStencilBufferFormat;
+    if (m_outputBackBufferFormat == PIXEL_FORMAT_UNKNOWN)
+        m_outputBackBufferFormat = PIXEL_FORMAT_R8G8B8A8_UNORM;
+
+    // create legacy root descriptors
+    if (!CreateLegacyRootSignatures())
+        return false;
 
     // create descriptor heaps
     if (!CreateDescriptorHeaps())
@@ -626,8 +640,8 @@ void D3D12RenderBackend::DeletePendingResources(uint64 fenceValue)
             continue;
         }
 
-        DebugAssert(desc.Type < countof(m_pDescriptorHeaps));
-        m_pDescriptorHeaps[desc.Type]->Free(desc.Handle);
+        DebugAssert(desc.Handle.Type < countof(m_pDescriptorHeaps));
+        m_pDescriptorHeaps[desc.Handle.Type]->Free(desc.Handle);
         m_pendingDeletionResources.FastRemove(i);
     }
 

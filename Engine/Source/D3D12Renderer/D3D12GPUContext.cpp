@@ -262,6 +262,15 @@ bool D3D12GPUContext::CreateInternalCommandLists()
             return false;
         }
 
+        // allocate view descriptor heap
+        pFrameData->pScratchViewHeap = D3D12ScratchDescriptorHeap::Create(m_pD3DDevice, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 16384);
+        pFrameData->pScratchSamplerHeap = D3D12ScratchDescriptorHeap::Create(m_pD3DDevice, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 2048);
+        if (pFrameData->pScratchViewHeap == nullptr || pFrameData->pScratchSamplerHeap == nullptr)
+        {
+            Log_ErrorPrintf("Failed to allocate scratch descriptor heaps.");
+            return false;
+        }
+
         // allocate reached event
         pFrameData->FenceReachedEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
         if (pFrameData->FenceReachedEvent == INVALID_HANDLE_VALUE)
@@ -334,10 +343,6 @@ void D3D12GPUContext::ActivateCommandQueue(uint32 index)
 
     // add descriptor heaps
     m_currentDescriptorHeaps.Clear();
-    m_currentDescriptorHeaps.Add(m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->GetD3DHeap());
-    m_currentDescriptorHeaps.Add(m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->GetD3DHeap());
-    m_currentDescriptorHeaps.Add(m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->GetD3DHeap());
-    m_currentDescriptorHeaps.Add(m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->GetD3DHeap());
     m_currentDescriptorHeaps.Add(m_pCurrentScratchViewHeap->GetD3DHeap());
     m_currentDescriptorHeaps.Add(m_pCurrentScratchSamplerHeap->GetD3DHeap());
     m_pCurrentCommandList->SetDescriptorHeaps(m_currentDescriptorHeaps.GetSize(), m_currentDescriptorHeaps.GetBasePointer());

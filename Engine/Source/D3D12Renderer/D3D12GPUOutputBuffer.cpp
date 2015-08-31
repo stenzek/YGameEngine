@@ -57,7 +57,7 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     DXGI_FORMAT depthStencilDXGIFormat = (depthStencilFormat != PIXEL_FORMAT_UNKNOWN) ? D3D12Helpers::PixelFormatToDXGIFormat(depthStencilFormat) : DXGI_FORMAT_UNKNOWN;
     if (backBufferDXGIFormat == DXGI_FORMAT_UNKNOWN || (depthStencilFormat != PIXEL_FORMAT_UNKNOWN && depthStencilDXGIFormat == DXGI_FORMAT_UNKNOWN))
     {
-        Log_ErrorPrintf("D3D12GPUOutputBuffer::Create: Invalid swap chain format (%s / %s)", NameTable_GetNameString(NameTables::PixelFormat, backBufferFormat), NameTable_GetNameString(NameTables::PixelFormat, depthStencilFormat));
+        Log_ErrorPrintf("Invalid swap chain format (%s / %s)", NameTable_GetNameString(NameTables::PixelFormat, backBufferFormat), NameTable_GetNameString(NameTables::PixelFormat, depthStencilFormat));
         return false;
     }
 
@@ -89,7 +89,7 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     hResult = pDXGIFactory->CreateSwapChainForHwnd(pCommandQueue, hWnd, &swapChainDesc, nullptr, nullptr, &pDXGISwapChain1);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D12RendererOutputWindow::Create: CreateSwapChainForHwnd failed with hResult %08X.", hResult);
+        Log_ErrorPrintf("CreateSwapChainForHwnd failed with hResult %08X.", hResult);
         return nullptr;
     }
 
@@ -97,7 +97,7 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     hResult = pDXGIFactory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D12RendererOutputWindow::Create: MakeWindowAssociation failed with hResult %08X.", hResult);
+        Log_ErrorPrintf("MakeWindowAssociation failed with hResult %08X.", hResult);
         pDXGISwapChain1->Release();
         return nullptr;
     }
@@ -107,7 +107,7 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     hResult = pDXGISwapChain1->QueryInterface(__uuidof(IDXGISwapChain3), (void **)&pDXGISwapChain);
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("D3D12RendererOutputWindow::Create: IDXGISwapChain1::QueryInterface failed with hResult %08X.", hResult);
+        Log_ErrorPrintf("IDXGISwapChain1::QueryInterface failed with hResult %08X.", hResult);
         pDXGISwapChain1->Release();
         return nullptr;
     }
@@ -142,8 +142,12 @@ D3D12_CPU_DESCRIPTOR_HANDLE D3D12GPUOutputBuffer::GetCurrentBackBufferViewDescri
 
 void D3D12GPUOutputBuffer::UpdateCurrentBackBuffer()
 {
-    m_currentBackBufferIndex = m_pDXGISwapChain->GetCurrentBackBufferIndex();
-    DebugAssert(m_currentBackBufferIndex < m_backBuffers.GetSize());
+    uint32 newBackBufferIndex = m_pDXGISwapChain->GetCurrentBackBufferIndex();
+    DebugAssert(newBackBufferIndex < m_backBuffers.GetSize());
+    if (newBackBufferIndex != m_currentBackBufferIndex)
+        Log_DevPrintf("Update backbuffer index = %u", newBackBufferIndex);
+
+    m_currentBackBufferIndex = newBackBufferIndex;
 }
 
 void D3D12GPUOutputBuffer::InternalResizeBuffers(uint32 width, uint32 height, RENDERER_VSYNC_TYPE vsyncType)
@@ -161,12 +165,12 @@ void D3D12GPUOutputBuffer::InternalResizeBuffers(uint32 width, uint32 height, RE
 
     // calculate buffer count
     uint32 bufferCount = CalculateDXGISwapChainBufferCount((newFullscreenState == TRUE), m_vsyncType);
-    Log_DevPrintf("D3D12RendererOutputBuffer::InternalResizeBuffers: New buffer count = %u", bufferCount);
+    Log_DevPrintf("New swap chain buffer count = %u", bufferCount);
 
     // invoke resize
     hResult = m_pDXGISwapChain->ResizeBuffers(bufferCount, width, height, m_backBufferDXGIFormat, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
     if (FAILED(hResult))
-        Panic("D3D12RendererOutputBuffer::InternalResizeBuffers: IDXGISwapChain::ResizeBuffers failed.");
+        Panic("IDXGISwapChain::ResizeBuffers failed.");
 
     // update attributes
     m_width = width;
@@ -175,7 +179,7 @@ void D3D12GPUOutputBuffer::InternalResizeBuffers(uint32 width, uint32 height, RE
 
     // recreate textures
     if (!InternalCreateBuffers())
-        Panic("D3D12RendererOutputBuffer::ResizeBuffers: Failed to recreate texture objects on resized swap chain.");
+        Panic("Failed to recreate texture objects on resized swap chain.");
 }
 
 bool D3D12GPUOutputBuffer::InternalCreateBuffers()
@@ -189,11 +193,12 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
     // find the current backbuffer index
     m_currentBackBufferIndex = m_pDXGISwapChain->GetCurrentBackBufferIndex();
     m_backBuffers.Reserve(swapChainDesc.BufferCount);
+    Log_DevPrintf("Current backbuffer index = %u", m_currentBackBufferIndex);
 
     // allocate RTV descriptors
     if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->AllocateRange(swapChainDesc.BufferCount, &m_renderTargetViewsDescriptorStart))
     {
-        Log_ErrorPrintf("D3D12RendererOutputBuffer::InternalCreateBuffers: Failed to allocate RTV descriptors.");
+        Log_ErrorPrintf("Failed to allocate RTV descriptors.");
         return false;
     }
 
@@ -210,7 +215,7 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
         hResult = m_pDXGISwapChain->GetBuffer(i, __uuidof(ID3D12Resource), (void **)&pBackBuffer);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D12RendererOutputBuffer::InternalCreateBuffers: IDXGISwapChain::GetBuffer failed with hResult %08X", hResult);
+            Log_ErrorPrintf("IDXGISwapChain::GetBuffer failed with hResult %08X", hResult);
             m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(m_renderTargetViewsDescriptorStart);
             return false;
         }
@@ -229,7 +234,7 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
         hResult = m_pD3DDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, nullptr, __uuidof(ID3D12Resource), (void **)&m_pDepthStencilBuffer);
         if (FAILED(hResult))
         {
-            Log_ErrorPrintf("D3D12RendererOutputBuffer::InternalCreateBuffers: CreateCommittedResource for DepthStencil failed with hResult %08X", hResult);
+            Log_ErrorPrintf("CreateCommittedResource for DepthStencil failed with hResult %08X", hResult);
             m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(m_renderTargetViewsDescriptorStart);
             return false;
         }
@@ -237,7 +242,7 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
         // allocate DSV descriptor
         if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Allocate(&m_depthStencilViewDescriptor))
         {
-            Log_ErrorPrintf("D3D12RendererOutputBuffer::InternalCreateBuffers: Failed to allocate DSV descriptors.");
+            Log_ErrorPrintf("Failed to allocate DSV descriptors.");
             m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(m_renderTargetViewsDescriptorStart);
             SAFE_RELEASE(m_pDepthStencilBuffer);
             return false;
@@ -294,7 +299,7 @@ GPUOutputBuffer *D3D12GPUDevice::CreateOutputBuffer(SDL_Window *pSDLWindow, REND
     SDL_VERSION(&info.version);
     if (!SDL_GetWindowWMInfo(pSDLWindow, &info))
     {
-        Log_ErrorPrintf("D3D11RenderBackend::Create: SDL_GetWindowWMInfo failed: %s", SDL_GetError());
+        Log_ErrorPrintf("SDL_GetWindowWMInfo failed: %s", SDL_GetError());
         return false;
     }
 

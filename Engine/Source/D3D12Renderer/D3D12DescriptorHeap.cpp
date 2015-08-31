@@ -24,7 +24,8 @@ D3D12DescriptorHeap *D3D12DescriptorHeap::Create(ID3D12Device *pDevice, D3D12_DE
     D3D12_DESCRIPTOR_HEAP_DESC desc;
     desc.Type = type;
     desc.NumDescriptors = descriptorCount;
-    desc.Flags = (type < D3D12_DESCRIPTOR_HEAP_TYPE_RTV) ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    //desc.Flags = (type < D3D12_DESCRIPTOR_HEAP_TYPE_RTV) ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     desc.NodeMask = 0;
 
     ID3D12DescriptorHeap *pD3DDescriptorHeap;

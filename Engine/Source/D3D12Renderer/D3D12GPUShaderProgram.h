@@ -5,6 +5,15 @@
 class D3D12GPUShaderProgram : public GPUShaderProgram
 {
 public:
+    struct ConstantBuffer
+    {
+        // @TODO this class could potentially be removed to save a level of indirection
+        String Name;
+        uint32 ParameterIndex;
+        uint32 MinimumSize;
+        uint32 EngineConstantBufferIndex;
+    };
+
     struct ShaderParameter
     {
         String Name;
@@ -70,6 +79,7 @@ public:
 
 protected:
     // arrays
+    typedef Array<ConstantBuffer> ConstantBufferArray;
     typedef Array<ShaderParameter> ParameterArray;
 
     // compiled pipeline object
@@ -85,6 +95,7 @@ protected:
     MemArray<D3D12_INPUT_ELEMENT_DESC> m_vertexAttributes;
 
     // arrays of above
+    ConstantBufferArray m_constantBuffers;
     ParameterArray m_parameters;
 
     // copies of bytecode for all shader stages

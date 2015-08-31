@@ -1551,7 +1551,7 @@ bool D3D12GPUContext::UpdatePipelineState()
             if (bindCount > 0 && AllocateScratchView(bindCount, &state->CBVTableCPUHandle, &state->CBVTableGPUHandle))
             {
                 m_pD3DDevice->CopyDescriptors(1, &state->CBVTableCPUHandle, nullptr, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(0, state->CBVTableGPUHandle);
+                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 0, state->CBVTableGPUHandle);
             }
         }
 
@@ -1579,7 +1579,7 @@ bool D3D12GPUContext::UpdatePipelineState()
             if (bindCount > 0 && AllocateScratchView(bindCount, &state->SRVTableCPUHandle, &state->SRVTableGPUHandle))
             {
                 m_pD3DDevice->CopyDescriptors(1, &state->SRVTableCPUHandle, nullptr, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(0, state->SRVTableGPUHandle);
+                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 1, state->SRVTableGPUHandle);
             }
         }
 
@@ -1607,7 +1607,7 @@ bool D3D12GPUContext::UpdatePipelineState()
             if (bindCount > 0 && AllocateScratchSamplers(bindCount, &state->SamplerTableCPUHandle, &state->SamplerTableGPUHandle))
             {
                 m_pD3DDevice->CopyDescriptors(1, &state->SamplerTableCPUHandle, nullptr, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(0, state->SamplerTableGPUHandle);
+                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(3 * stage + 2, state->SamplerTableGPUHandle);
             }
         }
 
@@ -1635,7 +1635,7 @@ bool D3D12GPUContext::UpdatePipelineState()
             if (bindCount > 0 && AllocateScratchView(bindCount, &state->UAVTableCPUHandle, &state->UAVTableGPUHandle))
             {
                 m_pD3DDevice->CopyDescriptors(1, &state->UAVTableCPUHandle, nullptr, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(0, state->UAVTableGPUHandle);
+                m_pCurrentCommandList->SetGraphicsRootDescriptorTable(15, state->UAVTableGPUHandle);
             }
         }
     }

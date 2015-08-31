@@ -288,31 +288,35 @@ bool D3D12GPUShaderProgram::Create(D3D12GPUDevice *pDevice, const GPU_VERTEX_ELE
     }
 
     // load up constant buffers
-    PODArray<uint32> engineConstantBufferIndices;
     if (header.ConstantBufferCount > 0)
     {
-        SmallString constantBufferName;
-        engineConstantBufferIndices.Resize(header.ConstantBufferCount);
-        for (uint32 i = 0; i < engineConstantBufferIndices.GetSize(); i++)
+        m_constantBuffers.Resize(header.ConstantBufferCount);
+        for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
         {
             D3DShaderCacheEntryConstantBuffer srcConstantBufferInfo;
+            ConstantBuffer *pDstConstantBuffer = &m_constantBuffers[i];
             if (!binaryReader.SafeReadBytes(&srcConstantBufferInfo, sizeof(srcConstantBufferInfo)))
                 return false;
 
             // read name
-            if (!binaryReader.SafeReadFixedString(srcConstantBufferInfo.NameLength, &constantBufferName))
+            if (!binaryReader.SafeReadFixedString(srcConstantBufferInfo.NameLength, &pDstConstantBuffer->Name))
                 return false;
 
+            // constant buffer struct
+            pDstConstantBuffer->MinimumSize = srcConstantBufferInfo.MinimumSize;
+            pDstConstantBuffer->ParameterIndex = srcConstantBufferInfo.ParameterIndex;
+            pDstConstantBuffer->EngineConstantBufferIndex = 0;
+        
             // lookup engine constant buffer
-            const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(constantBufferName, RENDERER_PLATFORM_D3D12, D3D12RenderBackend::GetInstance()->GetFeatureLevel());
+            const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(pDstConstantBuffer->Name, RENDERER_PLATFORM_D3D11, D3D12RenderBackend::GetInstance()->GetFeatureLevel());
             if (pEngineConstantBuffer == nullptr)
             {
-                Log_ErrorPrintf("D3D12ShaderProgram::Create: Shader is requesting unknown non-local constant buffer named '%s'.", constantBufferName.GetCharArray());
+                Log_ErrorPrintf("D3D12ShaderProgram::Create: Shader is requesting unknown constant buffer named '%s'.", pDstConstantBuffer->Name);
                 return false;
             }
 
-            // add index
-            engineConstantBufferIndices[i] = pEngineConstantBuffer->GetIndex();
+            // store index
+            pDstConstantBuffer->EngineConstantBufferIndex = pEngineConstantBuffer->GetIndex();
         }
     }
 
@@ -356,19 +360,20 @@ bool D3D12GPUShaderProgram::Switch(D3D12GPUContext *pContext, ID3D12GraphicsComm
     pCommandList->SetPipelineState(pPipelineState);
     
     // bind constant buffers
-    for (ShaderParameter &parameter : m_parameters)
+    for (const ConstantBuffer &constantBuffer : m_constantBuffers)
     {
-        if (parameter.Type == SHADER_PARAMETER_TYPE_CONSTANT_BUFFER)
+        const D3D12DescriptorHandle *pHandle = D3D12RenderBackend::GetInstance()->GetConstantBufferDescriptor(constantBuffer.EngineConstantBufferIndex);
+        if (pHandle != nullptr)
         {
-            DebugAssert(parameter.BindTarget == D3D_SHADER_BIND_TARGET_CONSTANT_BUFFER);
+            const ShaderParameter &parameter = m_parameters[constantBuffer.ParameterIndex];
+            DebugAssert(parameter.Type == SHADER_PARAMETER_TYPE_CONSTANT_BUFFER);
+
             for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
             {
                 if (parameter.BindPoint[stageIndex] < 0)
                     continue;
 
-                const D3D12DescriptorHandle *pHandle = D3D12RenderBackend::GetInstance()->GetConstantBufferDescriptor(parameter.ConstantBufferIndex);
-                if (pHandle != nullptr)
-                    pContext->SetShaderConstantBuffers((SHADER_PROGRAM_STAGE)stageIndex, parameter.BindPoint[stageIndex], *pHandle);
+                pContext->SetShaderConstantBuffers((SHADER_PROGRAM_STAGE)stageIndex, parameter.BindPoint[stageIndex], *pHandle);
             }
         }
     }

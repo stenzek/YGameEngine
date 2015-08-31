@@ -5,7 +5,8 @@
     #define BEGIN_CONSTANT_BUFFER(BufferName, InstanceName, Register) struct BufferName
     #define END_CONSTANT_BUFFER(BufferName, InstanceName) ; uniform BufferName InstanceName;
     #else
-    #define BEGIN_CONSTANT_BUFFER(BufferName, InstanceName, Register) cbuffer BufferName : register(Register) { struct BufferName##_s
+    //#define BEGIN_CONSTANT_BUFFER(BufferName, InstanceName, Register) cbuffer BufferName : register(Register) { struct BufferName##_s
+    #define BEGIN_CONSTANT_BUFFER(BufferName, InstanceName, Register) cbuffer BufferName { struct BufferName##_s
     #define END_CONSTANT_BUFFER(BufferName, InstanceName) InstanceName; }
 #endif
 

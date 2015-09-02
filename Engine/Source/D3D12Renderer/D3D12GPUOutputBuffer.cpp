@@ -172,7 +172,7 @@ bool D3D12GPUOutputBuffer::UpdateCurrentBackBuffer()
     DebugAssert(newBackBufferIndex < m_backBuffers.GetSize());
     if (newBackBufferIndex != m_currentBackBufferIndex)
     {
-        Log_DevPrintf("Update backbuffer index = %u", newBackBufferIndex);
+        //Log_DevPrintf("Update backbuffer index = %u", newBackBufferIndex);
         m_currentBackBufferIndex = newBackBufferIndex;
         return true;
     }
@@ -233,7 +233,7 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
     m_nextBackBufferIndex = m_pDXGISwapChain->GetCurrentBackBufferIndex();
     //m_nextBackBufferIndex = 0;
     m_backBuffers.Reserve(swapChainDesc.BufferCount);
-    Log_DevPrintf("Next backbuffer index = %u", m_currentBackBufferIndex);
+    //Log_DevPrintf("Next backbuffer index = %u", m_currentBackBufferIndex);
 
     // allocate RTV descriptors
     if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->AllocateRange(swapChainDesc.BufferCount, &m_renderTargetViewsDescriptorStart))

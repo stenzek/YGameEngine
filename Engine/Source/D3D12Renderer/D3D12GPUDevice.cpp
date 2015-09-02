@@ -123,10 +123,7 @@ void D3D12GPUDevice::BeginResourceBatchUpload()
 void D3D12GPUDevice::EndResourceBatchUpload()
 {
     if (m_pGPUContext != nullptr)
-    {
-        m_pGPUContext->Finish();
         return;
-    }
 
     DebugAssert(m_offThreadCopyQueueEnabled > 0);
     m_offThreadCopyQueueEnabled--;

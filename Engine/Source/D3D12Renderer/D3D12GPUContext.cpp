@@ -323,8 +323,8 @@ void D3D12GPUContext::ExecuteCurrentCommandList(bool reopen)
     HRESULT hResult = m_pCommandList->Close();
     if (SUCCEEDED(hResult))
     {
-        if (g_pRenderer != nullptr)
-            Log_DevPrintf("Exec frame %u", g_pRenderer->GetFrameNumber());
+        //if (g_pRenderer != nullptr)
+            //Log_DevPrintf("Exec frame %u", g_pRenderer->GetFrameNumber());
 
         m_pCurrentScratchBuffer->Commit();
         m_pCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pCommandList);
@@ -443,17 +443,17 @@ void D3D12GPUContext::WaitForCommandQueue(uint32 index)
     DebugAssert(pFrameData->Pending);
 
     // wait for the gpu to catch up if it's behind
-    //if (m_pFence->GetCompletedValue() < pFrameData->FenceValue)
+    if (m_pFence->GetCompletedValue() < pFrameData->FenceValue)
     {
-        Timer timer;
-        Log_DevPrintf("Waiting for gpu catchup.");
+        //Timer timer;
+        //Log_DevPrintf("Waiting for gpu catchup.");
         m_pFence->SetEventOnCompletion(pFrameData->FenceValue, m_fenceEvent);
         WaitForSingleObject(m_fenceEvent, INFINITE);
-        Log_DevPrintf("GPU idle. Time = %.4f ms", timer.GetTimeMilliseconds());
+        //Log_DevPrintf("GPU idle. Time = %.4f ms", timer.GetTimeMilliseconds());
     }
 
     // release resources
-    m_pBackend->DeletePendingResources(pFrameData->FenceValue);
+    //m_pBackend->DeletePendingResources(pFrameData->FenceValue);
 
     // no longer active
     pFrameData->Pending = false;
@@ -1557,6 +1557,7 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
     // allocate an array of cpu pointers, uses alloca so it's at the end of the stack
     D3D12_CPU_DESCRIPTOR_HANDLE *pCPUHandles = (D3D12_CPU_DESCRIPTOR_HANDLE *)alloca(sizeof(D3D12_CPU_DESCRIPTOR_HANDLE) * D3D12_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT);
 
+
     // update states
     for (uint32 stage = 0; stage < SHADER_PROGRAM_STAGE_COUNT; stage++)
     {
@@ -1573,6 +1574,7 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
                 {
                     pCPUHandles[i] = state->ConstantBuffers[i];
                     bindCount = i + 1;
+                    break;
                 }
                 else
                 {
@@ -1583,9 +1585,15 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
             state->ConstantBuffersDirty = false;
 
             // allocate scratch descriptors and copy
-            if (bindCount > 0 && AllocateScratchView(bindCount, &state->CBVTableCPUHandle, &state->CBVTableGPUHandle))
+            if (bindCount > 0 && AllocateScratchView(D3D12_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, &state->CBVTableCPUHandle, &state->CBVTableGPUHandle))
             {
                 m_pD3DDevice->CopyDescriptors(1, &state->CBVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                for (uint32 i = bindCount; i < D3D12_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT; i++)
+                {
+                    D3D12_CPU_DESCRIPTOR_HANDLE offsetHandle = { state->CBVTableCPUHandle.ptr + i * m_pD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) };
+                    //m_pD3DDevice->CreateConstantBufferView(nullptr, offsetHandle);
+                    m_pD3DDevice->CopyDescriptorsSimple(1, offsetHandle, pCPUHandles[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                }
                 m_pCommandList->SetGraphicsRootDescriptorTable(3 * stage + 0, state->CBVTableGPUHandle);
             }
         }
@@ -1601,6 +1609,7 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
                 {
                     pCPUHandles[i] = state->Resources[i];
                     bindCount = i + 1;
+                    break;
                 }
                 else
                 {
@@ -1629,6 +1638,7 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
                 {
                     pCPUHandles[i] = state->Samplers[i];
                     bindCount = i + 1;
+                    break;
                 }
                 else
                 {

@@ -316,6 +316,7 @@ static void Frame()
         rect.Set(200, 240, 40, 140);
         g_guiContext.DrawFilledRect(&rect, MAKE_COLOR_R8G8B8_UNORM(150, 255, 200));
         g_guiContext.DrawTextAt(40, 160, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255), "Hello world");
+        g_guiContext.DrawFormattedTextAt(40, 186, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255), "Framenumber: %u", g_pRenderer->GetFrameNumber());
 
         g_guiContext.PopManualFlush();
         g_guiContext.Flush();

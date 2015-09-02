@@ -328,7 +328,6 @@ void D3D12GPUContext::ExecuteCurrentCommandList(bool reopen)
 
         m_pCurrentScratchBuffer->Commit();
         m_pCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pCommandList);
-        Log_ProfilePrintf("Exec time %.4f ms", timer.GetTimeMilliseconds());
     }
     else
     {
@@ -370,6 +369,7 @@ void D3D12GPUContext::ExecuteCurrentCommandList(bool reopen)
 
 void D3D12GPUContext::ActivateCommandQueue(uint32 index)
 {
+    Timer ttimer;
     HRESULT hResult;
     DCommandQueue *pFrameData = &m_commandQueues[index];
     m_currentCommandQueueIndex = index;
@@ -379,22 +379,18 @@ void D3D12GPUContext::ActivateCommandQueue(uint32 index)
     hResult = pFrameData->pCommandAllocator->Reset();
     if (FAILED(hResult))
         Log_ErrorPrintf("ID3D12CommandAllocator::Reset failed with hResult %08X", hResult);
-    Log_ProfilePrintf("  Allocator reset: %.4f ms", timer.GetTimeMilliseconds()); timer.Reset();
     hResult = m_pCommandList->Reset(pFrameData->pCommandAllocator, nullptr);
     if (FAILED(hResult))
         Log_ErrorPrintf("ID3D12CommandList::Reset failed with hResult %08X", hResult);
-    Log_ProfilePrintf("  CL reset: %.4f ms", timer.GetTimeMilliseconds()); timer.Reset();
 
     // update pointers
     pFrameData->FenceValue = m_nextFenceValue++;
     m_pCurrentScratchBuffer = pFrameData->pScratchBuffer;
     m_pCurrentScratchSamplerHeap = pFrameData->pScratchSamplerHeap;
     m_pCurrentScratchViewHeap = pFrameData->pScratchViewHeap;
-    Log_ProfilePrintf("  Ptr reset: %.4f ms", timer.GetTimeMilliseconds()); timer.Reset();
 
     // reset scratch buffer
     pFrameData->pScratchBuffer->Reset(true);
-    Log_ProfilePrintf("  SB reset: %.4f ms", timer.GetTimeMilliseconds()); timer.Reset(); 
     pFrameData->pScratchViewHeap->Reset();
     pFrameData->pScratchSamplerHeap->Reset();
 
@@ -405,8 +401,7 @@ void D3D12GPUContext::ActivateCommandQueue(uint32 index)
 
     // update destruction fence value
     m_pBackend->SetCleanupFenceValue(pFrameData->FenceValue);
-    Log_DevPrintf("Command queue %u activated.", m_currentCommandQueueIndex);
-    Log_ProfilePrintf("  Remaining stuff reset: %.4f ms", timer.GetTimeMilliseconds()); timer.Reset();
+    //Log_DevPrintf("Command queue %u activated.", m_currentCommandQueueIndex);
 }
 
 void D3D12GPUContext::MoveToNextCommandQueue()
@@ -424,14 +419,11 @@ void D3D12GPUContext::MoveToNextCommandQueue()
     uint32 nextCommandQueueIndex = (m_currentCommandQueueIndex + 1) % D3D12RenderBackend::GetInstance()->GetFrameLatency();
 
     // wait for these operations to finish
-    Timer timer;
     if (m_commandQueues[nextCommandQueueIndex].Pending)
         WaitForCommandQueue(nextCommandQueueIndex);
-    Log_ProfilePrintf("MOVE: Wait time: %.4f ms", timer.GetTimeMilliseconds());
-    timer.Reset();
+
     // activate it
     ActivateCommandQueue(nextCommandQueueIndex);
-    Log_ProfilePrintf("MOVE: Activate time: %.4f ms", timer.GetTimeMilliseconds());
 }
 
 void D3D12GPUContext::FinishPendingCommands()
@@ -451,7 +443,7 @@ void D3D12GPUContext::WaitForCommandQueue(uint32 index)
     DebugAssert(pFrameData->Pending);
 
     // wait for the gpu to catch up if it's behind
-    if (m_pFence->GetCompletedValue() < pFrameData->FenceValue)
+    //if (m_pFence->GetCompletedValue() < pFrameData->FenceValue)
     {
         Timer timer;
         Log_DevPrintf("Waiting for gpu catchup.");
@@ -997,8 +989,6 @@ bool D3D12GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /
 
 void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour)
 {
-    Timer total;
-
     // the barrier *to* present state has to be queued
     ResourceBarrier(m_pCurrentSwapChain->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
@@ -1006,20 +996,14 @@ void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
     ExecuteCurrentCommandList(false);
 
     // present the image
-    Timer timer;
     m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
     m_pCurrentSwapChain->MoveToNextBackBuffer();
-    Log_ProfilePrintf("PResent time: %.4f ms", timer.GetTimeMilliseconds());
-    timer.Reset();
 
     // move to next command list (placed after here so the present happens before the fence)
     MoveToNextCommandQueue();
-    Log_ProfilePrintf("Move time: %.4f ms", timer.GetTimeMilliseconds());
 
     // restore state (since new command list)
-    timer.Reset();
     RestoreCommandListDependantState();
-    Log_ProfilePrintf("Restore time: %.4f ms, total present time %.4f ms", timer.GetTimeMilliseconds(), total.GetTimeMilliseconds());
 }
 
 uint32 D3D12GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)

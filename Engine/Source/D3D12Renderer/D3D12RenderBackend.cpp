@@ -266,7 +266,7 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
 
     // other vars
     m_frameLatency = pCreateParameters->GPUFrameLatency;
-    //m_frameLatency = 1;
+    m_frameLatency = 1;
     Log_DevPrintf("Frame latency: %u", m_frameLatency);
 
     // set default backbuffer formats if unspecified

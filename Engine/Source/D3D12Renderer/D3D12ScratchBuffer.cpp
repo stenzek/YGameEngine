@@ -73,7 +73,7 @@ bool D3D12ScratchBuffer::Allocate(uint32 size, uint32 *pOutOffset)
 
 bool D3D12ScratchBuffer::Reset(bool resetPosition)
 {
-    DebugAssert(m_pMappedPointer == nullptr);
+//     DebugAssert(m_pMappedPointer == nullptr);
     if (resetPosition)
         m_position = 0;
 

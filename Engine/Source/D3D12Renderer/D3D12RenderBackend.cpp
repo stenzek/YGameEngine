@@ -46,6 +46,27 @@ static void DumpActiveObjects()
 #endif
 }
 
+static void foo()
+{
+    HMODULE hDXGIDebugModule = GetModuleHandleA("dxgidebug.dll");
+    if (hDXGIDebugModule != NULL)
+    {
+        HRESULT(WINAPI *pDXGIGetDebugInterface)(REFIID riid, void **ppDebug);
+        pDXGIGetDebugInterface = (HRESULT(WINAPI *)(REFIID, void **))GetProcAddress(hDXGIDebugModule, "DXGIGetDebugInterface");
+        if (pDXGIGetDebugInterface != NULL)
+        {
+            IDXGIInfoQueue *pDXGIInfoQueue;
+            if (SUCCEEDED(pDXGIGetDebugInterface(__uuidof(pDXGIInfoQueue), reinterpret_cast<void **>(&pDXGIInfoQueue))))
+            {
+                pDXGIInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+                pDXGIInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, TRUE);
+                pDXGIInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, TRUE);
+                //pDXGIInfoQueue->Release();
+            }
+        }
+    }
+}
+
 D3D12RenderBackend::D3D12RenderBackend()
     : m_pDXGIFactory(nullptr)
     , m_pDXGIAdapter(nullptr)
@@ -121,8 +142,8 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
     }
 
     // create dxgi factory
-    //hResult = CreateDXGIFactory2((CVars::r_use_debug_device.GetBool()) ? DXGI_CREATE_FACTORY_DEBUG : 0, __uuidof(IDXGIFactory4), (void **)&m_pDXGIFactory);
-    hResult = CreateDXGIFactory1(IID_PPV_ARGS(&m_pDXGIFactory));
+    hResult = CreateDXGIFactory2((CVars::r_use_debug_device.GetBool()) ? DXGI_CREATE_FACTORY_DEBUG : 0, IID_PPV_ARGS(&m_pDXGIFactory));
+    //hResult = CreateDXGIFactory1(IID_PPV_ARGS(&m_pDXGIFactory));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("D3D12RenderBackend::Create: Failed to create DXGI factory with hResult %08X", hResult);
@@ -208,6 +229,7 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
                 m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
                 m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
                 m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+                foo();
             }
         }
     }
@@ -237,7 +259,8 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
 
     // find texture platform
     {
-        m_texturePlatform = TEXTURE_PLATFORM_DXTC;
+        //m_texturePlatform = TEXTURE_PLATFORM_DXTC;
+        m_texturePlatform = TEXTURE_PLATFORM_ES2_NOTC;
         Log_InfoPrintf("Texture Platform: %s", NameTable_GetNameString(NameTables::TexturePlatform, m_texturePlatform));
     }
 

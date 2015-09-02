@@ -137,7 +137,7 @@ public:
     // accessors
     ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
     ID3D12CommandQueue *GetD3DCommandQueue() const { return m_pCommandQueue; }
-    ID3D12GraphicsCommandList *GetCurrentCommandList() const { return m_pCurrentCommandList; }
+    ID3D12GraphicsCommandList *GetCurrentCommandList() const { return m_pCommandList; }
     D3D12GPUShaderProgram *GetD3D12ShaderProgram() const { return m_pCurrentShaderProgram; }
 
     // create device
@@ -186,11 +186,11 @@ private:
 
     // Created once
     ID3D12CommandQueue *m_pCommandQueue;
+    ID3D12GraphicsCommandList *m_pCommandList;
     ID3D12Fence *m_pFence;
     HANDLE m_fenceEvent;
 
     // Current command list
-    ID3D12GraphicsCommandList *m_pCurrentCommandList;
     D3D12ScratchBuffer *m_pCurrentScratchBuffer;
     D3D12ScratchDescriptorHeap *m_pCurrentScratchViewHeap;
     D3D12ScratchDescriptorHeap *m_pCurrentScratchSamplerHeap;
@@ -200,7 +200,6 @@ private:
     struct DCommandQueue
     {
         ID3D12CommandAllocator *pCommandAllocator;
-        ID3D12GraphicsCommandList *pCommandList;
         D3D12ScratchBuffer *pScratchBuffer;
         D3D12ScratchDescriptorHeap *pScratchViewHeap;
         D3D12ScratchDescriptorHeap *pScratchSamplerHeap;

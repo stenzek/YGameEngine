@@ -328,7 +328,7 @@ static void Frame()
         // render imgui
         //ImGui::Render();
 
-        //g_fpsCounter.DrawDetails(g_pRenderer->GetFixedResources()->GetDebugFont(), &g_guiContext);
+        g_fpsCounter.DrawDetails(g_pRenderer->GetFixedResources()->GetDebugFont(), &g_guiContext);
         g_pMainGPUContext->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE);
     }
 

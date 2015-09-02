@@ -1,6 +1,7 @@
 #include "D3D12Renderer/PrecompiledHeader.h"
 #include "D3D12Renderer/D3D12ScratchBuffer.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
+#include "D3D12Renderer/D3D12Helpers.h"
 Log_SetChannel(D3D12RenderBackend);
 
 D3D12ScratchBuffer::D3D12ScratchBuffer(ID3D12Resource *pResource, byte *pMappedPointer, uint32 size)
@@ -111,6 +112,7 @@ D3D12ScratchDescriptorHeap *D3D12ScratchDescriptorHeap::Create(ID3D12Device *pDe
         return nullptr;
     }
 
+    D3D12Helpers::SetD3D12DeviceChildDebugName(pDescriptorHeap, "scratch descriptor heap");
     return new D3D12ScratchDescriptorHeap(pDescriptorHeap, count, pDevice->GetDescriptorHandleIncrementSize(type));
 }
 

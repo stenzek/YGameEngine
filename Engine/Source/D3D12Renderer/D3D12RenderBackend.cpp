@@ -266,6 +266,8 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
 
     // other vars
     m_frameLatency = pCreateParameters->GPUFrameLatency;
+    //m_frameLatency = 1;
+    Log_DevPrintf("Frame latency: %u", m_frameLatency);
 
     // set default backbuffer formats if unspecified
     m_outputBackBufferFormat = pCreateParameters->BackBufferFormat;
@@ -287,6 +289,8 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
 
     // create device wrapper class
     m_pGPUDevice = new D3D12GPUDevice(this, m_pDXGIFactory, m_pDXGIAdapter, m_pD3DDevice, m_outputBackBufferFormat, m_outputDepthStencilFormat);
+    if (!m_pGPUDevice->CreateOffThreadResources())
+        return false;
 
     // create context wrapper class
     m_pGPUContext = new D3D12GPUContext(this, m_pGPUDevice, m_pD3DDevice);

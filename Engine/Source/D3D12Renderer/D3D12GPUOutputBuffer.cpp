@@ -19,7 +19,7 @@ static uint32 CalculateDXGISwapChainBufferCount(bool exclusiveFullscreen, RENDER
 {
     //DebugAssert(D3D12RenderBackend::GetInstance()->GetFrameLatency() > 0);
     //return 2 + (D3D12RenderBackend::GetInstance()->GetFrameLatency() - 1) + ((vsyncType == RENDERER_VSYNC_TYPE_TRIPLE_BUFFERING) ? 1 : 0);
-    return 2 + ((vsyncType == RENDERER_VSYNC_TYPE_TRIPLE_BUFFERING) ? 1 : 0);
+    return 2 + (D3D12RenderBackend::GetInstance()->GetFrameLatency() - 1) + ((vsyncType == RENDERER_VSYNC_TYPE_TRIPLE_BUFFERING) ? 1 : 0);
 }
 
 D3D12GPUOutputBuffer::D3D12GPUOutputBuffer(D3D12RenderBackend *pBackend, ID3D12Device *pD3DDevice, IDXGISwapChain3 *pDXGISwapChain, HWND hWnd, uint32 width, uint32 height, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilFormat, DXGI_FORMAT backBufferDXGIFormat, DXGI_FORMAT depthStencilDXGIFormat, RENDERER_VSYNC_TYPE vsyncType)
@@ -35,6 +35,7 @@ D3D12GPUOutputBuffer::D3D12GPUOutputBuffer(D3D12RenderBackend *pBackend, ID3D12D
     , m_backBufferDXGIFormat(backBufferDXGIFormat)
     , m_depthStencilDXGIFormat(depthStencilDXGIFormat)
     , m_currentBackBufferIndex(0xFFFFFFFF)
+    , m_nextBackBufferIndex(0)
     , m_pDepthStencilBuffer(nullptr)
 {
 
@@ -101,7 +102,7 @@ D3D12GPUOutputBuffer *D3D12GPUOutputBuffer::Create(D3D12RenderBackend *pBackend,
     swapChainDesc.SampleDesc.Count = 1;
     swapChainDesc.SampleDesc.Quality = 0;
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferCount = 3;
+    swapChainDesc.BufferCount = CalculateDXGISwapChainBufferCount(false, vsyncType);;
     swapChainDesc.Flags = 0;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swapChainDesc.Flags = 0;
@@ -167,10 +168,11 @@ D3D12_CPU_DESCRIPTOR_HANDLE D3D12GPUOutputBuffer::GetCurrentBackBufferViewDescri
 bool D3D12GPUOutputBuffer::UpdateCurrentBackBuffer()
 {
     uint32 newBackBufferIndex = m_pDXGISwapChain->GetCurrentBackBufferIndex();
+    //uint32 newBackBufferIndex = m_nextBackBufferIndex;
     DebugAssert(newBackBufferIndex < m_backBuffers.GetSize());
     if (newBackBufferIndex != m_currentBackBufferIndex)
     {
-        //Log_DevPrintf("Update backbuffer index = %u", newBackBufferIndex);
+        Log_DevPrintf("Update backbuffer index = %u", newBackBufferIndex);
         m_currentBackBufferIndex = newBackBufferIndex;
         return true;
     }
@@ -178,6 +180,11 @@ bool D3D12GPUOutputBuffer::UpdateCurrentBackBuffer()
     {
         return false;
     }
+}
+
+void D3D12GPUOutputBuffer::MoveToNextBackBuffer()
+{
+    m_nextBackBufferIndex = (m_nextBackBufferIndex + 1) % 2;
 }
 
 void D3D12GPUOutputBuffer::InternalResizeBuffers(uint32 width, uint32 height, RENDERER_VSYNC_TYPE vsyncType)
@@ -221,9 +228,12 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
     m_pDXGISwapChain->GetDesc1(&swapChainDesc);
 
     // find the current backbuffer index
-    m_currentBackBufferIndex = m_pDXGISwapChain->GetCurrentBackBufferIndex();
+    //m_currentBackBufferIndex = m_pDXGISwapChain->GetCurrentBackBufferIndex();
+    m_currentBackBufferIndex = 0xFFFFFFFF;
+    m_nextBackBufferIndex = m_pDXGISwapChain->GetCurrentBackBufferIndex();
+    //m_nextBackBufferIndex = 0;
     m_backBuffers.Reserve(swapChainDesc.BufferCount);
-    Log_DevPrintf("Current backbuffer index = %u", m_currentBackBufferIndex);
+    Log_DevPrintf("Next backbuffer index = %u", m_currentBackBufferIndex);
 
     // allocate RTV descriptors
     if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->AllocateRange(swapChainDesc.BufferCount, &m_renderTargetViewsDescriptorStart))

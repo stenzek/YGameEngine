@@ -30,7 +30,16 @@ D3D12ScratchBuffer *D3D12ScratchBuffer::Create(ID3D12Device *pDevice, uint32 siz
         return nullptr;
     }
 
-    return new D3D12ScratchBuffer(pResource, nullptr, size);
+    byte *pMappedPointer = nullptr;
+    D3D12_RANGE readRange = { 0, 0 };
+    hResult = pResource->Map(0, nullptr/*&readRange*/, (void **)&pMappedPointer);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("Map failed with hResult %08X", hResult);
+        return false;
+    }
+
+    return new D3D12ScratchBuffer(pResource, pMappedPointer, size);
 }
 
 D3D12ScratchBuffer::~D3D12ScratchBuffer()
@@ -70,24 +79,24 @@ bool D3D12ScratchBuffer::Reset(bool resetPosition)
 
     m_resetPosition = m_position;
 
-    D3D12_RANGE readRange = { 0, 0 };
-    HRESULT hResult = m_pResource->Map(0, nullptr/*&readRange*/, (void **)&m_pMappedPointer);
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("Map failed with hResult %08X", hResult);
-        return false;
-    }
+//     D3D12_RANGE readRange = { 0, 0 };
+//     HRESULT hResult = m_pResource->Map(0, nullptr/*&readRange*/, (void **)&m_pMappedPointer);
+//     if (FAILED(hResult))
+//     {
+//         Log_ErrorPrintf("Map failed with hResult %08X", hResult);
+//         return false;
+//     }
 
     return true;
 }
 
 void D3D12ScratchBuffer::Commit()
 {
-    DebugAssert(m_pMappedPointer != nullptr);
-
-    D3D12_RANGE writtenRange = { m_resetPosition, m_position };
-    m_pResource->Unmap(0, nullptr/*&writtenRange*/);
-    m_pMappedPointer = nullptr;
+//     DebugAssert(m_pMappedPointer != nullptr);
+// 
+//     D3D12_RANGE writtenRange = { m_resetPosition, m_position };
+//     m_pResource->Unmap(0, nullptr/*&writtenRange*/);
+//     m_pMappedPointer = nullptr;
 }
 
 D3D12ScratchDescriptorHeap::D3D12ScratchDescriptorHeap(ID3D12DescriptorHeap *pHeap, uint32 count, uint32 incrementSize)

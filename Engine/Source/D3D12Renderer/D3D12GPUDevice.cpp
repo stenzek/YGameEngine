@@ -18,7 +18,9 @@ D3D12GPUDevice::D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXG
     , m_pOffThreadCommandList(nullptr)
     , m_pOffThreadFence(nullptr)
     , m_offThreadFenceReachedEvent(nullptr)
-    , m_offThreadFenceValue(0)
+    , m_offThreadNextFenceValue(1)
+    , m_offThreadCopyQueueLength(0)
+    , m_offThreadCopyQueueEnabled(0)
     , m_outputBackBufferFormat(outputBackBufferFormat)
     , m_outputDepthStencilFormat(outputDepthStencilFormat)
 {
@@ -41,9 +43,17 @@ D3D12GPUDevice::~D3D12GPUDevice()
 bool D3D12GPUDevice::CreateOffThreadResources()
 {
     HRESULT hResult;
+    // @TODO graphics because of the resource barriers.
+    // what we need is a way to set them on first use.
+    // for texture, whatever, have a var with current
+    // state. on use, store anything with this flag
+    // to a list in the command list, and change it. 
+    // after command list is executed, set the new
+    // state and remove the flag on all objects.
 
     // create allocator
-    hResult = m_pD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&m_pOffThreadCommandAllocator));
+    //hResult = m_pD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&m_pOffThreadCommandAllocator));
+    hResult = m_pD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_pOffThreadCommandAllocator));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateCommandAllocator failed with hResult %08X", hResult);
@@ -51,7 +61,8 @@ bool D3D12GPUDevice::CreateOffThreadResources()
     }
 
     // create queue
-    D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_COPY, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 0 };
+    //D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_COPY, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 0 };
+    D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 1 };
     hResult = m_pD3DDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_pOffThreadCommandQueue));
     if (FAILED(hResult))
     {
@@ -60,15 +71,24 @@ bool D3D12GPUDevice::CreateOffThreadResources()
     }
 
     // create command list
-    hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, m_pOffThreadCommandAllocator, nullptr, IID_PPV_ARGS(&m_pOffThreadCommandList));
+    //hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, m_pOffThreadCommandAllocator, nullptr, IID_PPV_ARGS(&m_pOffThreadCommandList));
+    hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pOffThreadCommandAllocator, nullptr, IID_PPV_ARGS(&m_pOffThreadCommandList));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateCommandList failed with hResult %08X", hResult);
         return false;
     }
 
+    // start in closed state
+    hResult = m_pOffThreadCommandList->Close();
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("Close failed with hResult %08X", hResult);
+        return false;
+    }
+
     // create fence
-    hResult = m_pD3DDevice->CreateFence(m_offThreadFenceValue, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_pOffThreadFence));
+    hResult = m_pD3DDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_pOffThreadFence));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateFence failed with hResult %08X", hResult);
@@ -92,13 +112,21 @@ void D3D12GPUDevice::BeginResourceBatchUpload()
     if (m_pGPUContext != nullptr)
         return;
 
-    m_offThreadCopyQueueEnabled++;
+    if ((m_offThreadCopyQueueEnabled++) == 0)
+    {
+        // reset the command allocator/list
+        m_pOffThreadCommandAllocator->Reset();
+        m_pOffThreadCommandList->Reset(m_pOffThreadCommandAllocator, nullptr);
+    }
 }
 
 void D3D12GPUDevice::EndResourceBatchUpload()
 {
     if (m_pGPUContext != nullptr)
+    {
+        m_pGPUContext->Finish();
         return;
+    }
 
     DebugAssert(m_offThreadCopyQueueEnabled > 0);
     m_offThreadCopyQueueEnabled--;
@@ -121,24 +149,25 @@ void D3D12GPUDevice::FlushCopyQueue()
     m_pOffThreadCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pOffThreadCommandList);
 
     // @TODO other way around??? 
-    HRESULT hResult = m_pOffThreadCommandQueue->Signal(m_pOffThreadFence, 1);
+    HRESULT hResult = m_pOffThreadCommandQueue->Signal(m_pOffThreadFence, m_offThreadNextFenceValue);
     if (SUCCEEDED(hResult))
     {
         // wait until the fence is reached
-        hResult = m_pOffThreadFence->SetEventOnCompletion(++m_offThreadFenceValue, m_offThreadFenceReachedEvent);
-        if (SUCCEEDED(hResult))
-            WaitForSingleObject(m_offThreadFenceReachedEvent, INFINITE);
-        else
-            Log_ErrorPrintf("ID3D12Fence::SetEventOnCompletion failed with hResult %08X", hResult);
+        if (m_pOffThreadFence->GetCompletedValue() < m_offThreadNextFenceValue)
+        {
+            hResult = m_pOffThreadFence->SetEventOnCompletion(m_offThreadNextFenceValue, m_offThreadFenceReachedEvent);
+            if (SUCCEEDED(hResult))
+                WaitForSingleObject(m_offThreadFenceReachedEvent, INFINITE);
+            else
+                Log_ErrorPrintf("ID3D12Fence::SetEventOnCompletion failed with hResult %08X", hResult);
+        }
+
+        m_offThreadNextFenceValue++;
     }
     else
     {
         Log_ErrorPrintf("ID3D12Fence::Signal failed with hResult %08X", hResult);
     }
-
-    // reset the command allocator/list
-    m_pOffThreadCommandAllocator->Reset();
-    m_pOffThreadCommandList->Reset(m_pOffThreadCommandAllocator, nullptr);
 
     // reset vars
     m_offThreadCopyQueueLength = 0;

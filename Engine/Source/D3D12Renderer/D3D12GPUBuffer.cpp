@@ -43,7 +43,7 @@ void D3D12GPUBuffer::SetDebugName(const char *debugName)
 GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /* = NULL */)
 {
     // work out the default resource state
-    D3D12_RESOURCE_STATES defaultResourceState = D3D12_RESOURCE_STATE_COMMON;
+    D3D12_RESOURCE_STATES defaultResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
     if (pDesc->Flags & (GPU_BUFFER_FLAG_BIND_CONSTANT_BUFFER | GPU_BUFFER_FLAG_BIND_VERTEX_BUFFER))
         defaultResourceState |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
     if (pDesc->Flags & GPU_BUFFER_FLAG_BIND_INDEX_BUFFER)
@@ -106,8 +106,9 @@ GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
         ResourceBarrier(pResource, D3D12_RESOURCE_STATE_COPY_DEST, defaultResourceState);
 
         // flush copy queue
-        EndResourceBatchUpload();
+        FlushCopyQueue();
         ScheduleUploadResourceDeletion(pUploadResource);
+        EndResourceBatchUpload();
     }
 
     // done, return the pointer from before

@@ -302,8 +302,9 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         ResourceBarrier(pD3DResource, D3D12_RESOURCE_STATE_COPY_DEST, defaultResourceState);
 
         // done with the upload, and free the buffer
-        EndResourceBatchUpload();
+        FlushCopyQueue();
         ScheduleUploadResourceDeletion(pUploadResource);
+        EndResourceBatchUpload();
     }
 
     // create class

@@ -128,7 +128,7 @@ private:
     ID3D12Fence *m_pOffThreadFence;
     HANDLE m_offThreadFenceReachedEvent;
     PODArray<ID3D12Pageable *> m_offThreadUploadResources;
-    uint64 m_offThreadFenceValue;
+    uint64 m_offThreadNextFenceValue;
     uint32 m_offThreadCopyQueueLength;
     uint32 m_offThreadCopyQueueEnabled;
 

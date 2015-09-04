@@ -119,7 +119,7 @@ void D3D12GPUTexture2D::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemory
 
 void D3D12GPUTexture2D::SetDebugName(const char *name)
 {
-    D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DResource, name);
+    D3D12Helpers::SetD3D12ObjectName(m_pD3DResource, name);
 }
 
 GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /*= nullptr*/, const uint32 *pInitialDataPitch /*= nullptr*/)

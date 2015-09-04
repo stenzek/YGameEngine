@@ -168,12 +168,12 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
 
     // create it
     ID3D12PipelineState *pPipelineState;
-    HRESULT hResult = D3D12RenderBackend::GetInstance()->GetD3DDevice()->CreateGraphicsPipelineState(&pipelineDesc, __uuidof(ID3D12PipelineState), (void **)&pPipelineState);
+    HRESULT hResult = D3D12RenderBackend::GetInstance()->GetD3DDevice()->CreateGraphicsPipelineState(&pipelineDesc, IID_PPV_ARGS(&pPipelineState));
     if (SUCCEEDED(hResult))
     {
         // set debug name
         if (!m_debugName.IsEmpty())
-            D3D12Helpers::SetD3D12DeviceChildDebugName(pPipelineState, m_debugName);
+            D3D12Helpers::SetD3D12ObjectName(pPipelineState, m_debugName);
     }
     else
     {

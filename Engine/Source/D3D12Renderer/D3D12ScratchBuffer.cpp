@@ -121,7 +121,7 @@ D3D12ScratchDescriptorHeap *D3D12ScratchDescriptorHeap::Create(ID3D12Device *pDe
         return nullptr;
     }
 
-    D3D12Helpers::SetD3D12DeviceChildDebugName(pDescriptorHeap, "scratch descriptor heap");
+    D3D12Helpers::SetD3D12ObjectName(pDescriptorHeap, "scratch descriptor heap");
     return new D3D12ScratchDescriptorHeap(pDescriptorHeap, count, pDevice->GetDescriptorHandleIncrementSize(type));
 }
 

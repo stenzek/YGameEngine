@@ -1137,7 +1137,7 @@ void D3D11GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex,
         else
         {
             cbInfo->DirtyLowerBounds = Min(cbInfo->DirtyLowerBounds, (int32)offset);
-            cbInfo->DirtyUpperBounds = Min(cbInfo->DirtyUpperBounds, (int32)(offset + count));
+            cbInfo->DirtyUpperBounds = Max(cbInfo->DirtyUpperBounds, (int32)(offset + count));
         }
 
         if (commit)
@@ -1169,7 +1169,7 @@ void D3D11GPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fiel
         else
         {
             cbInfo->DirtyLowerBounds = Min(cbInfo->DirtyLowerBounds, (int32)offset);
-            cbInfo->DirtyUpperBounds = Min(cbInfo->DirtyUpperBounds, (int32)(offset + writeSize));
+            cbInfo->DirtyUpperBounds = Max(cbInfo->DirtyUpperBounds, (int32)(offset + writeSize));
         }
 
         if (commit)

@@ -453,7 +453,7 @@ void D3D12GPUContext::WaitForCommandQueue(uint32 index)
     }
 
     // release resources
-    //m_pBackend->DeletePendingResources(pFrameData->FenceValue);
+    m_pBackend->DeletePendingResources(pFrameData->FenceValue);
 
     // no longer active
     pFrameData->Pending = false;
@@ -1322,7 +1322,7 @@ void D3D12GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex,
         else
         {
             cbInfo->DirtyLowerBounds = Min(cbInfo->DirtyLowerBounds, (int32)offset);
-            cbInfo->DirtyUpperBounds = Min(cbInfo->DirtyUpperBounds, (int32)(offset + count));
+            cbInfo->DirtyUpperBounds = Max(cbInfo->DirtyUpperBounds, (int32)(offset + count));
         }
 
         if (commit)
@@ -1574,11 +1574,11 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
                 {
                     pCPUHandles[i] = state->ConstantBuffers[i];
                     bindCount = i + 1;
-                    break;
                 }
                 else
                 {
                     pCPUHandles[i].ptr = 0;
+                    break;
                 }
             }
             state->ConstantBufferBindCount = bindCount;
@@ -1609,11 +1609,11 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
                 {
                     pCPUHandles[i] = state->Resources[i];
                     bindCount = i + 1;
-                    break;
                 }
                 else
                 {
                     pCPUHandles[i].ptr = 0;
+                    break;
                 }
             }
             state->ResourceBindCount = bindCount;
@@ -1638,11 +1638,11 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
                 {
                     pCPUHandles[i] = state->Samplers[i];
                     bindCount = i + 1;
-                    break;
                 }
                 else
                 {
                     pCPUHandles[i].ptr = 0;
+                    break;
                 }
             }
             state->SamplerBindCount = bindCount;
@@ -1823,6 +1823,7 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(pResource2);
 #endif
 
+    g_pRenderer->GetStats()->IncrementDrawCallCounter();
 }
 
 

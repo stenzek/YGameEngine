@@ -108,13 +108,13 @@ PIXEL_FORMAT D3D12Helpers::DXGIFormatToPixelFormat(DXGI_FORMAT Format)
     return PIXEL_FORMAT_UNKNOWN;
 }
 
-void D3D12Helpers::SetD3D12DeviceChildDebugName(ID3D12Object *pObject, const char *debugName)
+void D3D12Helpers::SetD3D12ObjectName(ID3D12Object *pObject, const char *debugName)
 {
 #ifdef Y_BUILD_CONFIG_DEBUG
     uint32 nameLength = Y_strlen(debugName);
     if (nameLength > 0)
     {
-        wchar_t *buffer = (wchar_t *)alloca(nameLength + 1);
+        wchar_t *buffer = (wchar_t *)alloca(sizeof(wchar_t) * nameLength + sizeof(wchar_t));
         mbstowcs(buffer, debugName, nameLength);
         buffer[nameLength] = 0;
         pObject->SetName(buffer);

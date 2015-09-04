@@ -217,7 +217,7 @@ ShaderProgram *ShaderMap::LoadShaderPermutation(uint32 globalShaderFlags, const 
     if (pGPUProgram != nullptr)
     {
         pGPUProgram->SetDebugName(SmallString::FromFormat("%s<0x%x>:%s<0x%x>:%s<0x%x>", 
-                                                          (pBaseShaderTypeInfo != nullptr) ? pBaseShaderTypeInfo->GetTypeName() : "null", vertexFactoryFlags,
+                                                          (pBaseShaderTypeInfo != nullptr) ? pBaseShaderTypeInfo->GetTypeName() : "null", baseShaderFlags,
                                                           (pVertexFactoryTypeInfo != nullptr) ? pVertexFactoryTypeInfo->GetTypeName() : "null", vertexFactoryFlags,
                                                           (pMaterialShader != nullptr) ? pMaterialShader->GetName().GetCharArray() : "null", materialShaderFlags));
     }

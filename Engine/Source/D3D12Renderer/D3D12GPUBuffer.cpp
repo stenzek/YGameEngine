@@ -37,7 +37,7 @@ void D3D12GPUBuffer::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsa
 
 void D3D12GPUBuffer::SetDebugName(const char *debugName)
 {
-    D3D12Helpers::SetD3D12DeviceChildDebugName(m_pD3DResource, debugName);
+    D3D12Helpers::SetD3D12ObjectName(m_pD3DResource, debugName);
 }
 
 GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /* = NULL */)

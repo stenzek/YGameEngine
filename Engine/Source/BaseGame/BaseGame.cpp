@@ -875,12 +875,18 @@ void BaseGame::RenderThreadFrame(float deltaTime)
 
     // begin frame
     RENDER_PROFILER_BEGIN_SECTION(m_pRenderProfiler, "OnRenderThreadBeginFrame", false);
-    OnRenderThreadBeginFrame(deltaTime);
+    {
+        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadBeginFrame", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
+        OnRenderThreadBeginFrame(deltaTime);
+    }
     RENDER_PROFILER_END_SECTION(m_pRenderProfiler);
 
     // collect events
     RENDER_PROFILER_BEGIN_SECTION(m_pRenderProfiler, "RenderThreadCollectEvents", false);
-    RenderThreadCollectEvents(deltaTime);
+    {
+        MICROPROFILE_SCOPEI("BaseGame", "RenderThreadCollectEvents", MAKE_COLOR_R8G8B8_UNORM(255, 255, 100));
+        RenderThreadCollectEvents(deltaTime);
+    }
     RENDER_PROFILER_END_SECTION(m_pRenderProfiler);
 
     // restart the renderer if a request is queued
@@ -908,23 +914,32 @@ void BaseGame::RenderThreadFrame(float deltaTime)
 
     // call event
     RENDER_PROFILER_BEGIN_SECTION(m_pRenderProfiler, "OnRenderThreadDraw", true);
-    OnRenderThreadDraw(deltaTime);
+    {
+        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadDraw", MAKE_COLOR_R8G8B8_UNORM(255, 100, 100));
+        OnRenderThreadDraw(deltaTime);
+    }
     RENDER_PROFILER_END_SECTION(m_pRenderProfiler);
 
     // draw overlays
     RENDER_PROFILER_BEGIN_SECTION(m_pRenderProfiler, "RenderThreadDrawOverlays", true);
-    RenderThreadDrawOverlays(deltaTime);
+    {
+        MICROPROFILE_SCOPEI("BaseGame", "RenderThreadDrawOverlays", MAKE_COLOR_R8G8B8_UNORM(100, 200, 100));
+        RenderThreadDrawOverlays(deltaTime);
+    }
     RENDER_PROFILER_END_SECTION(m_pRenderProfiler);
 
     // end frame
     RENDER_PROFILER_BEGIN_SECTION(m_pRenderProfiler, "OnRenderThreadEndFrame", false);
-    OnRenderThreadEndFrame(deltaTime);
+    {
+        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadEndFrame", MAKE_COLOR_R8G8B8_UNORM(100, 20, 30));
+        OnRenderThreadEndFrame(deltaTime);
+    }
     RENDER_PROFILER_END_SECTION(m_pRenderProfiler);
 
     // clear state of context, and swap buffers
     RENDER_PROFILER_BEGIN_SECTION(m_pRenderProfiler, "Clear and swap buffers", false);
     {
-        MICROPROFILE_SCOPEI("BaseGame", "SwapBuffers", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+        MICROPROFILE_SCOPEI("BaseGame", "SwapBuffers", MAKE_COLOR_R8G8B8_UNORM(100, 255, 100));
 
         m_pGPUContext->ClearState(true, true, true, true);
         m_pGPUContext->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE); /* @TODO */

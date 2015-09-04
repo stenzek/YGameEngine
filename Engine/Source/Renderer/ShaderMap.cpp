@@ -212,6 +212,17 @@ ShaderProgram *ShaderMap::LoadShaderPermutation(uint32 globalShaderFlags, const 
     }
 #endif
 
+    // set debug name
+#ifdef Y_BUILD_CONFIG_DEBUG
+    if (pGPUProgram != nullptr)
+    {
+        pGPUProgram->SetDebugName(SmallString::FromFormat("%s<0x%x>:%s<0x%x>:%s<0x%x>", 
+                                                          (pBaseShaderTypeInfo != nullptr) ? pBaseShaderTypeInfo->GetTypeName() : "null", vertexFactoryFlags,
+                                                          (pVertexFactoryTypeInfo != nullptr) ? pVertexFactoryTypeInfo->GetTypeName() : "null", vertexFactoryFlags,
+                                                          (pMaterialShader != nullptr) ? pMaterialShader->GetName().GetCharArray() : "null", materialShaderFlags));
+    }
+#endif
+
     // got a gpu program?
     ShaderProgram *pProgram = (pGPUProgram != nullptr) ? new ShaderProgram(pGPUProgram, globalShaderFlags, pBaseShaderTypeInfo, baseShaderFlags, pVertexFactoryTypeInfo, vertexFactoryFlags, pMaterialShader, materialShaderFlags) : nullptr;
     

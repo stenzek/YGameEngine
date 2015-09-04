@@ -1741,7 +1741,6 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
         return;
 
 #if 1
-
     // can use scratch buffer directly. 
     // this probably should use a threshold to go to an upload buffer..
     uint32 bufferSpaceRequired = vertexSize * nVertices;

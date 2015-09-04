@@ -6,7 +6,7 @@ namespace D3D12Helpers
     DXGI_FORMAT PixelFormatToDXGIFormat(PIXEL_FORMAT Format);
     PIXEL_FORMAT DXGIFormatToPixelFormat(DXGI_FORMAT Format);
 
-    void SetD3D12DeviceChildDebugName(ID3D12DeviceChild *pDeviceChild, const char *debugName);
+    void SetD3D12DeviceChildDebugName(pObject *pDeviceChild, const char *debugName);
 
     bool FillD3D12RasterizerStateDesc(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerState, D3D12_RASTERIZER_DESC *pOutRasterizerDesc);
     bool FillD3D12DepthStencilStateDesc(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilState, D3D12_DEPTH_STENCIL_DESC *pOutDepthStencilDesc);

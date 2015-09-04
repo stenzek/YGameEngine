@@ -236,13 +236,13 @@ private:
         D3D12_GPU_DESCRIPTOR_HANDLE SamplerTableGPUHandle;
         D3D12_GPU_DESCRIPTOR_HANDLE UAVTableGPUHandle;
 
-        D3D12DescriptorHandle ConstantBuffers[D3D12_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT];
+        D3D12DescriptorHandle ConstantBuffers[D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS];
         uint32 ConstantBufferBindCount;
 
-        D3D12DescriptorHandle Resources[D3D12_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT];
+        D3D12DescriptorHandle Resources[D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS];
         uint32 ResourceBindCount;
 
-        D3D12DescriptorHandle Samplers[D3D12_COMMONSHADER_SAMPLER_SLOT_COUNT];
+        D3D12DescriptorHandle Samplers[D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS];
         uint32 SamplerBindCount;
 
         // @TODO move, since it's shared between stages

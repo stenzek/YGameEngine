@@ -15,7 +15,7 @@ D3D12GraphicsCommandQueue::D3D12GraphicsCommandQueue(D3D12RenderBackend *pBacken
     , m_linearBufferHeapSize(linearBufferHeapSize)
     , m_linearViewHeapSize(linearViewHeapSize)
     , m_linearSamplerHeapSize(linearSamplerHeapSize)
-    , m_maxCommandAllocatorPoolSize(4)
+    , m_maxCommandAllocatorPoolSize(8)
     , m_maxLinearBufferHeapPoolSize(16)
     , m_maxLinearViewHeapPoolSize(32)
     , m_maxLinearSamplerHeapPoolSize(32)

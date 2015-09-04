@@ -1468,7 +1468,7 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
     }
 
     // allocate an array of cpu pointers, uses alloca so it's at the end of the stack
-    D3D12_CPU_DESCRIPTOR_HANDLE *pCPUHandles = (D3D12_CPU_DESCRIPTOR_HANDLE *)alloca(sizeof(D3D12_CPU_DESCRIPTOR_HANDLE) * D3D12_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT);
+    D3D12_CPU_DESCRIPTOR_HANDLE *pCPUHandles = (D3D12_CPU_DESCRIPTOR_HANDLE *)alloca(sizeof(D3D12_CPU_DESCRIPTOR_HANDLE) * 32);
 
 
     // update states
@@ -1498,10 +1498,10 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
             state->ConstantBuffersDirty = false;
 
             // allocate scratch descriptors and copy
-            if (bindCount > 0 && AllocateScratchView(D3D12_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, &state->CBVTableCPUHandle, &state->CBVTableGPUHandle))
+            if (bindCount > 0 && AllocateScratchView(D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS, &state->CBVTableCPUHandle, &state->CBVTableGPUHandle))
             {
                 m_pD3DDevice->CopyDescriptors(1, &state->CBVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                for (uint32 i = bindCount; i < D3D12_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT; i++)
+                for (uint32 i = bindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS; i++)
                 {
                     D3D12_CPU_DESCRIPTOR_HANDLE offsetHandle = { state->CBVTableCPUHandle.ptr + i * m_pD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) };
                     //m_pD3DDevice->CreateConstantBufferView(nullptr, offsetHandle);

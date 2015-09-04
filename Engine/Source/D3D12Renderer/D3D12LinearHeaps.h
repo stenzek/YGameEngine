@@ -1,12 +1,12 @@
 #pragma once
 #include "D3D12Renderer/D3D12Common.h"
 
-class D3D12ScratchBuffer
+class D3D12LinearBufferHeap
 {
     // @TODO maybe use something like a circular buffer here?
 public:
-    static D3D12ScratchBuffer *Create(ID3D12Device *pDevice, uint32 size);
-    ~D3D12ScratchBuffer();
+    static D3D12LinearBufferHeap *Create(ID3D12Device *pDevice, uint32 size);
+    ~D3D12LinearBufferHeap();
 
     ID3D12Resource *GetResource() const { return m_pResource; }
     uint32 GetSize() const { return m_size; }
@@ -19,7 +19,7 @@ public:
     void Commit();
     
 private:
-    D3D12ScratchBuffer(ID3D12Resource *pResource, byte *pMappedPointer, uint32 size);
+    D3D12LinearBufferHeap(ID3D12Resource *pResource, byte *pMappedPointer, uint32 size);
 
     D3D12_GPU_VIRTUAL_ADDRESS m_gpuAddress;
 
@@ -31,11 +31,11 @@ private:
     uint32 m_resetPosition;
 };
 
-class D3D12ScratchDescriptorHeap
+class D3D12LinearDescriptorHeap
 {
 public:
-    static D3D12ScratchDescriptorHeap *Create(ID3D12Device *pDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count);
-    ~D3D12ScratchDescriptorHeap();
+    static D3D12LinearDescriptorHeap *Create(ID3D12Device *pDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count);
+    ~D3D12LinearDescriptorHeap();
 
     ID3D12DescriptorHeap *GetD3DHeap() const { return m_pD3DHeap; }
     uint32 GetSize() const { return m_size; }
@@ -45,7 +45,7 @@ public:
     void Reset();
 
 private:
-    D3D12ScratchDescriptorHeap(ID3D12DescriptorHeap *pHeap, uint32 count, uint32 incrementSize);
+    D3D12LinearDescriptorHeap(ID3D12DescriptorHeap *pHeap, uint32 count, uint32 incrementSize);
 
     ID3D12DescriptorHeap *m_pD3DHeap;
     D3D12_CPU_DESCRIPTOR_HANDLE m_cpuHandleStart;

@@ -78,15 +78,15 @@ D3D12RenderBackend::D3D12RenderBackend()
     , m_outputBackBufferFormat(PIXEL_FORMAT_UNKNOWN)
     , m_outputDepthStencilFormat(PIXEL_FORMAT_UNKNOWN)
     , m_frameLatency(0)
+    , m_pGraphicsCommandQueue(nullptr)
     , m_pGPUDevice(nullptr)
     , m_pGPUContext(nullptr)
     , m_pLegacyGraphicsRootSignature(nullptr)
     , m_pLegacyComputeRootSignature(nullptr)
     , m_fnD3D12SerializeRootSignature(nullptr)
     , m_pConstantBufferStorageHeap(nullptr)
-    , m_currentCleanupFenceValue(0)
 {
-    Y_memzero(m_pDescriptorHeaps, sizeof(m_pDescriptorHeaps));
+    Y_memzero(m_pCPUDescriptorHeaps, sizeof(m_pCPUDescriptorHeaps));
 
     DebugAssert(s_pInstance == nullptr);
     s_pInstance = this;
@@ -279,11 +279,16 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
         return false;
 
     // create descriptor heaps
-    if (!CreateDescriptorHeaps())
+    if (!CreateCPUDescriptorHeaps())
         return false;
 
     // create constant buffers
     if (!CreateConstantStorage())
+        return false;
+
+    // create graphics command queue
+    m_pGraphicsCommandQueue = new D3D12GraphicsCommandQueue(this, m_pD3DDevice, 2 * 1024 * 1024, 1024, 1024);
+    if (!m_pGraphicsCommandQueue->Initialize())
         return false;
 
     // create device wrapper class
@@ -427,7 +432,7 @@ bool D3D12RenderBackend::CreateLegacyRootSignatures()
     return true;
 }
 
-bool D3D12RenderBackend::CreateDescriptorHeaps()
+bool D3D12RenderBackend::CreateCPUDescriptorHeaps()
 {
     static const uint32 initialDescriptorHeapSize[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
     {
@@ -437,11 +442,11 @@ bool D3D12RenderBackend::CreateDescriptorHeaps()
         1024            // D3D12_DESCRIPTOR_HEAP_TYPE_DSV
     };
 
-    static_assert(countof(initialDescriptorHeapSize) == countof(m_pDescriptorHeaps), "descriptor heap type count");
+    static_assert(countof(initialDescriptorHeapSize) == countof(m_pCPUDescriptorHeaps), "descriptor heap type count");
     for (uint32 i = 0; i < countof(initialDescriptorHeapSize); i++)
     {
-        m_pDescriptorHeaps[i] = D3D12DescriptorHeap::Create(m_pD3DDevice, (D3D12_DESCRIPTOR_HEAP_TYPE)i, initialDescriptorHeapSize[i]);
-        if (m_pDescriptorHeaps[i] == nullptr)
+        m_pCPUDescriptorHeaps[i] = D3D12DescriptorHeap::Create(m_pD3DDevice, (D3D12_DESCRIPTOR_HEAP_TYPE)i, initialDescriptorHeapSize[i], true);
+        if (m_pCPUDescriptorHeaps[i] == nullptr)
         {
             Log_ErrorPrintf("Failed to allocate descriptor heap type %u", i);
             return false;
@@ -520,7 +525,7 @@ bool D3D12RenderBackend::CreateConstantStorage()
         }
 
         // allocate a handle for the view
-        if (!GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Allocate(&pConstantBufferStorage->DescriptorHandle))
+        if (!GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Allocate(&pConstantBufferStorage->DescriptorHandle))
         {
             const ShaderConstantBuffer *declaration = ShaderConstantBuffer::GetRegistry()->GetTypeInfoByIndex(i);
             Log_ErrorPrintf("Failed to allocate constant buffer %u (%s)", i, declaration->GetBufferName());
@@ -546,23 +551,22 @@ void D3D12RenderBackend::Shutdown()
     SAFE_RELEASE_LAST(m_pGPUDevice);
 
     // remove any scheduled resources (descriptors will be dropped anyways)
-    for (uint32 i = 0; i < m_pendingDeletionResources.GetSize(); i++)
-        m_pendingDeletionResources[i].pResource->Release();
+    delete m_pGraphicsCommandQueue;
 
     // cleanup constant buffers
     for (ConstantBufferStorage &constantBufferStorage : m_constantBufferStorage)
     {
-        GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(constantBufferStorage.DescriptorHandle);
+        GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(constantBufferStorage.DescriptorHandle);
         if (constantBufferStorage.pResource != nullptr)
             constantBufferStorage.pResource->Release();
     }
     SAFE_RELEASE(m_pConstantBufferStorageHeap);
 
     // remove descriptor heaps
-    for (uint32 i = 0; i < countof(m_pDescriptorHeaps); i++)
+    for (uint32 i = 0; i < countof(m_pCPUDescriptorHeaps); i++)
     {
-        if (m_pDescriptorHeaps[i] != nullptr)
-            delete m_pDescriptorHeaps[i];
+        if (m_pCPUDescriptorHeaps[i] != nullptr)
+            delete m_pCPUDescriptorHeaps[i];
     }
 
     // signatures
@@ -669,72 +673,6 @@ const D3D12DescriptorHandle *D3D12RenderBackend::GetConstantBufferDescriptor(uin
 {
     DebugAssert(index < m_constantBufferStorage.GetSize());
     return (m_constantBufferStorage[index].pResource != nullptr) ? &m_constantBufferStorage[index].DescriptorHandle : nullptr;
-}
-
-void D3D12RenderBackend::ScheduleResourceForDeletion(ID3D12Pageable *pResource)
-{
-    ScheduleResourceForDeletion(pResource, m_currentCleanupFenceValue);
-}
-
-void D3D12RenderBackend::ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)
-{
-    PendingDeletionResource pdr;
-    pdr.pResource = pResource;
-    pdr.FenceValue = fenceValue;
-    
-    m_pendingDeletionLock.Lock();
-    m_pendingDeletionResources.Add(pdr);
-    m_pendingDeletionLock.Unlock();
-}
-
-void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle)
-{
-    ScheduleDescriptorForDeletion(handle, m_currentCleanupFenceValue);
-}
-
-void D3D12RenderBackend::ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)
-{
-    PendingDeletionDescriptor pdr;
-    pdr.Handle = handle;
-    pdr.FenceValue = fenceValue;
-
-    m_pendingDeletionLock.Lock();
-    m_pendingDeletionDescriptors.Add(pdr);
-    m_pendingDeletionLock.Unlock();
-}
-
-void D3D12RenderBackend::DeletePendingResources(uint64 fenceValue)
-{
-    m_pendingDeletionLock.Lock();
-
-    for (uint32 i = 0; i < m_pendingDeletionResources.GetSize(); )
-    {
-        if (m_pendingDeletionResources[i].FenceValue > fenceValue)
-        {
-            i++;
-            continue;
-        }
-
-        ID3D12Pageable *pResource = m_pendingDeletionResources[i].pResource;
-        m_pendingDeletionResources.FastRemove(i);
-        SAFE_RELEASE_LAST(pResource);
-    }
-
-    for (uint32 i = 0; i < m_pendingDeletionDescriptors.GetSize(); )
-    {
-        PendingDeletionDescriptor &desc = m_pendingDeletionDescriptors[i];
-        if (desc.FenceValue > fenceValue)
-        {
-            i++;
-            continue;
-        }
-
-        DebugAssert(desc.Handle.Type < countof(m_pDescriptorHeaps));
-        m_pDescriptorHeaps[desc.Handle.Type]->Free(desc.Handle);
-        m_pendingDeletionDescriptors.FastRemove(i);
-    }
-
-    m_pendingDeletionLock.Unlock();
 }
 
 bool D3D12RenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer)

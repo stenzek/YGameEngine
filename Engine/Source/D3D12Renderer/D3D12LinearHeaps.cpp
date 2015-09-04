@@ -1,10 +1,10 @@
 #include "D3D12Renderer/PrecompiledHeader.h"
-#include "D3D12Renderer/D3D12ScratchBuffer.h"
+#include "D3D12Renderer/D3D12LinearHeaps.h"
 #include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12Helpers.h"
 Log_SetChannel(D3D12RenderBackend);
 
-D3D12ScratchBuffer::D3D12ScratchBuffer(ID3D12Resource *pResource, byte *pMappedPointer, uint32 size)
+D3D12LinearBufferHeap::D3D12LinearBufferHeap(ID3D12Resource *pResource, byte *pMappedPointer, uint32 size)
     : m_gpuAddress(pResource->GetGPUVirtualAddress())
     , m_pResource(pResource)
     , m_pMappedPointer(pMappedPointer)
@@ -15,7 +15,7 @@ D3D12ScratchBuffer::D3D12ScratchBuffer(ID3D12Resource *pResource, byte *pMappedP
 
 }
 
-D3D12ScratchBuffer *D3D12ScratchBuffer::Create(ID3D12Device *pDevice, uint32 size)
+D3D12LinearBufferHeap *D3D12LinearBufferHeap::Create(ID3D12Device *pDevice, uint32 size)
 {
     HRESULT hResult;
     ID3D12Resource *pResource;
@@ -39,28 +39,28 @@ D3D12ScratchBuffer *D3D12ScratchBuffer::Create(ID3D12Device *pDevice, uint32 siz
         return false;
     }
 
-    return new D3D12ScratchBuffer(pResource, pMappedPointer, size);
+    return new D3D12LinearBufferHeap(pResource, pMappedPointer, size);
 }
 
-D3D12ScratchBuffer::~D3D12ScratchBuffer()
+D3D12LinearBufferHeap::~D3D12LinearBufferHeap()
 {
     DebugAssert(m_pMappedPointer == nullptr);
-    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(m_pResource);
+    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(m_pResource);
 }
 
-void *D3D12ScratchBuffer::GetPointer(uint32 offset) const
+void *D3D12LinearBufferHeap::GetPointer(uint32 offset) const
 {
     DebugAssert(offset < m_size);
     return m_pMappedPointer + offset;
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS D3D12ScratchBuffer::GetGPUAddress(uint32 offset) const
+D3D12_GPU_VIRTUAL_ADDRESS D3D12LinearBufferHeap::GetGPUAddress(uint32 offset) const
 {
     DebugAssert(offset < m_size);
     return m_gpuAddress + offset;
 }
 
-bool D3D12ScratchBuffer::Allocate(uint32 size, uint32 *pOutOffset)
+bool D3D12LinearBufferHeap::Allocate(uint32 size, uint32 *pOutOffset)
 {
     DebugAssert(m_pMappedPointer != nullptr);
     if ((m_position + size) >= m_size)
@@ -71,7 +71,7 @@ bool D3D12ScratchBuffer::Allocate(uint32 size, uint32 *pOutOffset)
     return true;
 }
 
-bool D3D12ScratchBuffer::Reset(bool resetPosition)
+bool D3D12LinearBufferHeap::Reset(bool resetPosition)
 {
 //     DebugAssert(m_pMappedPointer == nullptr);
     if (resetPosition)
@@ -90,7 +90,7 @@ bool D3D12ScratchBuffer::Reset(bool resetPosition)
     return true;
 }
 
-void D3D12ScratchBuffer::Commit()
+void D3D12LinearBufferHeap::Commit()
 {
 //     DebugAssert(m_pMappedPointer != nullptr);
 // 
@@ -99,7 +99,7 @@ void D3D12ScratchBuffer::Commit()
 //     m_pMappedPointer = nullptr;
 }
 
-D3D12ScratchDescriptorHeap::D3D12ScratchDescriptorHeap(ID3D12DescriptorHeap *pHeap, uint32 count, uint32 incrementSize)
+D3D12LinearDescriptorHeap::D3D12LinearDescriptorHeap(ID3D12DescriptorHeap *pHeap, uint32 count, uint32 incrementSize)
     : m_pD3DHeap(pHeap)
     , m_cpuHandleStart(pHeap->GetCPUDescriptorHandleForHeapStart())
     , m_gpuHandleStart(pHeap->GetGPUDescriptorHandleForHeapStart())
@@ -110,7 +110,7 @@ D3D12ScratchDescriptorHeap::D3D12ScratchDescriptorHeap(ID3D12DescriptorHeap *pHe
 
 }
 
-D3D12ScratchDescriptorHeap *D3D12ScratchDescriptorHeap::Create(ID3D12Device *pDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count)
+D3D12LinearDescriptorHeap *D3D12LinearDescriptorHeap::Create(ID3D12Device *pDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count)
 {
     ID3D12DescriptorHeap *pDescriptorHeap;
     D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = { type, count, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
@@ -122,15 +122,15 @@ D3D12ScratchDescriptorHeap *D3D12ScratchDescriptorHeap::Create(ID3D12Device *pDe
     }
 
     D3D12Helpers::SetD3D12ObjectName(pDescriptorHeap, "scratch descriptor heap");
-    return new D3D12ScratchDescriptorHeap(pDescriptorHeap, count, pDevice->GetDescriptorHandleIncrementSize(type));
+    return new D3D12LinearDescriptorHeap(pDescriptorHeap, count, pDevice->GetDescriptorHandleIncrementSize(type));
 }
 
-D3D12ScratchDescriptorHeap::~D3D12ScratchDescriptorHeap()
+D3D12LinearDescriptorHeap::~D3D12LinearDescriptorHeap()
 {
-    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(m_pD3DHeap);
+    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(m_pD3DHeap);
 }
 
-bool D3D12ScratchDescriptorHeap::Allocate(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle)
+bool D3D12LinearDescriptorHeap::Allocate(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle)
 {
     DebugAssert(count > 0);
     if ((m_position + count) > m_size)
@@ -142,7 +142,7 @@ bool D3D12ScratchDescriptorHeap::Allocate(uint32 count, D3D12_CPU_DESCRIPTOR_HAN
     return true;
 }
 
-void D3D12ScratchDescriptorHeap::Reset()
+void D3D12LinearDescriptorHeap::Reset()
 {
     m_position = 0;
 }

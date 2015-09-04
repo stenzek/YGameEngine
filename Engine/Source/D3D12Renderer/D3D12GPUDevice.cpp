@@ -210,7 +210,7 @@ void D3D12GPUDevice::ScheduleUploadResourceDeletion(ID3D12Pageable *pResource)
 {
     if (m_pGPUContext != nullptr)
     {
-        m_pBackend->ScheduleResourceForDeletion(pResource);
+        m_pBackend->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(pResource);
         return;
     }
 
@@ -245,7 +245,7 @@ D3D12GPUSamplerState::D3D12GPUSamplerState(const GPU_SAMPLER_STATE_DESC *pSample
 
 D3D12GPUSamplerState::~D3D12GPUSamplerState()
 {
-    D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(m_samplerHandle);
+    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_samplerHandle);
 }
 
 void D3D12GPUSamplerState::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -270,7 +270,7 @@ GPUSamplerState *D3D12GPUDevice::CreateSamplerState(const GPU_SAMPLER_STATE_DESC
 
     // allocate a descriptor
     D3D12DescriptorHandle descriptorHandle;
-    if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&descriptorHandle))
+    if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&descriptorHandle))
     {
         Log_ErrorPrintf("Failed to allocate descriptor handle");
         return false;

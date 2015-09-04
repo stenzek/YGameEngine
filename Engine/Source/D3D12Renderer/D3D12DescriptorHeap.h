@@ -35,7 +35,7 @@ class D3D12DescriptorHeap
 public:
     ~D3D12DescriptorHeap();
 
-    static D3D12DescriptorHeap *Create(ID3D12Device *pDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 descriptorCount);
+    static D3D12DescriptorHeap *Create(ID3D12Device *pDevice, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 descriptorCount, bool cpuOnly);
 
     ID3D12DescriptorHeap *GetD3DHeap() const { return m_pD3DDescriptorHeap; }
 

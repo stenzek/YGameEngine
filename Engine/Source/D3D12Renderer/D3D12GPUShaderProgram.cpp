@@ -48,7 +48,7 @@ D3D12GPUShaderProgram::~D3D12GPUShaderProgram()
     for (uint32 i = 0; i < m_pipelineStates.GetSize(); i++)
     {
         if (m_pipelineStates[i].pPipelineState != nullptr)
-            D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(m_pipelineStates[i].pPipelineState);
+            D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(m_pipelineStates[i].pPipelineState);
     }
 
     for (uint32 i = 0; i < countof(m_pStageByteCode); i++)

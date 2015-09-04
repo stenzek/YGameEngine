@@ -23,7 +23,7 @@ D3D12GPUBuffer::~D3D12GPUBuffer()
 
     DebugAssert(m_pD3DMapResource == nullptr);
     
-    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(m_pD3DResource);
+    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(m_pD3DResource);
 }
 
 void D3D12GPUBuffer::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -240,7 +240,7 @@ bool D3D12GPUContext::WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint3
     ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
 
     // release the upload buffer later
-    m_pBackend->ScheduleResourceForDeletion(pUploadBuffer);
+    m_pBackend->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(pUploadBuffer);
     return true;
 }
 
@@ -332,7 +332,7 @@ void D3D12GPUContext::Unmapbuffer(GPUBuffer *pBuffer, void *pPointer)
         ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
 
         // have to wait until the gpu is finished with it before releasing the buffer
-        m_pBackend->ScheduleResourceForDeletion(pMapBuffer);
+        m_pBackend->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(pMapBuffer);
     }
     else
     {

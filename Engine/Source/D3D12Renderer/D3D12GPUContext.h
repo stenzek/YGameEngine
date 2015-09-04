@@ -1,7 +1,8 @@
 #pragma once
 #include "D3D12Renderer/D3D12Common.h"
+#include "D3D12Renderer/D3D12GraphicsCommandQueue.h"
 #include "D3D12Renderer/D3D12DescriptorHeap.h"
-#include "D3D12Renderer/D3D12ScratchBuffer.h"
+#include "D3D12Renderer/D3D12LinearHeaps.h"
 
 class D3D12GPUContext : public GPUContext
 {
@@ -136,7 +137,6 @@ public:
 
     // accessors
     ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
-    ID3D12CommandQueue *GetD3DCommandQueue() const { return m_pCommandQueue; }
     ID3D12GraphicsCommandList *GetCurrentCommandList() const { return m_pCommandList; }
     D3D12GPUShaderProgram *GetD3D12ShaderProgram() const { return m_pCurrentShaderProgram; }
 
@@ -163,12 +163,10 @@ public:
 private:
     // preallocate constant buffers
     void CreateConstantBuffers();
-    bool CreateInternalCommandLists();
-    void ActivateCommandQueue(uint32 index);
-    void WaitForCommandQueue(uint32 index);
-    void ExecuteCurrentCommandList(bool reopen);
-    void MoveToNextCommandQueue();
-    void FinishPendingCommands();
+    bool CreateCommandList();
+    void FlushCommandList(bool reopen, bool wait, bool refreshAllocators);
+    void GetNewAllocators(uint64 fenceValue);
+    void UpdateShaderDescriptorHeaps();
     void ClearCommandListDependantState();
     void RestoreCommandListDependantState();
     bool UpdatePipelineState(bool force);
@@ -179,36 +177,20 @@ private:
     bool AllocateScratchSamplers(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle);
 
     D3D12RenderBackend *m_pBackend;
+    D3D12GraphicsCommandQueue *m_pGraphicsCommandQueue;
     D3D12GPUDevice *m_pDevice;
     ID3D12Device *m_pD3DDevice;
 
     GPUContextConstants *m_pConstants;
 
     // Created once
-    ID3D12CommandQueue *m_pCommandQueue;
     ID3D12GraphicsCommandList *m_pCommandList;
-    ID3D12Fence *m_pFence;
-    HANDLE m_fenceEvent;
 
-    // Current command list
-    D3D12ScratchBuffer *m_pCurrentScratchBuffer;
-    D3D12ScratchDescriptorHeap *m_pCurrentScratchViewHeap;
-    D3D12ScratchDescriptorHeap *m_pCurrentScratchSamplerHeap;
-    PODArray<ID3D12DescriptorHeap *> m_currentDescriptorHeaps;
-
-    // Pool of command lists - DCommandQueue because of CommandQueue class that will be removed
-    struct DCommandQueue
-    {
-        ID3D12CommandAllocator *pCommandAllocator;
-        D3D12ScratchBuffer *pScratchBuffer;
-        D3D12ScratchDescriptorHeap *pScratchViewHeap;
-        D3D12ScratchDescriptorHeap *pScratchSamplerHeap;
-        uint64 FenceValue;
-        bool Pending;
-    };
-    MemArray<DCommandQueue> m_commandQueues;
-    uint32 m_currentCommandQueueIndex;
-    uint64 m_nextFenceValue;
+    // Current allocators
+    ID3D12CommandAllocator *m_pCurrentCommandAllocator;
+    D3D12LinearBufferHeap *m_pCurrentScratchBuffer;
+    D3D12LinearDescriptorHeap *m_pCurrentScratchViewHeap;
+    D3D12LinearDescriptorHeap *m_pCurrentScratchSamplerHeap;
 
     // state
     RENDERER_VIEWPORT m_currentViewport;

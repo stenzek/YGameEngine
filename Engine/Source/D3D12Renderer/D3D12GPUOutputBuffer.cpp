@@ -236,7 +236,7 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
     //Log_DevPrintf("Next backbuffer index = %u", m_currentBackBufferIndex);
 
     // allocate RTV descriptors
-    if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->AllocateRange(swapChainDesc.BufferCount, &m_renderTargetViewsDescriptorStart))
+    if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->AllocateRange(swapChainDesc.BufferCount, &m_renderTargetViewsDescriptorStart))
     {
         Log_ErrorPrintf("Failed to allocate RTV descriptors.");
         return false;
@@ -256,7 +256,7 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("IDXGISwapChain::GetBuffer failed with hResult %08X", hResult);
-            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(m_renderTargetViewsDescriptorStart);
+            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(m_renderTargetViewsDescriptorStart);
             return false;
         }
 
@@ -283,15 +283,15 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("CreateCommittedResource for DepthStencil failed with hResult %08X", hResult);
-            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(m_renderTargetViewsDescriptorStart);
+            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(m_renderTargetViewsDescriptorStart);
             return false;
         }
 
         // allocate DSV descriptor
-        if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Allocate(&m_depthStencilViewDescriptor))
+        if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Allocate(&m_depthStencilViewDescriptor))
         {
             Log_ErrorPrintf("Failed to allocate DSV descriptors.");
-            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(m_renderTargetViewsDescriptorStart);
+            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(m_renderTargetViewsDescriptorStart);
             SAFE_RELEASE(m_pDepthStencilBuffer);
             return false;
         }
@@ -310,8 +310,8 @@ bool D3D12GPUOutputBuffer::InternalCreateBuffers()
 
 void D3D12GPUOutputBuffer::InternalReleaseBuffers()
 {
-    D3D12RenderBackend::GetInstance()->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(m_renderTargetViewsDescriptorStart);
-    D3D12RenderBackend::GetInstance()->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Free(m_depthStencilViewDescriptor);
+    D3D12RenderBackend::GetInstance()->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Free(m_renderTargetViewsDescriptorStart);
+    D3D12RenderBackend::GetInstance()->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Free(m_depthStencilViewDescriptor);
 
     for (uint32 i = 0; i < m_backBuffers.GetSize(); i++)
         m_backBuffers[i]->Release();
@@ -337,7 +337,7 @@ GPUOutputBuffer *D3D12GPUDevice::CreateOutputBuffer(RenderSystemWindowHandle hWn
 {
     // can only be done on the render thread
     DebugAssert(m_pGPUContext != nullptr);
-    return D3D12GPUOutputBuffer::Create(m_pBackend, m_pDXGIFactory, m_pD3DDevice, m_pGPUContext->GetD3DCommandQueue(), (HWND)hWnd, m_outputBackBufferFormat, m_outputDepthStencilFormat, vsyncType);
+    return D3D12GPUOutputBuffer::Create(m_pBackend, m_pDXGIFactory, m_pD3DDevice, m_pBackend->GetGraphicsCommandQueue()->GetD3DCommandQueue(), (HWND)hWnd, m_outputBackBufferFormat, m_outputDepthStencilFormat, vsyncType);
 }
 
 GPUOutputBuffer *D3D12GPUDevice::CreateOutputBuffer(SDL_Window *pSDLWindow, RENDERER_VSYNC_TYPE vsyncType)

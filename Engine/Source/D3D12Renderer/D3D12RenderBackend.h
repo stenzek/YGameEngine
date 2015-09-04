@@ -1,6 +1,7 @@
 #pragma once
 #include "D3D12Renderer/D3D12Common.h"
 #include "D3D12Renderer/D3D12DescriptorHeap.h"
+#include "D3D12Renderer/D3D12GraphicsCommandQueue.h"
 
 class D3D12RenderBackend : public RenderBackend
 {
@@ -25,7 +26,7 @@ public:
     ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
     D3D12GPUDevice *GetGPUDevice() const { return m_pGPUDevice; }
     D3D12GPUContext *GetGPUContext() const { return m_pGPUContext; }
-    D3D12DescriptorHeap *GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) { return m_pDescriptorHeaps[type]; }
+    D3D12DescriptorHeap *GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) { return m_pCPUDescriptorHeaps[type]; }
     uint32 GetFrameLatency() const { return m_frameLatency; }
 
     // legacy root signatures
@@ -36,14 +37,8 @@ public:
     ID3D12Resource *GetConstantBufferResource(uint32 index);
     const D3D12DescriptorHandle *GetConstantBufferDescriptor(uint32 index) const;
 
-    // resource cleanup
-    uint64 GetCurrentCleanupFenceValue() const { return m_currentCleanupFenceValue; }
-    void SetCleanupFenceValue(uint64 fenceValue) { m_currentCleanupFenceValue = fenceValue; }
-    void ScheduleResourceForDeletion(ID3D12Pageable *pResource);
-    void ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint64 fenceValue);
-    void ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle);
-    void ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle, uint64 fenceValue);
-    void DeletePendingResources(uint64 fenceValue);
+    // resource tracker
+    D3D12GraphicsCommandQueue *GetGraphicsCommandQueue() { return m_pGraphicsCommandQueue; }
 
     // creation
     bool Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer);
@@ -62,7 +57,7 @@ private:
     bool CreateLegacyRootSignatures();
 
     // create descriptor heaps
-    bool CreateDescriptorHeaps();
+    bool CreateCPUDescriptorHeaps();
 
     // create constant buffers
     bool CreateConstantStorage();
@@ -83,6 +78,9 @@ private:
 
     uint32 m_frameLatency;
 
+    // resource tracker
+    D3D12GraphicsCommandQueue *m_pGraphicsCommandQueue;
+
     // device
     D3D12GPUDevice *m_pGPUDevice;
     D3D12GPUContext *m_pGPUContext;
@@ -93,27 +91,11 @@ private:
     PFN_D3D12_SERIALIZE_ROOT_SIGNATURE m_fnD3D12SerializeRootSignature;
 
     // descriptor heaps
-    D3D12DescriptorHeap *m_pDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+    D3D12DescriptorHeap *m_pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
     // constant buffer storage
     MemArray<ConstantBufferStorage> m_constantBufferStorage;
     ID3D12Heap *m_pConstantBufferStorageHeap;
-
-    // object scheduled for deletion
-    struct PendingDeletionResource
-    {
-        ID3D12Pageable *pResource;
-        uint64 FenceValue;
-    };
-    struct PendingDeletionDescriptor
-    {
-        D3D12DescriptorHandle Handle;
-        uint64 FenceValue;
-    };
-    MemArray<PendingDeletionResource> m_pendingDeletionResources;
-    MemArray<PendingDeletionDescriptor> m_pendingDeletionDescriptors;
-    Mutex m_pendingDeletionLock;
-    uint64 m_currentCleanupFenceValue;
 
     // instance
     static D3D12RenderBackend *s_pInstance;

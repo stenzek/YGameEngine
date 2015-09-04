@@ -13,16 +13,14 @@ Log_SetChannel(D3D12RenderBackend);
 
 D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice)
     : m_pBackend(pBackend)
+    , m_pGraphicsCommandQueue(pBackend->GetGraphicsCommandQueue())
     , m_pDevice(pDevice)
     , m_pD3DDevice(pD3DDevice)
     , m_pConstants(nullptr)
-    , m_pCommandQueue(nullptr)
-    , m_pFence(nullptr)
-    , m_fenceEvent(NULL)
     , m_pCommandList(nullptr)
     , m_pCurrentScratchBuffer(nullptr)
-    , m_currentCommandQueueIndex(0)
-    , m_nextFenceValue(0)
+    , m_pCurrentScratchViewHeap(nullptr)
+    , m_pCurrentScratchSamplerHeap(nullptr)
 {
     // add references
     m_pDevice->SetGPUContext(this);
@@ -67,38 +65,35 @@ D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *p
 
 D3D12GPUContext::~D3D12GPUContext()
 {
-    // move to next frame, executing all commands
+    // execute all pending commands and wait until they're completed
     if (m_pCommandList != nullptr)
-    {
-        ExecuteCurrentCommandList(false);
-        MoveToNextCommandQueue();
-        FinishPendingCommands();
+        FlushCommandList(false, true, false);
 
-        // close the current command queue (it'll be empty)
-        m_pCommandList->Close();
-        m_pCurrentScratchBuffer->Commit();
-    }
-
-    // nuke command queues
-    for (uint32 i = 0; i < m_commandQueues.GetSize(); i++)
-    {
-        DCommandQueue *pQueue = &m_commandQueues[i];
-        delete pQueue->pScratchSamplerHeap;
-        delete pQueue->pScratchViewHeap;
-        delete pQueue->pScratchBuffer;
-        SAFE_RELEASE(pQueue->pCommandAllocator);
-    }
-
-    // nuke d3d objects
-    m_pCurrentScratchBuffer = nullptr;
-    m_pCurrentScratchViewHeap = nullptr;
-    m_pCurrentScratchSamplerHeap = nullptr;
-    m_currentDescriptorHeaps.Obliterate();
-    if (m_fenceEvent != NULL)
-        CloseHandle(m_fenceEvent);
-    SAFE_RELEASE(m_pFence);
+    // release command list
     SAFE_RELEASE(m_pCommandList);
-    SAFE_RELEASE(m_pCommandQueue);
+
+    // release everything back to the queue (not done above because we don't want another one after this)
+    uint64 syncFence = m_pBackend->GetGraphicsCommandQueue()->CreateSynchronizationPoint();
+    if (m_pCurrentCommandAllocator != nullptr)
+    {
+        m_pGraphicsCommandQueue->ReleaseCommandAllocator(m_pCurrentCommandAllocator, syncFence);
+        m_pCurrentCommandAllocator = nullptr;
+    }
+    if (m_pCurrentScratchBuffer != nullptr)
+    {
+        m_pGraphicsCommandQueue->ReleaseLinearBufferHeap(m_pCurrentScratchBuffer, syncFence);
+        m_pCurrentScratchBuffer = nullptr;
+    }
+    if (m_pCurrentScratchViewHeap != nullptr)
+    {
+        m_pGraphicsCommandQueue->ReleaseLinearViewHeap(m_pCurrentScratchViewHeap, syncFence);
+        m_pCurrentScratchViewHeap = nullptr;
+    }
+    if (m_pCurrentScratchSamplerHeap != nullptr)
+    {
+        m_pGraphicsCommandQueue->ReleaseLinearSamplerHeap(m_pCurrentScratchSamplerHeap, syncFence);
+        m_pCurrentScratchSamplerHeap = nullptr;
+    }
 
 #if 0
     // clear any state
@@ -174,8 +169,8 @@ bool D3D12GPUContext::Create()
     m_pConstants = new GPUContextConstants(this);
     CreateConstantBuffers();
 
-    // create queued frame data
-    if (!CreateInternalCommandLists())
+    // create command list
+    if (!CreateCommandList())
         return false;
 
     return true;
@@ -208,92 +203,27 @@ void D3D12GPUContext::CreateConstantBuffers()
     }
 }
 
-bool D3D12GPUContext::CreateInternalCommandLists()
+bool D3D12GPUContext::CreateCommandList()
 {
     HRESULT hResult;
-    uint32 frameLatency = m_pBackend->GetFrameLatency();
-    m_commandQueues.Resize(frameLatency);
-    m_commandQueues.ZeroContents();
 
-    // allocate command queue
-    D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 0 };
-    hResult = m_pD3DDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_pCommandQueue));
+    // allocate everything
+    m_pCurrentCommandAllocator = m_pGraphicsCommandQueue->RequestCommandAllocator();
+    m_pCurrentScratchBuffer = m_pGraphicsCommandQueue->RequestLinearBufferHeap();
+    m_pCurrentScratchViewHeap = m_pGraphicsCommandQueue->RequestLinearViewHeap();
+    m_pCurrentScratchSamplerHeap = m_pGraphicsCommandQueue->RequestLinearSamplerHeap();
+    if (m_pCurrentCommandAllocator == nullptr || m_pCurrentScratchBuffer == nullptr || m_pCurrentScratchViewHeap == nullptr || m_pCurrentScratchSamplerHeap == nullptr)
+        return false;
+
+    // create command list
+    hResult = m_pD3DDevice->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCurrentCommandAllocator, nullptr, IID_PPV_ARGS(&m_pCommandList));
     if (FAILED(hResult))
     {
-        Log_ErrorPrintf("CreateCommandQueue failed with hResult %08X", hResult);
+        Log_ErrorPrintf("CreateCommandList failed with hResult %08X", hResult);
         return false;
     }
 
-    // allocate fence
-    hResult = m_pD3DDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_pFence));
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("ID3D12Device::CreateFence failed with hResult %08X", hResult);
-        return false;
-    }
-
-    // allocate reached event
-    m_fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-    if (m_fenceEvent == NULL)
-    {
-        Log_ErrorPrintf("CreateEvent failed (%u).", GetLastError());
-        return false;
-    }
-
-    // allocate command lists
-    for (uint32 i = 0; i < frameLatency; i++)
-    {
-        DCommandQueue *pFrameData = &m_commandQueues[i];
-        pFrameData->FenceValue = 0;
-        pFrameData->Pending = false;
-
-        // allocate command allocator
-        hResult = m_pD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&pFrameData->pCommandAllocator));
-        if (FAILED(hResult))
-        {
-            Log_ErrorPrintf("ID3D12Device::CreateCommandAllocator failed with hResult %08X", hResult);
-            return false;
-        }
-
-        // allocate scratch buffer
-        pFrameData->pScratchBuffer = D3D12ScratchBuffer::Create(m_pD3DDevice, 16 * 1024 * 1024);
-        if (pFrameData->pScratchBuffer == nullptr)
-        {
-            Log_ErrorPrintf("Failed to allocate scratch buffer.");
-            return false;
-        }
-
-        // allocate view descriptor heap
-        pFrameData->pScratchViewHeap = D3D12ScratchDescriptorHeap::Create(m_pD3DDevice, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 16384);
-        pFrameData->pScratchSamplerHeap = D3D12ScratchDescriptorHeap::Create(m_pD3DDevice, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 2048);
-        if (pFrameData->pScratchViewHeap == nullptr || pFrameData->pScratchSamplerHeap == nullptr)
-        {
-            Log_ErrorPrintf("Failed to allocate scratch descriptor heaps.");
-            return false;
-        }
-    }
-
-    // allocate command list, temporarily using the first command allocator as a backing source
-    hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandQueues[0].pCommandAllocator, nullptr, IID_PPV_ARGS(&m_pCommandList));
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("ID3D12Device::CreateCommandList failed with hResult %08X", hResult);
-        return false;
-    }
-
-    // command list is expected to be in the closed state
-    hResult = m_pCommandList->Close();
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("ID3D12CommandList::Close failed with hResult %08X", hResult);
-        return false;
-    }
-
-    // first fence value is 1
-    m_nextFenceValue = 1;
-
-    // activate the first command queue
-    ActivateCommandQueue(0);
+    // set initial state
     RestoreCommandListDependantState();
     return true;
 }
@@ -305,38 +235,34 @@ void D3D12GPUContext::BeginFrame()
 
 void D3D12GPUContext::Flush()
 {
-    ExecuteCurrentCommandList(true);
+    FlushCommandList(true, false, false);
+    RestoreCommandListDependantState();
 }
 
 void D3D12GPUContext::Finish()
 {
-    ExecuteCurrentCommandList(false);
-    MoveToNextCommandQueue();
+    FlushCommandList(true, true, true);
     RestoreCommandListDependantState();
-    FinishPendingCommands();
 }
 
-void D3D12GPUContext::ExecuteCurrentCommandList(bool reopen)
+void D3D12GPUContext::FlushCommandList(bool reopen, bool wait, bool refreshAllocators)
 {
-    Timer timer;
+    uint64 fenceValue;
+
     // execute any queued commands on the immediate command list
     HRESULT hResult = m_pCommandList->Close();
     if (SUCCEEDED(hResult))
     {
-        //if (g_pRenderer != nullptr)
-            //Log_DevPrintf("Exec frame %u", g_pRenderer->GetFrameNumber());
-
-        m_pCurrentScratchBuffer->Commit();
-        m_pCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList **)&m_pCommandList);
+        // execute it and create a synchronization point
+        fenceValue = m_pGraphicsCommandQueue->ExecuteCommandList(m_pCommandList);
     }
     else
     {
         Log_ErrorPrintf("ID3D12CommandList::Close failed with hResult %08X, some may commands may not be executed. Recreating command list.", hResult);
 
         // create a new command list (documentation says that a command list that failed Close() will forever be in an error state)
-        DCommandQueue *pFrameData = &m_commandQueues[m_currentCommandQueueIndex];
         ID3D12GraphicsCommandList *pNewCommandList;
-        hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pFrameData->pCommandAllocator, nullptr, IID_PPV_ARGS(&pNewCommandList));
+        hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCurrentCommandAllocator, nullptr, IID_PPV_ARGS(&pNewCommandList));
         if (SUCCEEDED(hResult))
         {
             hResult = pNewCommandList->Close();
@@ -352,111 +278,93 @@ void D3D12GPUContext::ExecuteCurrentCommandList(bool reopen)
             // can't do much, leave the broken command list around, try next time..
             Log_ErrorPrintf("ID3D12Device::CreateCommandList failed with hResult %08X. Something is seriously wrong.", hResult);
         }
+
+        // create a synchronization point so we can still wait for the gpu to catch up
+        fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
+    }
+
+    if (wait)
+    {
+        // wait for the gpu to catch up
+        m_pBackend->GetGraphicsCommandQueue()->WaitForFence(fenceValue);
+
+        // no need to refresh allocators if we're waiting since that's implicitly done, we will reset the buffers/heaps though
+        m_pCurrentScratchBuffer->Reset(true);
+        m_pCurrentScratchViewHeap->Reset();
+        m_pCurrentScratchSamplerHeap->Reset();
+    }
+    else if (refreshAllocators)
+    {
+        GetNewAllocators(fenceValue);
     }
 
     if (reopen)
     {
-        if (!m_pCurrentScratchBuffer->Reset(false))
-            Log_ErrorPrintf("Failed to reset scratch buffer.");
-
-        hResult = m_pCommandList->Reset(m_commandQueues[m_currentCommandQueueIndex].pCommandAllocator, nullptr);
+        hResult = m_pCommandList->Reset(m_pCurrentCommandAllocator, nullptr);
         if (FAILED(hResult))
             Log_WarningPrintf("ID3D12CommandList:Reset failed with hResult %08X", hResult);
-
-        RestoreCommandListDependantState();
     }
+
+    // take this opportunity to clean up stale resources (even if we're not waiting, it's a good place, since the gpu will be busy for a while)
+    m_pGraphicsCommandQueue->ReleaseStaleResources();
 }
 
-void D3D12GPUContext::ActivateCommandQueue(uint32 index)
+void D3D12GPUContext::GetNewAllocators(uint64 fenceValue)
 {
-    Timer ttimer;
-    HRESULT hResult;
-    DCommandQueue *pFrameData = &m_commandQueues[index];
-    m_currentCommandQueueIndex = index;
-
-    // begin recording commands
-    Timer timer;
-    hResult = pFrameData->pCommandAllocator->Reset();
-    if (FAILED(hResult))
-        Log_ErrorPrintf("ID3D12CommandAllocator::Reset failed with hResult %08X", hResult);
-    hResult = m_pCommandList->Reset(pFrameData->pCommandAllocator, nullptr);
-    if (FAILED(hResult))
-        Log_ErrorPrintf("ID3D12CommandList::Reset failed with hResult %08X", hResult);
-
-    // update pointers
-    pFrameData->FenceValue = m_nextFenceValue++;
-    m_pCurrentScratchBuffer = pFrameData->pScratchBuffer;
-    m_pCurrentScratchSamplerHeap = pFrameData->pScratchSamplerHeap;
-    m_pCurrentScratchViewHeap = pFrameData->pScratchViewHeap;
-
-    // reset scratch buffer
-    pFrameData->pScratchBuffer->Reset(true);
-    pFrameData->pScratchViewHeap->Reset();
-    pFrameData->pScratchSamplerHeap->Reset();
-
-    // add descriptor heaps
-    m_currentDescriptorHeaps.Clear();
-    m_currentDescriptorHeaps.Add(m_pCurrentScratchViewHeap->GetD3DHeap());
-    m_currentDescriptorHeaps.Add(m_pCurrentScratchSamplerHeap->GetD3DHeap());
-
-    // update destruction fence value
-    m_pBackend->SetCleanupFenceValue(pFrameData->FenceValue);
-    //Log_DevPrintf("Command queue %u activated.", m_currentCommandQueueIndex);
-}
-
-void D3D12GPUContext::MoveToNextCommandQueue()
-{
-    // set up fence for the next time round (for the current command list)
-    DCommandQueue *pFrameData = &m_commandQueues[m_currentCommandQueueIndex];
-    HRESULT hResult = m_pCommandQueue->Signal(m_pFence, pFrameData->FenceValue);
-    if (FAILED(hResult))
-        Log_ErrorPrintf("ID3D12CommandQueue::Signal failed with hResult %08X", hResult);
-
-    // mark as needing to catch up before we can re-use this queue
-    pFrameData->Pending = true;
-
-    // next frame
-    uint32 nextCommandQueueIndex = (m_currentCommandQueueIndex + 1) % D3D12RenderBackend::GetInstance()->GetFrameLatency();
-
-    // wait for these operations to finish
-    if (m_commandQueues[nextCommandQueueIndex].Pending)
-        WaitForCommandQueue(nextCommandQueueIndex);
-
-    // activate it
-    ActivateCommandQueue(nextCommandQueueIndex);
-}
-
-void D3D12GPUContext::FinishPendingCommands()
-{
-    // ensure all other frames have been reached
-    uint32 frameLatency = m_pBackend->GetFrameLatency();
-    for (uint32 queuedFrameIndex = (m_currentCommandQueueIndex + 1) % frameLatency; queuedFrameIndex != m_currentCommandQueueIndex; queuedFrameIndex = (queuedFrameIndex + 1) % frameLatency)
+    // get a new set of allocators. if anything fails, wait for the gpu, and re-use the current one.
+    ID3D12CommandAllocator *pCommandAllocator = m_pGraphicsCommandQueue->RequestCommandAllocator();
+    if (pCommandAllocator == nullptr)
     {
-        if (m_commandQueues[queuedFrameIndex].Pending)
-            WaitForCommandQueue(queuedFrameIndex);
+        m_pGraphicsCommandQueue->WaitForFence(fenceValue);
+        pCommandAllocator->Reset();
+    }
+    else
+    {
+        m_pGraphicsCommandQueue->ReleaseCommandAllocator(m_pCurrentCommandAllocator, fenceValue);
+        m_pCurrentCommandAllocator = pCommandAllocator;
+    }
+
+    D3D12LinearBufferHeap *pBufferHeap = m_pGraphicsCommandQueue->RequestLinearBufferHeap();
+    if (pBufferHeap == nullptr)
+    {
+        m_pGraphicsCommandQueue->WaitForFence(fenceValue);
+        pBufferHeap->Reset(true);
+    }
+    else
+    {
+        m_pGraphicsCommandQueue->ReleaseLinearBufferHeap(m_pCurrentScratchBuffer, fenceValue);
+        m_pCurrentScratchBuffer = pBufferHeap;
+    }
+
+    D3D12LinearDescriptorHeap *pViewHeap = m_pGraphicsCommandQueue->RequestLinearViewHeap();
+    if (pViewHeap == nullptr)
+    {
+        m_pGraphicsCommandQueue->WaitForFence(fenceValue);
+        pViewHeap->Reset();
+    }
+    else
+    {
+        m_pGraphicsCommandQueue->ReleaseLinearViewHeap(m_pCurrentScratchViewHeap, fenceValue);
+        m_pCurrentScratchViewHeap = pViewHeap;
+    }
+
+    D3D12LinearDescriptorHeap *pSamplerHeap = m_pGraphicsCommandQueue->RequestLinearSamplerHeap();
+    if (pSamplerHeap == nullptr)
+    {
+        m_pGraphicsCommandQueue->WaitForFence(fenceValue);
+        pSamplerHeap->Reset();
+    }
+    else
+    {
+        m_pGraphicsCommandQueue->ReleaseLinearSamplerHeap(m_pCurrentScratchSamplerHeap, fenceValue);
+        m_pCurrentScratchSamplerHeap = pSamplerHeap;
     }
 }
 
-void D3D12GPUContext::WaitForCommandQueue(uint32 index)
+void D3D12GPUContext::UpdateShaderDescriptorHeaps()
 {
-    DCommandQueue *pFrameData = &m_commandQueues[index];
-    DebugAssert(pFrameData->Pending);
-
-    // wait for the gpu to catch up if it's behind
-    if (m_pFence->GetCompletedValue() < pFrameData->FenceValue)
-    {
-        //Timer timer;
-        //Log_DevPrintf("Waiting for gpu catchup.");
-        m_pFence->SetEventOnCompletion(pFrameData->FenceValue, m_fenceEvent);
-        WaitForSingleObject(m_fenceEvent, INFINITE);
-        //Log_DevPrintf("GPU idle. Time = %.4f ms", timer.GetTimeMilliseconds());
-    }
-
-    // release resources
-    m_pBackend->DeletePendingResources(pFrameData->FenceValue);
-
-    // no longer active
-    pFrameData->Pending = false;
+    ID3D12DescriptorHeap *pDescriptorHeaps[] = { m_pCurrentScratchViewHeap->GetD3DHeap(), m_pCurrentScratchSamplerHeap->GetD3DHeap() };
+    m_pCommandList->SetDescriptorHeaps(countof(pDescriptorHeaps), pDescriptorHeaps);
 }
 
 void D3D12GPUContext::ClearCommandListDependantState()
@@ -487,7 +395,7 @@ void D3D12GPUContext::ClearCommandListDependantState()
 void D3D12GPUContext::RestoreCommandListDependantState()
 {
     // graphics root
-    m_pCommandList->SetDescriptorHeaps(m_currentDescriptorHeaps.GetSize(), m_currentDescriptorHeaps.GetBasePointer());
+    UpdateShaderDescriptorHeaps();
     m_pCommandList->SetGraphicsRootSignature(m_pBackend->GetLegacyGraphicsRootSignature());
     m_pCommandList->SetComputeRootSignature(m_pBackend->GetLegacyComputeRootSignature());
 
@@ -509,30 +417,34 @@ void D3D12GPUContext::RestoreCommandListDependantState()
 
 bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress)
 {
+    // outright refuse if it's larger than the buffer size (since the alloc will always fail)
+    if (size > m_pGraphicsCommandQueue->GetLinearBufferHeapSize())
+        return false;
+
     uint32 offset;
     if (!m_pCurrentScratchBuffer->Allocate(size, &offset))
     {
-        // work out new buffer size
-        uint32 newBufferSize = Max(m_pCurrentScratchBuffer->GetSize() + size, m_pCurrentScratchBuffer->GetSize() * 2);
-        Log_PerfPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Scratch buffer (%u bytes) overflow, allocating new buffer of %u bytes.", m_pCurrentScratchBuffer->GetSize(), newBufferSize);
-
-        // allocate new buffer
-        D3D12ScratchBuffer *pNewScratchBuffer = D3D12ScratchBuffer::Create(m_pD3DDevice, newBufferSize);
-        if (pNewScratchBuffer == nullptr)
+        // get a new buffer (well, try to)
+        // this could possibly be improved by caching the fence value from the last command list, though then it won't be re-used as soon as possible.
+        uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
+        D3D12LinearBufferHeap *pNewBuffer = m_pGraphicsCommandQueue->RequestLinearBufferHeap();
+        if (pNewBuffer != nullptr)
         {
-            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Failed to allocate new scratch buffer of size %u", newBufferSize);
-            return false;
+            // release the old buffer
+            m_pGraphicsCommandQueue->ReleaseLinearBufferHeap(m_pCurrentScratchBuffer, fenceValue);
+            m_pCurrentScratchBuffer = pNewBuffer;
+        }
+        else
+        {
+            // wait for this one to finish
+            m_pGraphicsCommandQueue->WaitForFence(fenceValue);
+            m_pCurrentScratchBuffer->Reset(true);
         }
 
-        // nuke current scratch buffer (the internal buffer will be scheduled for deletion after the frame)
-        delete m_pCurrentScratchBuffer;
-        m_pCurrentScratchBuffer = pNewScratchBuffer;
-        m_commandQueues[m_currentCommandQueueIndex].pScratchBuffer = pNewScratchBuffer;
-
-        // allocate from new scratch buffer
+        // retry allocation on new buffer
         if (!m_pCurrentScratchBuffer->Allocate(size, &offset))
         {
-            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchBufferMemory: Failed to allocate new scratch buffer (this shouldn't happen)");
+            Log_ErrorPrintf("Failed to allocate on new scratch buffer (this shouldn't happen)");
             return false;
         }
     }
@@ -551,32 +463,34 @@ bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **
 
 bool D3D12GPUContext::AllocateScratchView(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle)
 {
+    // outright refuse if it's larger than the buffer size (since the alloc will always fail)
+    if (count > m_pGraphicsCommandQueue->GetLinearViewHeapSize())
+        return false;
+
     if (!m_pCurrentScratchViewHeap->Allocate(count, pOutCPUHandle, pOutGPUHandle))
     {
-        // work out new descriptor count
-        uint32 newViewCount = Max(m_pCurrentScratchViewHeap->GetSize() + count, m_pCurrentScratchViewHeap->GetSize() * 2);
-        Log_PerfPrintf("D3D12GPUContext::AllocateScratchView: Scratch view heap (%u entries) overflow, allocating new heap of %u entries.", m_pCurrentScratchViewHeap->GetSize(), newViewCount);
-
-        // allocate new heap
-        D3D12ScratchDescriptorHeap *pNewHeap = D3D12ScratchDescriptorHeap::Create(m_pD3DDevice, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, newViewCount);
-        if (pNewHeap == nullptr)
+        // get a new buffer (well, try to)
+        // this could possibly be improved by caching the fence value from the last command list, though then it won't be re-used as soon as possible.
+        uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
+        D3D12LinearDescriptorHeap *pNewHeap = m_pGraphicsCommandQueue->RequestLinearViewHeap();
+        if (pNewHeap != nullptr)
         {
-            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchView: Failed to allocate new scratch heap of size %u", newViewCount);
-            return false;
+            // release the old buffer
+            m_pGraphicsCommandQueue->ReleaseLinearViewHeap(m_pCurrentScratchViewHeap, fenceValue);
+            m_pCurrentScratchViewHeap = pNewHeap;
+            UpdateShaderDescriptorHeaps();
+        }
+        else
+        {
+            // wait for this one to finish
+            m_pGraphicsCommandQueue->WaitForFence(fenceValue);
+            m_pCurrentScratchViewHeap->Reset();
         }
 
-        // nuke current heap [will get postponed to delete later]
-        delete m_pCurrentScratchViewHeap;
-        m_pCurrentScratchViewHeap = pNewHeap;
-        m_commandQueues[m_currentCommandQueueIndex].pScratchViewHeap = pNewHeap;
-
-        // add to descriptor table list
-        m_currentDescriptorHeaps.Add(pNewHeap->GetD3DHeap());
-
-        // allocate from new heap
+        // retry allocation on new buffer
         if (!m_pCurrentScratchViewHeap->Allocate(count, pOutCPUHandle, pOutGPUHandle))
         {
-            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchView: Failed to allocate new heap (this shouldn't happen)");
+            Log_ErrorPrintf("Failed to allocate on new scratch buffer (this shouldn't happen)");
             return false;
         }
     }
@@ -586,32 +500,34 @@ bool D3D12GPUContext::AllocateScratchView(uint32 count, D3D12_CPU_DESCRIPTOR_HAN
 
 bool D3D12GPUContext::AllocateScratchSamplers(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle)
 {
+    // outright refuse if it's larger than the buffer size (since the alloc will always fail)
+    if (count > m_pGraphicsCommandQueue->GetLinearSamplerHeapSize())
+        return false;
+
     if (!m_pCurrentScratchSamplerHeap->Allocate(count, pOutCPUHandle, pOutGPUHandle))
     {
-        // work out new descriptor count
-        uint32 newSamplerCount = Max(m_pCurrentScratchViewHeap->GetSize() + count, m_pCurrentScratchViewHeap->GetSize() * 2);
-        Log_PerfPrintf("D3D12GPUContext::AllocateScratchView: Scratch view heap (%u entries) overflow, allocating new heap of %u entries.", m_pCurrentScratchViewHeap->GetSize(), newSamplerCount);
-
-        // allocate new heap
-        D3D12ScratchDescriptorHeap *pNewHeap = D3D12ScratchDescriptorHeap::Create(m_pD3DDevice, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, newSamplerCount);
-        if (pNewHeap == nullptr)
+        // get a new buffer (well, try to)
+        // this could possibly be improved by caching the fence value from the last command list, though then it won't be re-used as soon as possible.
+        uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
+        D3D12LinearDescriptorHeap *pNewHeap = m_pGraphicsCommandQueue->RequestLinearSamplerHeap();
+        if (pNewHeap != nullptr)
         {
-            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchView: Failed to allocate new scratch heap of size %u", newSamplerCount);
-            return false;
+            // release the old buffer
+            m_pGraphicsCommandQueue->ReleaseLinearSamplerHeap(m_pCurrentScratchSamplerHeap, fenceValue);
+            m_pCurrentScratchSamplerHeap = pNewHeap;
+            UpdateShaderDescriptorHeaps();
+        }
+        else
+        {
+            // wait for this one to finish
+            m_pGraphicsCommandQueue->WaitForFence(fenceValue);
+            m_pCurrentScratchSamplerHeap->Reset();
         }
 
-        // nuke current heap [will get postponed to delete later]
-        delete m_pCurrentScratchSamplerHeap;
-        m_pCurrentScratchSamplerHeap = pNewHeap;
-        m_commandQueues[m_currentCommandQueueIndex].pScratchSamplerHeap = pNewHeap;
-
-        // add to descriptor table list
-        m_currentDescriptorHeaps.Add(pNewHeap->GetD3DHeap());
-
-        // allocate from new heap
+        // retry allocation on new buffer
         if (!m_pCurrentScratchSamplerHeap->Allocate(count, pOutCPUHandle, pOutGPUHandle))
         {
-            Log_ErrorPrintf("D3D12GPUContext::AllocateScratchView: Failed to allocate new heap (this shouldn't happen)");
+            Log_ErrorPrintf("Failed to allocate on new scratch buffer (this shouldn't happen)");
             return false;
         }
     }
@@ -992,15 +908,12 @@ void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
     // the barrier *to* present state has to be queued
     ResourceBarrier(m_pCurrentSwapChain->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
-    // ensure all commands have been queued
-    ExecuteCurrentCommandList(false);
+    // ensure all commands have been queued, and get a new set of allocators
+    FlushCommandList(true, false, true);
 
     // present the image
     m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
     m_pCurrentSwapChain->MoveToNextBackBuffer();
-
-    // move to next command list (placed after here so the present happens before the fence)
-    MoveToNextCommandQueue();
 
     // restore state (since new command list)
     RestoreCommandListDependantState();
@@ -1819,8 +1732,8 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     vertexBufferView.StrideInBytes = vertexSize;
     m_pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
     m_pCommandList->DrawInstanced(nVertices, 1, 0, 0);
-    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(pResource);
-    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(pResource2);
+    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(pResource);
+    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(pResource2);
 #endif
 
     g_pRenderer->GetStats()->IncrementDrawCallCounter();

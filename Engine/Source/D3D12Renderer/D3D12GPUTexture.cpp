@@ -93,12 +93,12 @@ D3D12GPUTexture2D::D3D12GPUTexture2D(const GPU_TEXTURE2D_DESC *pDesc, ID3D12Reso
 D3D12GPUTexture2D::~D3D12GPUTexture2D()
 {
     if (!m_samplerHandle.IsNull())
-        D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(m_samplerHandle);
+        D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_samplerHandle);
 
     if (!m_srvHandle.IsNull())
-        D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(m_srvHandle);
+        D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_srvHandle);
 
-    D3D12RenderBackend::GetInstance()->ScheduleResourceForDeletion(m_pD3DResource);
+    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(m_pD3DResource);
 }
 
 void D3D12GPUTexture2D::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -190,7 +190,7 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
     if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_SHADER_BINDABLE)
     {
         // allocate a descriptor
-        if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Allocate(&srvHandle))
+        if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Allocate(&srvHandle))
         {
             pD3DResource->Release();
             return false;
@@ -217,16 +217,16 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         if (!D3D12Helpers::FillD3D12SamplerStateDesc(pSamplerStateDesc, &samplerDesc))
         {
             Log_ErrorPrintf("Failed to convert sampler state description.");
-            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
             pD3DResource->Release();
             return false;
         }
 
         // allocate a descriptor
-        if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&samplerHandle))
+        if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&samplerHandle))
         {
             Log_ErrorPrintf("Failed to allocator sampler descriptor.");
-            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
             pD3DResource->Release();
             return false;
         }
@@ -253,8 +253,8 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("CreateCommittedResource for upload resource failed with hResult %08X", hResult);
-            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
-            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
+            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
             pD3DResource->Release();
             return false;
         }
@@ -267,8 +267,8 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         {
             Log_ErrorPrintf("Map upload subresource for upload resource failed with hResult %08X", hResult);
             pUploadResource->Release();
-            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
-            m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
+            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
             pD3DResource->Release();
             return false;
         }
@@ -406,7 +406,7 @@ D3D12GPURenderTargetView::D3D12GPURenderTargetView(GPUTexture *pTexture, const G
 
 D3D12GPURenderTargetView::~D3D12GPURenderTargetView()
 {
-    D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(m_descriptorHandle);
+    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_descriptorHandle);
 }
 
 void D3D12GPURenderTargetView::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -521,7 +521,7 @@ GPURenderTargetView *D3D12GPUDevice::CreateRenderTargetView(GPUTexture *pTexture
 
     // allocate handle
     D3D12DescriptorHandle handle;
-    if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Allocate(&handle))
+    if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Allocate(&handle))
     {
         Log_ErrorPrintf("D3D12GPUDevice::CreateRenderTargetView: Failed to allocate descriptor.");
         return nullptr;
@@ -542,7 +542,7 @@ D3D12GPUDepthStencilBufferView::D3D12GPUDepthStencilBufferView(GPUTexture *pText
 
 D3D12GPUDepthStencilBufferView::~D3D12GPUDepthStencilBufferView()
 {
-    D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(m_descriptorHandle);
+    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_descriptorHandle);
 }
 
 void D3D12GPUDepthStencilBufferView::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -659,7 +659,7 @@ GPUDepthStencilBufferView *D3D12GPUDevice::CreateDepthStencilBufferView(GPUTextu
 
     // allocate handle
     D3D12DescriptorHandle handle;
-    if (!m_pBackend->GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Allocate(&handle))
+    if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Allocate(&handle))
     {
         Log_ErrorPrintf("D3D12GPUDevice::CreateRenderTargetView: Failed to allocate descriptor.");
         return nullptr;
@@ -680,7 +680,7 @@ D3D12GPUComputeView::D3D12GPUComputeView(GPUResource *pResource, const GPU_COMPU
 
 D3D12GPUComputeView::~D3D12GPUComputeView()
 {
-    D3D12RenderBackend::GetInstance()->ScheduleDescriptorForDeletion(m_descriptorHandle);
+    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_descriptorHandle);
 }
 
 void D3D12GPUComputeView::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const

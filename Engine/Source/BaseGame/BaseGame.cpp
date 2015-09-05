@@ -434,8 +434,6 @@ void BaseGame::PopForcedAbsoluteMouseMovement()
 
 void BaseGame::RenderThreadCollectEvents(float deltaTime)
 {
-    MICROPROFILE_SCOPEI("BaseGame", "RenderThreadCollectEvents", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
-
     // get new messages from the underlying subsystem
     SDL_PumpEvents();
 
@@ -837,6 +835,9 @@ void BaseGame::RenderThreadFrame(float deltaTime)
 {
     MICROPROFILE_SCOPEI("BaseGame", "RenderThreadFrame", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
     MICROPROFILE_SCOPEGPUI("RenderThreadFrame", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+
+    // reset counters
+    g_pRenderer->GetCounters()->ResetPerFrameCounters();
 
     // collect events
     {

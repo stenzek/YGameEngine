@@ -26,11 +26,6 @@ void VSMain(in VertexFactoryInput in_input,
     out_screenPosition = mul(ViewConstants.ViewProjectionMatrix, float4(worldPosition, 1));
 }
 
-float4 PSMain() : SV_Target
-{
-    return float4(0, 0, 0, 0);
-}
-
 #else
 
 // Shader with materials
@@ -49,14 +44,20 @@ void VSMain(in VertexFactoryInput in_input,
 	out_screenPosition = mul(ViewConstants.ViewProjectionMatrix, float4(worldPosition, 1));
 }
 
-void PSMain(in MaterialPSInterpolants in_interpolants,
-            out float4 out_target : SV_Target)
+void PSMain(in MaterialPSInterpolants in_interpolants
+#if RENDERER_FEATURE_LEVEL < FEATURE_LEVEL_SM4
+            , out float4 out_target : SV_Target
+#endif
+           )
 {
     MaterialPSInputParameters MPIParameters = GetMaterialPSInputParameters(in_interpolants);
     
 #if MATERIAL_BLENDING_MODE_MASKED
     // If using masked blending, use CalcOutputColor to clip the pixel
-    out_target = MaterialCalcOutputColor(MPIParameters, float3(0, 0, 0));
+    MaterialCalcOutputColor(MPIParameters, float3(0, 0, 0));
+    #if FEATURE_LEVEL < FEATURE_LEVEL_SM4
+        out_target = float4(0, 0, 0, 0);
+    #endif
 #else
     // Get the opacity, then clip from that
     clip(MaterialGetOpacity(MPIParameters) - 0.8);

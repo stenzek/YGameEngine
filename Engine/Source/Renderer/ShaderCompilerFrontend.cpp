@@ -220,6 +220,25 @@ static void AddCommonDefines(RENDERER_PLATFORM platform, RENDERER_FEATURE_LEVEL 
                              const MaterialShader *pMaterialShader, uint32 materialShaderFlags,
                              ShaderCompilerParameters *pParameters)
 {  
+    switch (platform)
+    {
+    case RENDERER_PLATFORM_D3D11:
+        pParameters->AddPreprocessorMacro("PLATFORM_D3D11", "1");
+        break;
+
+    case RENDERER_PLATFORM_D3D12:
+        pParameters->AddPreprocessorMacro("PLATFORM_D3D12", "1");
+        break;
+
+    case RENDERER_PLATFORM_OPENGL:
+        pParameters->AddPreprocessorMacro("PLATFORM_OPENGL", "1");
+        break;
+
+    case RENDERER_PLATFORM_OPENGLES2:
+        pParameters->AddPreprocessorMacro("PLATFORM_OPENGLES2", "1");
+        break;
+    }
+
     // platform-specific defines
     switch (featureLevel)
     {

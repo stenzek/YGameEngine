@@ -34,6 +34,7 @@ public:
     const char *GetInstanceName() const { return m_instanceName; }
     const RENDERER_PLATFORM GetPlatformRequirement() const { return m_platformRequirement; }
     const RENDERER_FEATURE_LEVEL GetMinimumFeatureLevel() const { return m_minimumFeatureLevel; }
+    const SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY GetUpdateFrequency() const { return m_updateFrequency; }
 
     const SHADER_CONSTANT_BUFFER_FIELD_DECLARATION *GetFieldDeclaration(uint32 field) const { DebugAssert(field < m_nFields); return &m_pFields[field]; }
     const uint32 GetFieldCount() const { return m_nFields; }

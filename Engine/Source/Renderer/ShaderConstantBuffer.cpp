@@ -14,6 +14,7 @@ ShaderConstantBuffer::ShaderConstantBuffer(const char *bufferName, const char *i
       m_bufferName(bufferName),
       m_instanceName(instanceName),
       m_platformRequirement(platformRequirement),
+      m_updateFrequency(updateFrequency),
       m_pFields(pFieldDeclarations),
       m_nFields(0)
 {
@@ -30,6 +31,7 @@ ShaderConstantBuffer::ShaderConstantBuffer(const char *bufferName, const char *i
       m_bufferName(bufferName),
       m_instanceName(instanceName),
       m_platformRequirement(platformRequirement),
+      m_updateFrequency(updateFrequency),
       m_pFields(nullptr),
       m_nFields(0),
       m_bufferSize(structSize)

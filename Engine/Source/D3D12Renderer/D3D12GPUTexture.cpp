@@ -831,19 +831,19 @@ GPUDepthStencilBufferView *D3D12GPUDevice::CreateDepthStencilBufferView(GPUTextu
         dsvDesc.Texture2D.MipSlice = pDesc->MipLevel;
         break;
 
-#if 0
     case GPU_RESOURCE_TYPE_TEXTURE2DARRAY:
-        pD3DResource = static_cast<D3D12GPUTexture2DArray *>(pTexture)->GetD3DTexture();
-        creationFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2DArray *>(pTexture)->GetDesc()->Format);
+        pD3DResource = static_cast<D3D12GPUTexture2DArray *>(pTexture)->GetD3DResource();
+        creationFormat = D3D12Helpers::PixelFormatToDXGIFormat(static_cast<D3D12GPUTexture2DArray *>(pTexture)->GetDesc()->Format);
         MapTextureFormatToViewFormat(&creationFormat, &srvFormat, &rtvFormat, &dsvFormat);
         dsvDesc.Format = dsvFormat;
         dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-        dsvDesc.Flags = 0;
+        dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
         dsvDesc.Texture2DArray.MipSlice = pDesc->MipLevel;
         dsvDesc.Texture2DArray.FirstArraySlice = pDesc->FirstLayerIndex;
         dsvDesc.Texture2DArray.ArraySize = pDesc->NumLayers;
         break;
 
+#if 0
     case GPU_RESOURCE_TYPE_TEXTURECUBE:
         pD3DResource = static_cast<D3D12GPUTextureCube *>(pTexture)->GetD3DTexture();
         creationFormat = D3D12TypeConversion::PixelFormatToDXGIFormat(static_cast<D3D12GPUTextureCube *>(pTexture)->GetDesc()->Format);

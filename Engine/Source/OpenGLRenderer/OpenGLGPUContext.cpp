@@ -1516,7 +1516,7 @@ void OpenGLGPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex
     }
 
     // changed?
-    DebugAssert((offset + count) <= constantBuffer->Size);
+    DebugAssert(count > 0 && (offset + count) <= constantBuffer->Size);
     if (Y_memcmp(constantBuffer->pLocalMemory + offset, pData, count) != 0)
     {
         // write it
@@ -1531,7 +1531,7 @@ void OpenGLGPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex
         else
         {
             constantBuffer->DirtyLowerBounds = Min(constantBuffer->DirtyLowerBounds, (int32)offset);
-            constantBuffer->DirtyUpperBounds = Max(constantBuffer->DirtyUpperBounds, (int32)(offset + count));
+            constantBuffer->DirtyUpperBounds = Max(constantBuffer->DirtyUpperBounds, (int32)(offset + count - 1));
         }
 
         // commit buffer?
@@ -1551,7 +1551,7 @@ void OpenGLGPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fie
     }
 
     // changed?
-    DebugAssert((offset + count) <= constantBuffer->Size);
+    DebugAssert(count > 0 && (offset + count) <= constantBuffer->Size);
     if (Y_memcmp_stride(constantBuffer->pLocalMemory + offset, bufferStride, pData, copySize, copySize, count) != 0)
     {
         // write it
@@ -1567,7 +1567,7 @@ void OpenGLGPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fie
         else
         {
             constantBuffer->DirtyLowerBounds = Min(constantBuffer->DirtyLowerBounds, (int32)offset);
-            constantBuffer->DirtyUpperBounds = Max(constantBuffer->DirtyUpperBounds, (int32)(offset + writtenCount));
+            constantBuffer->DirtyUpperBounds = Max(constantBuffer->DirtyUpperBounds, (int32)(offset + writtenCount - 1));
         }
 
         // commit buffer?

@@ -380,6 +380,7 @@ void D3D12GPUContext::ClearCommandListDependantState()
     SAFE_RELEASE(m_pCurrentDepthBufferView);
     m_nCurrentRenderTargets = 0;
     SynchronizeRenderTargetsAndUAVs();
+    UpdateScissorRect();
 
     // predicate
     //SAFE_RELEASE(m_pCurrentPredicate);
@@ -405,12 +406,11 @@ void D3D12GPUContext::RestoreCommandListDependantState()
 
     // render targets
     SynchronizeRenderTargetsAndUAVs();
+    UpdateScissorRect();
 
     // other stuff
     D3D12_VIEWPORT D3D12Viewport = { (float)m_currentViewport.TopLeftX, (float)m_currentViewport.TopLeftY, (float)m_currentViewport.Width, (float)m_currentViewport.Height, m_currentViewport.MinDepth, m_currentViewport.MaxDepth };
-    D3D12_RECT D3D12ScissorRect = { (LONG)m_scissorRect.Left, (LONG)m_scissorRect.Top, (LONG)m_scissorRect.Right, (LONG)m_scissorRect.Bottom };
     m_pCommandList->RSSetViewports(1, &D3D12Viewport);
-    m_pCommandList->RSSetScissorRects(1, &D3D12ScissorRect);
     m_pCommandList->IASetPrimitiveTopology(D3D12Helpers::GetD3D12PrimitiveTopology(m_currentTopology));
     m_pCommandList->OMSetBlendFactor(m_currentBlendStateBlendFactors);
     m_pCommandList->OMSetStencilRef(m_currentDepthStencilRef);
@@ -536,6 +536,41 @@ bool D3D12GPUContext::AllocateScratchSamplers(uint32 count, D3D12_CPU_DESCRIPTOR
     return true;
 }
 
+void D3D12GPUContext::GetCurrentRenderTargetDimensions(uint32 *width, uint32 *height)
+{
+    uint3 textureDimensions;
+    if (m_pCurrentDepthBufferView != nullptr)
+        textureDimensions = Renderer::GetTextureDimensions(m_pCurrentDepthBufferView->GetTargetTexture());
+    else if (m_nCurrentRenderTargets > 0)
+        textureDimensions = Renderer::GetTextureDimensions(m_pCurrentRenderTargetViews[0]->GetTargetTexture());
+    else if (m_pCurrentSwapChain != nullptr)
+        textureDimensions.Set(m_pCurrentSwapChain->GetWidth(), m_pCurrentSwapChain->GetHeight(), 1);
+    else
+        textureDimensions.Set(1, 1, 1);
+
+    *width = textureDimensions.x;
+    *height = textureDimensions.y;
+}
+
+void D3D12GPUContext::UpdateScissorRect()
+{
+    if (m_pCurrentRasterizerState != nullptr && m_pCurrentRasterizerState->GetDesc()->ScissorEnable)
+    {
+        D3D12_RECT scissorRect = { (LONG)m_scissorRect.Left, (LONG)m_scissorRect.Top, (LONG)m_scissorRect.Right, (LONG)m_scissorRect.Bottom };
+        m_pCommandList->RSSetScissorRects(1, &scissorRect);
+    }
+    else
+    {
+        // get current render target dimensions
+        uint32 width, height;
+        GetCurrentRenderTargetDimensions(&width, &height);
+
+        // set scissor
+        D3D12_RECT scissorRect = { (LONG)0, (LONG)0, (LONG)width, (LONG)height };
+        m_pCommandList->RSSetScissorRects(1, &scissorRect);
+    }
+}
+
 void D3D12GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffers /* = true */, bool clearStates /* = true */, bool clearRenderTargets /* = true */)
 {
     if (clearShaders)
@@ -598,9 +633,6 @@ void D3D12GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffe
 
         RENDERER_VIEWPORT viewport(0, 0, 0, 0, 0.0f, 1.0f);
         SetViewport(&viewport);
-
-        RENDERER_SCISSOR_RECT scissor(0, 0, 0, 0);
-        SetScissorRect(&scissor);
     }
 
     if (clearRenderTargets)
@@ -618,13 +650,19 @@ void D3D12GPUContext::SetRasterizerState(GPURasterizerState *pRasterizerState)
 {
     if (m_pCurrentRasterizerState != pRasterizerState)
     {
+        bool oldScissorState = (m_pCurrentRasterizerState != nullptr) ? m_pCurrentRasterizerState->GetDesc()->ScissorEnable : false;
         if (m_pCurrentRasterizerState != nullptr)
             m_pCurrentRasterizerState->Release();
 
+        bool newScissorState = (pRasterizerState != nullptr) ? pRasterizerState->GetDesc()->ScissorEnable : false;
         if ((m_pCurrentRasterizerState = static_cast<D3D12GPURasterizerState *>(pRasterizerState)) != nullptr)
             m_pCurrentRasterizerState->AddRef();
 
         m_pipelineChanged = true;
+
+        // set scissor rect if scissor is not enabled
+        if (oldScissorState != newScissorState)
+            UpdateScissorRect();
     }
 }
 
@@ -714,38 +752,21 @@ void D3D12GPUContext::SetFullViewport(GPUTexture *pForRenderTarget /* = NULL */)
     RENDERER_VIEWPORT viewport;
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
-
-    if (pForRenderTarget == NULL && m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == NULL)
-    {
-        viewport.Width = m_pCurrentSwapChain->GetWidth();
-        viewport.Height = m_pCurrentSwapChain->GetHeight();
-    }
-    else
-    {
-        DebugAssert(m_pCurrentRenderTargetViews[0] != NULL || pForRenderTarget != NULL);
-
-        GPUTexture *pRT = pForRenderTarget;
-        if (pRT != nullptr || m_nCurrentRenderTargets > 0)
-        {
-            uint3 renderTargetDimensions = Renderer::GetTextureDimensions((pRT != nullptr) ? pRT : m_pCurrentRenderTargetViews[0]->GetTargetTexture());
-            viewport.Width = renderTargetDimensions.x;
-            viewport.Height = renderTargetDimensions.y;
-        }
-        else
-        {
-            viewport.Width = m_pCurrentSwapChain->GetWidth();
-            viewport.Height = m_pCurrentSwapChain->GetHeight();
-        }
-    }
-
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
 
-    SetViewport(&viewport);
+    if (pForRenderTarget != nullptr)
+    {
+        uint3 textureDimensions = Renderer::GetTextureDimensions(pForRenderTarget);
+        viewport.Width = textureDimensions.x;
+        viewport.Height = textureDimensions.y;
+    }
+    else
+    {
+        GetCurrentRenderTargetDimensions(&viewport.Width, &viewport.Height);
+    }
 
-    RENDERER_SCISSOR_RECT scissorRect;
-    scissorRect.Set(0, 0, viewport.Width - 1, viewport.Height - 1);
-    SetScissorRect(&scissorRect);
+    SetViewport(&viewport);
 }
 
 const RENDERER_SCISSOR_RECT *D3D12GPUContext::GetScissorRect()
@@ -760,8 +781,12 @@ void D3D12GPUContext::SetScissorRect(const RENDERER_SCISSOR_RECT *pScissorRect)
 
     Y_memcpy(&m_scissorRect, pScissorRect, sizeof(m_scissorRect));
 
-    D3D12_RECT D3D12ScissorRect = { (LONG)m_scissorRect.Left, (LONG)m_scissorRect.Top, (LONG)m_scissorRect.Right, (LONG)m_scissorRect.Bottom };
-    m_pCommandList->RSSetScissorRects(1, &D3D12ScissorRect);
+    // only set if rasterizer state permits
+    if (m_pCurrentRasterizerState != nullptr && m_pCurrentRasterizerState->GetDesc()->ScissorEnable)
+    {
+        D3D12_RECT D3D12ScissorRect = { (LONG)m_scissorRect.Left, (LONG)m_scissorRect.Top, (LONG)m_scissorRect.Right, (LONG)m_scissorRect.Bottom };
+        m_pCommandList->RSSetScissorRects(1, &D3D12ScissorRect);
+    }
 }
 
 void D3D12GPUContext::ClearTargets(bool clearColor /* = true */, bool clearDepth /* = true */, bool clearStencil /* = true */, const float4 &clearColorValue /* = float4::Zero */, float clearDepthValue /* = 1.0f */, uint8 clearStencilValue /* = 0 */)
@@ -849,7 +874,10 @@ void D3D12GPUContext::SetOutputBuffer(GPUOutputBuffer *pSwapChain)
 
     // Currently rendering to window?
     if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
+    {
         SynchronizeRenderTargetsAndUAVs();
+        UpdateScissorRect();
+    }
 
     // update references
     if (pOldSwapChain != nullptr)
@@ -898,7 +926,10 @@ bool D3D12GPUContext::ResizeOutputBuffer(uint32 width /* = 0 */, uint32 height /
 
     // synchronize render targets if we were bound
     if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
+    {
         SynchronizeRenderTargetsAndUAVs();
+        UpdateScissorRect();
+    }
 
     // done
     return true;
@@ -975,6 +1006,7 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
 
         m_nCurrentRenderTargets = 0;
         SynchronizeRenderTargetsAndUAVs();
+        UpdateScissorRect();
         m_pipelineChanged = true;
     }
     else
@@ -1033,6 +1065,7 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
         if (doUpdate)
         {
             SynchronizeRenderTargetsAndUAVs();
+            UpdateScissorRect();
             m_pipelineChanged = true;
         }
     }
@@ -1238,7 +1271,7 @@ void D3D12GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex,
         return;
     }
 
-    DebugAssert((offset + count) <= cbInfo->Size);
+    DebugAssert(count > 0 && (offset + count) <= cbInfo->Size);
     if (Y_memcmp(cbInfo->pLocalMemory + offset, pData, count) != 0)
     {
         Y_memcpy(cbInfo->pLocalMemory + offset, pData, count);
@@ -1251,7 +1284,7 @@ void D3D12GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex,
         else
         {
             cbInfo->DirtyLowerBounds = Min(cbInfo->DirtyLowerBounds, (int32)offset);
-            cbInfo->DirtyUpperBounds = Max(cbInfo->DirtyUpperBounds, (int32)(offset + count));
+            cbInfo->DirtyUpperBounds = Max(cbInfo->DirtyUpperBounds, (int32)(offset + count - 1));
         }
 
         if (commit)
@@ -1269,7 +1302,7 @@ void D3D12GPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fiel
     }
 
     uint32 writeSize = bufferStride * count;
-    DebugAssert((offset + writeSize) <= cbInfo->Size);
+    DebugAssert(writeSize > 0 && (offset + writeSize) <= cbInfo->Size);
 
     if (Y_memcmp_stride(cbInfo->pLocalMemory + offset, bufferStride, pData, copySize, copySize, count) != 0)
     {
@@ -1283,7 +1316,7 @@ void D3D12GPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fiel
         else
         {
             cbInfo->DirtyLowerBounds = Min(cbInfo->DirtyLowerBounds, (int32)offset);
-            cbInfo->DirtyUpperBounds = Min(cbInfo->DirtyUpperBounds, (int32)(offset + writeSize));
+            cbInfo->DirtyUpperBounds = Min(cbInfo->DirtyUpperBounds, (int32)(offset + writeSize - 1));
         }
 
         if (commit)

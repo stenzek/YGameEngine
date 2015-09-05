@@ -1124,7 +1124,7 @@ void D3D11GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex,
         return;
     }
 
-    DebugAssert((offset + count) <= cbInfo->Size);
+    DebugAssert(count > 0 && (offset + count) <= cbInfo->Size);
     if (Y_memcmp(cbInfo->pLocalMemory + offset, pData, count) != 0)
     {
         Y_memcpy(cbInfo->pLocalMemory + offset, pData, count);
@@ -1137,7 +1137,7 @@ void D3D11GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex,
         else
         {
             cbInfo->DirtyLowerBounds = Min(cbInfo->DirtyLowerBounds, (int32)offset);
-            cbInfo->DirtyUpperBounds = Max(cbInfo->DirtyUpperBounds, (int32)(offset + count));
+            cbInfo->DirtyUpperBounds = Max(cbInfo->DirtyUpperBounds, (int32)(offset + count - 1));
         }
 
         if (commit)
@@ -1155,7 +1155,7 @@ void D3D11GPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fiel
     }
 
     uint32 writeSize = bufferStride * count;
-    DebugAssert((offset + writeSize) <= cbInfo->Size);
+    DebugAssert(writeSize > 0 && (offset + writeSize) <= cbInfo->Size);
 
     if (Y_memcmp_stride(cbInfo->pLocalMemory + offset, bufferStride, pData, copySize, copySize, count) != 0)
     {
@@ -1169,7 +1169,7 @@ void D3D11GPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fiel
         else
         {
             cbInfo->DirtyLowerBounds = Min(cbInfo->DirtyLowerBounds, (int32)offset);
-            cbInfo->DirtyUpperBounds = Max(cbInfo->DirtyUpperBounds, (int32)(offset + writeSize));
+            cbInfo->DirtyUpperBounds = Max(cbInfo->DirtyUpperBounds, (int32)(offset + writeSize - 1));
         }
 
         if (commit)

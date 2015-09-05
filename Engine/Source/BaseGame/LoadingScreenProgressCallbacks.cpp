@@ -58,8 +58,11 @@ void LoadingScreenProgressCallbacks::SetProgressValue(uint32 value)
 
     BaseProgressCallbacks::SetProgressValue(value);
 
-    if (m_progressValue != lastValue)
+    if (m_progressValue != lastValue && m_timeSinceLastDraw.GetTimeSeconds() >= 0.01f)
+    {
+        m_timeSinceLastDraw.Reset();
         Redraw();
+    }
 }
 
 void LoadingScreenProgressCallbacks::DisplayError(const char *message)

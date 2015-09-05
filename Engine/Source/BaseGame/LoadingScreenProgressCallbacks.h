@@ -41,4 +41,6 @@ private:
 
     float m_lastPercentComplete;
     uint32 m_lastBarLength;
+
+    Timer m_timeSinceLastDraw;
 };

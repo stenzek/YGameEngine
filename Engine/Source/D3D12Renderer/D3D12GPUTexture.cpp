@@ -390,13 +390,11 @@ bool D3D12GPUContext::ReadTexture(GPUTexture2D *pTexture, void *pDestination, ui
         return false;
 
     // can't read it if it's currently bound to colour or depth buffer
-    for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
+    if (IsBoundAsRenderTarget(pTexture))
     {
-        if (m_pCurrentRenderTargetViews[i] != nullptr && m_pCurrentRenderTargetViews[i]->GetTargetTexture() == pWrappedTexture)
-            return false;
-    }
-    if (m_pCurrentDepthBufferView != nullptr && m_pCurrentDepthBufferView->GetTargetTexture() == pWrappedTexture)
+        Log_ErrorPrintf("Can't read back texture when bound as render target.");
         return false;
+    }
 
     // fill descriptor information with the size we want to capture
     D3D12_RESOURCE_DESC regionDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, countX, countY, 1, 1, textureDXGIFormat, { 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE };

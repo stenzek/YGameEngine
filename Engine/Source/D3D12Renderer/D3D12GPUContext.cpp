@@ -596,6 +596,20 @@ void D3D12GPUContext::GetCurrentRenderTargetDimensions(uint32 *width, uint32 *he
     *height = textureDimensions.y;
 }
 
+bool D3D12GPUContext::IsBoundAsRenderTarget(GPUTexture *pTexture)
+{
+    for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
+    {
+        if (m_pCurrentRenderTargetViews[i] != nullptr && m_pCurrentRenderTargetViews[i]->GetTargetTexture() == pTexture)
+            return true;
+    }
+    if (m_pCurrentDepthBufferView != nullptr && m_pCurrentDepthBufferView->GetTargetTexture() == pTexture)
+        return true;
+
+    // @TODO check UAVs
+    return false;
+}
+
 void D3D12GPUContext::UpdateScissorRect()
 {
     if (m_pCurrentRasterizerState != nullptr && m_pCurrentRasterizerState->GetDesc()->ScissorEnable)
@@ -1910,6 +1924,17 @@ bool D3D12GPUContext::CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pD
         return false;
     }
 
+    // can't copy when we're a render target
+    if (IsBoundAsRenderTarget(pSourceTexture) || IsBoundAsRenderTarget(pDestinationTexture))
+    {
+        Log_ErrorPrintf("Can't copy texture when bound as render target.");
+        return false;
+    }
+
+    // switch to copy states
+    ResourceBarrier(pD3D12SourceTexture->GetD3DResource(), pD3D12SourceTexture->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+    ResourceBarrier(pD3D12DestinationTexture->GetD3DResource(), pD3D12DestinationTexture->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
+
     // copy each mip level
     for (uint32 i = 0; i < pD3D12SourceTexture->GetDesc()->MipLevels; i++)
     {
@@ -1918,6 +1943,9 @@ bool D3D12GPUContext::CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pD
         m_pCommandList->CopyTextureRegion(&destinationLocation, 0, 0, 0, &sourceLocation, nullptr);
     }
 
+    // switch back from copy states
+    ResourceBarrier(pD3D12SourceTexture->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, pD3D12SourceTexture->GetDefaultResourceState());
+    ResourceBarrier(pD3D12DestinationTexture->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12DestinationTexture->GetDefaultResourceState());
     return true;
 }
 

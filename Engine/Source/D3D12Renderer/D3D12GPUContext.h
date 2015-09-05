@@ -180,6 +180,7 @@ private:
     void RestoreCommandListDependantState();
     bool UpdatePipelineState(bool force);
     void GetCurrentRenderTargetDimensions(uint32 *width, uint32 *height);
+    bool IsBoundAsRenderTarget(GPUTexture *pTexture);
     void UpdateScissorRect();
 
     D3D12RenderBackend *m_pBackend;

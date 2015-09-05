@@ -37,6 +37,7 @@ protected:
     virtual void OnMainThreadAsyncTick(float deltaTime) override;
     virtual void OnMainThreadTick(float deltaTime) override;
     virtual void OnMainThreadEndFrame(float deltaTime) override;
+    virtual void OnRenderThreadPreFrame(float deltaTime) override;
     virtual void OnRenderThreadBeginFrame(float deltaTime) override;
     virtual void OnRenderThreadDraw(float deltaTime) override;
     virtual void OnRenderThreadEndFrame(float deltaTime) override;

@@ -5,6 +5,7 @@
 #include "Engine/Engine.h"
 #include "Engine/ResourceManager.h"
 #include "Engine/SDLHeaders.h"
+#include "Engine/Camera.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/ImGuiBridge.h"
 #include "YBaseLib/CPUID.h"
@@ -301,14 +302,19 @@ static void Frame()
     CheckEvents();
 
     // imgui
-    //ImGui::NewFrame(deltaTime);
+    ImGui::NewFrame(deltaTime);
 
     // do stuff
     {
-        g_pRenderer->BeginFrame();
+        g_pMainGPUContext->BeginFrame();
         g_pMainGPUContext->SetRenderTargets(0, nullptr, nullptr);
         g_pMainGPUContext->SetFullViewport();
         g_pMainGPUContext->ClearTargets(true, true, true, Vector4f(0.5f, 0.2f, 0.8f, 0.0f));
+
+        Camera camera;
+        camera.SetPosition(float3::Zero);
+        camera.SetProjectionType(CAMERA_PROJECTION_TYPE_PERSPECTIVE);
+        g_pMainGPUContext->GetConstants()->SetFromCamera(camera, true);
 
         MINIGUI_RECT rect(40, 140, 40, 140);
         g_guiContext.PushManualFlush();
@@ -316,18 +322,19 @@ static void Frame()
         rect.Set(200, 240, 40, 140);
         g_guiContext.DrawFilledRect(&rect, MAKE_COLOR_R8G8B8_UNORM(150, 255, 200));
         g_guiContext.DrawTextAt(40, 160, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255), "Hello world");
-        g_guiContext.DrawFormattedTextAt(40, 186, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255), "Framenumber: %u", g_pRenderer->GetFrameNumber());
+
+        g_guiContext.Draw3DBox(AABox(0.0f, 3.0f, 0.0f, 1.0f, 4.0f, 1.0f), MAKE_COLOR_R8G8B8_UNORM(255, 255, 255));
 
         g_guiContext.PopManualFlush();
         g_guiContext.Flush();
 
         // draw imgui
         {
-            //ImGui::ShowTestWindow(nullptr);
+            ImGui::ShowTestWindow(nullptr);
         }
 
         // render imgui
-        //ImGui::Render();
+        ImGui::Render();
 
         g_fpsCounter.DrawDetails(g_pRenderer->GetFixedResources()->GetDebugFont(), &g_guiContext);
         g_pMainGPUContext->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE);

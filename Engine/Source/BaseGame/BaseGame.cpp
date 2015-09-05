@@ -151,6 +151,12 @@ void BaseGame::OnMainThreadEndFrame(float deltaTime)
     m_pGameState->OnMainThreadEndFrame(deltaTime);
 }
 
+void BaseGame::OnRenderThreadPreFrame(float deltaTime)
+{
+    // pass to game state
+    m_pGameState->OnRenderThreadPreFrame(deltaTime);
+}
+
 void BaseGame::OnRenderThreadBeginFrame(float deltaTime)
 {
     // pass to game state
@@ -869,27 +875,22 @@ void BaseGame::RenderThreadFrame(float deltaTime)
     MICROPROFILE_SCOPEGPUI("RenderThreadFrame", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
 
     // start of frame
-    {
-        MICROPROFILE_SCOPEI("BaseGame", "BeginFrame", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
-
-        g_pRenderer->BeginFrame();
-        if (m_pRenderProfiler != nullptr)
-            m_pRenderProfiler->BeginFrame();
-    }
-
-    // begin frame
-    RENDER_PROFILER_BEGIN_SECTION(m_pRenderProfiler, "OnRenderThreadBeginFrame", false);
-    {
-        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadBeginFrame", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
-        OnRenderThreadBeginFrame(deltaTime);
-    }
-    RENDER_PROFILER_END_SECTION(m_pRenderProfiler);
+    if (m_pRenderProfiler != nullptr)
+        m_pRenderProfiler->BeginFrame();
 
     // collect events
     RENDER_PROFILER_BEGIN_SECTION(m_pRenderProfiler, "RenderThreadCollectEvents", false);
     {
         MICROPROFILE_SCOPEI("BaseGame", "RenderThreadCollectEvents", MAKE_COLOR_R8G8B8_UNORM(255, 255, 100));
         RenderThreadCollectEvents(deltaTime);
+    }
+    RENDER_PROFILER_END_SECTION(m_pRenderProfiler);
+
+    // pre frame
+    RENDER_PROFILER_BEGIN_SECTION(m_pRenderProfiler, "OnRenderThreadBeginFrame", false);
+    {
+        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadPreFrame", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
+        OnRenderThreadPreFrame(deltaTime);
     }
     RENDER_PROFILER_END_SECTION(m_pRenderProfiler);
 
@@ -905,10 +906,20 @@ void BaseGame::RenderThreadFrame(float deltaTime)
         m_renderThreadEventsReadyEvent.Signal();
 
     // clear the backbuffer/depth buffer, this is mainly as a help to tilers
-    m_pGPUContext->SetRenderTargets(0, nullptr, nullptr);
-    m_pGPUContext->SetFullViewport();
-    m_pGPUContext->DiscardTargets(true, true, true);
-    m_pGPUContext->ClearTargets(true, true, true);
+    {
+        MICROPROFILE_SCOPEI("BaseGame", "Begin GPU Frame", MAKE_COLOR_R8G8B8_UNORM(200, 50, 50));
+        m_pGPUContext->BeginFrame();
+        m_pGPUContext->SetRenderTargets(0, nullptr, nullptr);
+        m_pGPUContext->SetFullViewport();
+        m_pGPUContext->DiscardTargets(true, true, true);
+        m_pGPUContext->ClearTargets(true, true, true);
+    }
+
+    // begin frame helper
+    {
+        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadBeginFrame", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
+        OnRenderThreadPreFrame(deltaTime);
+    }
 
 #ifdef WITH_IMGUI
     // imgui stuff

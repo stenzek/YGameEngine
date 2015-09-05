@@ -66,6 +66,7 @@ protected:
     virtual void OnMainThreadAsyncTick(float deltaTime);
     virtual void OnMainThreadTick(float deltaTime);
     virtual void OnMainThreadEndFrame(float deltaTime);
+    virtual void OnRenderThreadPreFrame(float deltaTime);
     virtual void OnRenderThreadBeginFrame(float deltaTime);
     virtual void OnRenderThreadDraw(float deltaTime);
     virtual void OnRenderThreadEndFrame(float deltaTime);

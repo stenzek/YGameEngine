@@ -206,12 +206,17 @@ void BaseDemoWorldGameState::OnMainThreadEndFrame(float deltaTime)
     m_pWorld->EndFrame();
 }
 
+void BaseDemoWorldGameState::OnRenderThreadPreFrame(float deltaTime)
+{
+    BaseDemoGameState::OnRenderThreadPreFrame(deltaTime);
+
+    // copy camera from main thread to render thread before the main thread changes it
+    m_viewParameters.SetCamera(&m_camera);
+}
+
 void BaseDemoWorldGameState::OnRenderThreadBeginFrame(float deltaTime)
 {
-    BaseDemoGameState::OnRenderThreadBeginFrame(deltaTime);
-
-    // copy camera to render thread
-    m_viewParameters.SetCamera(&m_camera);
+    BaseDemoGameState::OnRenderThreadPreFrame(deltaTime);
 }
 
 void BaseDemoWorldGameState::OnRenderThreadDraw(float deltaTime)

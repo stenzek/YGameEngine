@@ -949,9 +949,6 @@ public:
     static GPUDevice *GetGPUDevice();
     static GPUContext *GetGPUContext();
 
-    // Frame number
-    void BeginFrame();
-
     // Stats access
     RendererCounters *GetCounters() { return &m_stats; }
 

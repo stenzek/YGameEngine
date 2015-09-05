@@ -18,11 +18,12 @@ LaunchpadGameState::~LaunchpadGameState()
 
 void LaunchpadGameState::OnSwitchedIn()
 {
-//     if (!m_pDemoGame->IsQuitPending())
-//     {
-//         // run new demo
-//         InvokeSkeletalAnimationDemo();
-//     }
+    if (!m_pDemoGame->IsQuitPending())
+    {
+        // run new demo
+        //InvokeSkeletalAnimationDemo();
+        //InvokeDrawCallStressDemo();
+    }
 
     m_pDemoGame->ActivateImGui();
 }
@@ -78,6 +79,11 @@ void LaunchpadGameState::OnMainThreadTick(float deltaTime)
 }
 
 void LaunchpadGameState::OnMainThreadEndFrame(float deltaTime)
+{
+
+}
+
+void LaunchpadGameState::OnRenderThreadPreFrame(float deltaTime)
 {
 
 }

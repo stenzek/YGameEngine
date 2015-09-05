@@ -189,9 +189,14 @@ void BaseDemoGameState::OnMainThreadEndFrame(float deltaTime)
 
 }
 
-void BaseDemoGameState::OnRenderThreadBeginFrame(float deltaTime)
+void BaseDemoGameState::OnRenderThreadPreFrame(float deltaTime)
 {
     
+}
+
+void BaseDemoGameState::OnRenderThreadBeginFrame(float deltaTime)
+{
+
 }
 
 void BaseDemoGameState::OnRenderThreadDraw(float deltaTime)

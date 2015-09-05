@@ -21,6 +21,7 @@ public:
     virtual void OnMainThreadAsyncTick(float deltaTime) = 0;
     virtual void OnMainThreadTick(float deltaTime) = 0;
     virtual void OnMainThreadEndFrame(float deltaTime) = 0;
+    virtual void OnRenderThreadPreFrame(float deltaTime) = 0;
     virtual void OnRenderThreadBeginFrame(float deltaTime) = 0;
     virtual void OnRenderThreadDraw(float deltaTime) = 0;
     virtual void OnRenderThreadEndFrame(float deltaTime) = 0;

@@ -12,7 +12,7 @@ DrawCallStressDemo::DrawCallStressDemo(DemoGame *pDemoGame)
     , m_pSunLightEntity(nullptr)
     , m_sunLightRotation(float3::Zero)
     , m_pMeshToRender(nullptr)
-    , m_newObjectCount(1000)
+    , m_newObjectCount(10)
 {
     
 }
@@ -42,6 +42,10 @@ bool DrawCallStressDemo::Initialize()
 
     // init view parameters
     m_viewParameters.MaximumShadowViewDistance = 500.0f;
+    m_viewParameters.EnableBloom = false;
+    m_viewParameters.EnableManualExposure = true;
+    m_viewParameters.ManualExposure = 1.0f;
+    m_camera.SetPosition(float3(-1.1f, -10.4f, 3.3f));
     return true;
 }
 
@@ -91,6 +95,8 @@ void DrawCallStressDemo::OnMainThreadTick(float deltaTime)
 void DrawCallStressDemo::DrawOverlays(float deltaTime)
 {
     BaseDemoWorldGameState::DrawOverlays(deltaTime);
+
+    //m_pDemoGame->GetGUIContext()->Draw3DBox(AABox(0.0f, 10.0f, 0.0f, 1.0f, 11.0f, 1.0f), MAKE_COLOR_R8G8B8_UNORM(255, 255, 255));
 }
 
 void DrawCallStressDemo::DrawUI(float deltaTime)

@@ -35,6 +35,9 @@ bool SkeletalAnimationDemo::Initialize()
 
     // init view
     m_viewParameters.MaximumShadowViewDistance = 500.0f;
+    m_viewParameters.EnableBloom = false;
+    m_viewParameters.EnableManualExposure = true;
+    m_viewParameters.ManualExposure = 1.0f;
     return true;
 }
 

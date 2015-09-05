@@ -215,7 +215,7 @@ BlockWorldChunkRenderProxy *BlockWorldChunkRenderProxy::CreateForChunk(uint32 en
 #endif
 
     // upload to gpu, either deferred or immediate
-    if (g_pRenderer->GetCapabilities().SupportsMultithreadedResourceCreation)
+    if (0 && g_pRenderer->GetCapabilities().SupportsMultithreadedResourceCreation)
     {
         // if deferred upload fails, queue it for next frame
         if (!pRenderProxy->UploadMeshToGPU(pBuilder))

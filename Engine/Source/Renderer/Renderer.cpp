@@ -592,15 +592,6 @@ void RendererCounters::OnResourceDeleted(const GPUResource *pResource)
     Y_AtomicAdd(m_resourceGPUMemoryUsage[type], -(ptrdiff_t)gpuMemoryUsage);
 }
 
-void Renderer::BeginFrame()
-{
-    DebugAssert(IsOnRenderThread());
-
-    m_stats.ResetPerFrameCounters();
-
-    s_pCurrentThreadGPUContext->BeginFrame();
-}
-
 bool Renderer::EnableResourceCreationForCurrentThread()
 {
     if (s_pCurrentThreadGPUDevice != nullptr)

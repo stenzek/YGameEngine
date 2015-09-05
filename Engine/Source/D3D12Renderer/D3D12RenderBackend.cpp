@@ -229,6 +229,10 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
                 m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
                 m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
                 m_pD3DInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+
+                // stop these annoying warnings
+                // D3D12 WARNING : ID3D12CommandList::ClearRenderTargetView : The clear values do not match those passed to resource creation.The clear operation is typically slower as a result; but will still clear to the desired value.[EXECUTION WARNING #820: CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE]
+                //m_pD3DInfoQueue->SetBreakOnID(D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE, FALSE);
                 foo();
             }
         }

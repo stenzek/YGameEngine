@@ -1291,7 +1291,7 @@ void D3D12GPUContext::WriteConstantBufferStrided(uint32 bufferIndex, uint32 fiel
         else
         {
             cbInfo->DirtyLowerBounds = Min(cbInfo->DirtyLowerBounds, (int32)offset);
-            cbInfo->DirtyUpperBounds = Min(cbInfo->DirtyUpperBounds, (int32)(offset + writeSize - 1));
+            cbInfo->DirtyUpperBounds = Max(cbInfo->DirtyUpperBounds, (int32)(offset + writeSize - 1));
         }
 
         if (commit)

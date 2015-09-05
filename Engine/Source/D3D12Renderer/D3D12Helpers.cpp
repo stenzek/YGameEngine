@@ -407,11 +407,11 @@ bool D3D12Helpers::GetResourceSamplerHandle(GPUResource *pResource, D3D12Descrip
         *pHandle = static_cast<D3D12GPUTexture2D *>(pResource)->GetSamplerHandle();
         return (!pHandle->IsNull());
 
-#if 0
     case GPU_RESOURCE_TYPE_TEXTURE2DARRAY:
         *pHandle = static_cast<D3D12GPUTexture2DArray *>(pResource)->GetSamplerHandle();
         return (!pHandle->IsNull());
 
+#if 0
     case GPU_RESOURCE_TYPE_TEXTURE3D:
         *pHandle = static_cast<D3D12GPUTexture3D *>(pResource)->GetSamplerHandle();
         return (!pHandle->IsNull());

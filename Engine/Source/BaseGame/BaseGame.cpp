@@ -869,9 +869,13 @@ void BaseGame::RenderThreadFrame(float deltaTime)
     MICROPROFILE_SCOPEGPUI("RenderThreadFrame", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
 
     // start of frame
-    g_pRenderer->BeginFrame();
-    if (m_pRenderProfiler != nullptr)
-        m_pRenderProfiler->BeginFrame();
+    {
+        MICROPROFILE_SCOPEI("BaseGame", "BeginFrame", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
+
+        g_pRenderer->BeginFrame();
+        if (m_pRenderProfiler != nullptr)
+            m_pRenderProfiler->BeginFrame();
+    }
 
     // begin frame
     RENDER_PROFILER_BEGIN_SECTION(m_pRenderProfiler, "OnRenderThreadBeginFrame", false);
@@ -996,7 +1000,7 @@ void BaseGame::RenderThreadDrawOverlays(float deltaTime)
         WorldRenderer::RenderStats rs;
         m_pWorldRenderer->GetRenderStats(&rs);
 
-        m_guiContext.DrawFormattedTextAt(PANEL_MARGIN, 48, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8A8_UNORM(255, 255, 255, 255), "framenumber: %u", g_pRenderer->GetFrameNumber());
+        m_guiContext.DrawFormattedTextAt(PANEL_MARGIN, 48, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8A8_UNORM(255, 255, 255, 255), "frame: %u dropped: %u", g_pRenderer->GetCounters()->GetFrameNumber(), g_pRenderer->GetCounters()->GetFramesDroppedCounter());
         m_guiContext.DrawFormattedTextAt(PANEL_MARGIN, 64, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8A8_UNORM(255, 255, 255, 255), "objects drawn: %u (%u culled)", rs.ObjectCount, rs.ObjectsCulledByOcclusion);
         m_guiContext.DrawFormattedTextAt(PANEL_MARGIN, 80, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8A8_UNORM(255, 255, 255, 255), "dlights: %u (%u shadow maps)", rs.LightCount, rs.ShadowMapCount);
         m_guiContext.DrawFormattedTextAt(PANEL_MARGIN, 96, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8A8_UNORM(255, 255, 255, 255), "buffers: %u (vram: %s)", rs.IntermediateBufferCount, StringConverter::SizeToHumanReadableString(rs.IntermediateBufferMemoryUsage).GetCharArray());

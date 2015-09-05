@@ -160,7 +160,7 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
             return false;
         }
     }
-#if 0
+#if 1
     else
     {
         // iterate over adapters
@@ -259,8 +259,7 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
 
     // find texture platform
     {
-        //m_texturePlatform = TEXTURE_PLATFORM_DXTC;
-        m_texturePlatform = TEXTURE_PLATFORM_ES2_NOTC;
+        m_texturePlatform = TEXTURE_PLATFORM_DXTC;
         Log_InfoPrintf("Texture Platform: %s", NameTable_GetNameString(NameTables::TexturePlatform, m_texturePlatform));
     }
 

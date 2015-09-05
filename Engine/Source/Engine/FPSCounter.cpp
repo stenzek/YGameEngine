@@ -84,7 +84,7 @@ void FPSCounter::EndGameThreadFrame()
 void FPSCounter::EndRenderThreadFrame()
 {
     m_lastRenderFrameTime = (float)m_renderThreadTimer.GetTimeSeconds();
-    m_lastDrawCallCount = g_pRenderer->GetStats()->GetDrawCallCounter();
+    m_lastDrawCallCount = g_pRenderer->GetCounters()->GetDrawCallCounter();
 }
 
 void FPSCounter::DrawDetails(const Font *pFont, MiniGUIContext *pGUIContext, int32 startX /* = -100 */, int32 startY /* = 0 */, uint32 fontSize /* = 16 */) const

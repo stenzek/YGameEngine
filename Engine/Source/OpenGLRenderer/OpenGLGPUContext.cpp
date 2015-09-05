@@ -710,7 +710,7 @@ void OpenGLGPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviou
 
 void OpenGLGPUContext::BeginFrame()
 {
-    g_pRenderer->BeginFrame();
+
 }
 
 void OpenGLGPUContext::Flush()

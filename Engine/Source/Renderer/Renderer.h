@@ -751,20 +751,25 @@ struct RendererInitializationParameters
 };
 
 // Renderer stats
-class RendererStats
+class RendererCounters
 {
 public:
-    RendererStats();
-    ~RendererStats();
+    RendererCounters();
+    ~RendererCounters();
 
     // Counters
+    uint32 GetFrameNumber() const { return m_frameNumber; }
     uint32 GetDrawCallCounter() const { return m_drawCallCounter; }
     uint32 GetShaderChangeCounter() const { return m_shaderChangeCounter; }
+    uint32 GetPipelineChangeCounter() const { return m_pipelineChangeCounter; }
+    uint32 GetFramesDroppedCounter() const { return m_framesDroppedCounter; }
 
     // Counter updating
     void IncrementDrawCallCounter() { Y_AtomicIncrement(m_drawCallCounter); }
     void IncrementShaderChangeCounter() { Y_AtomicIncrement(m_shaderChangeCounter); }
-    void ResetCounters();
+    void IncrementPipelineChangeCounter() { Y_AtomicIncrement(m_pipelineChangeCounter); }
+    void IncrementFramesDroppedCounter() { Y_AtomicIncrement(m_framesDroppedCounter); }
+    void ResetPerFrameCounters();
 
     // Resource memory management
     void OnResourceCreated(const GPUResource *pResource);
@@ -775,6 +780,8 @@ private:
 
     uint32 m_drawCallCounter;
     uint32 m_shaderChangeCounter;
+    uint32 m_pipelineChangeCounter;
+    uint32 m_framesDroppedCounter;
 
     Y_ATOMIC_DECL ptrdiff_t m_resourceCPUMemoryUsage[GPU_RESOURCE_TYPE_COUNT];
     Y_ATOMIC_DECL ptrdiff_t m_resourceGPUMemoryUsage[GPU_RESOURCE_TYPE_COUNT];
@@ -943,11 +950,10 @@ public:
     static GPUContext *GetGPUContext();
 
     // Frame number
-    uint32 GetFrameNumber() const { return m_frameNumber; }
     void BeginFrame();
 
     // Stats access
-    RendererStats *GetStats() { return &m_stats; }
+    RendererCounters *GetCounters() { return &m_stats; }
 
     // render thread
     static const Thread::ThreadIdType GetRenderThreadId() { return s_renderThreadId; }
@@ -1049,7 +1055,6 @@ protected:
     TEXTURE_PLATFORM m_eTexturePlatform;
     RendererCapabilities m_RendererCapabilities;
     float m_fTexelOffset;
-    uint32 m_frameNumber;
 
     // backend
     RenderBackend *m_pBackendInterface;
@@ -1067,7 +1072,7 @@ protected:
     MiniGUIContext m_guiContext;
 
     // stats
-    RendererStats m_stats;
+    RendererCounters m_stats;
 
 private:
     bool InternalDrawPlain(GPUContext *pGPUDevice, const PlainVertexFactory::Vertex *pVertices, uint32 nVertices, uint32 flags);

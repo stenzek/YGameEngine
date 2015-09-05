@@ -722,7 +722,7 @@ void D3D11GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
 
 void D3D11GPUContext::BeginFrame()
 {
-    g_pRenderer->BeginFrame();
+
 }
 
 void D3D11GPUContext::Flush()
@@ -1584,7 +1584,7 @@ void D3D11GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
 
         // draw it
         m_pD3DContext->Draw(maxVertices, 0);
-        g_pRenderer->GetStats()->IncrementDrawCallCounter();
+        g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 
         // increment positions
         m_userVertexBufferPosition += requestedSpace;

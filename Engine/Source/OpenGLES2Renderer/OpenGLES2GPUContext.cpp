@@ -615,7 +615,7 @@ void OpenGLES2GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehav
 
 void OpenGLES2GPUContext::BeginFrame()
 {
-    g_pRenderer->BeginFrame();
+
 }
 
 void OpenGLES2GPUContext::Flush()

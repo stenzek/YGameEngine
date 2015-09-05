@@ -453,7 +453,6 @@ Renderer::Renderer(RenderBackend *pBackendInterface, RendererOutputWindow *pOutp
     : m_fixedResources(this)
     , m_pBackendInterface(pBackendInterface)
     , m_pImplicitOutputWindow(pOutputWindow)
-    , m_frameNumber(0)
 {
     m_eRendererPlatform = pBackendInterface->GetPlatform();
     m_eRendererFeatureLevel = pBackendInterface->GetFeatureLevel();
@@ -549,26 +548,30 @@ GPUContext *Renderer::GetGPUContext()
 }
 
 
-RendererStats::RendererStats()
-    : m_drawCallCounter(0)
+RendererCounters::RendererCounters()
+    : m_frameNumber(0)
+    , m_drawCallCounter(0)
     , m_shaderChangeCounter(0)
+    , m_pipelineChangeCounter(0)
+    , m_framesDroppedCounter(0)
 {
     Y_memzero((void *)m_resourceCPUMemoryUsage, sizeof(m_resourceCPUMemoryUsage));
     Y_memzero((void *)m_resourceGPUMemoryUsage, sizeof(m_resourceGPUMemoryUsage));
 }
 
-RendererStats::~RendererStats()
+RendererCounters::~RendererCounters()
 {
 
 }
 
-void RendererStats::ResetCounters()
+void RendererCounters::ResetPerFrameCounters()
 {
+    m_frameNumber++;
     m_drawCallCounter = 0;
     m_shaderChangeCounter = 0;
 }
 
-void RendererStats::OnResourceCreated(const GPUResource *pResource)
+void RendererCounters::OnResourceCreated(const GPUResource *pResource)
 {
     GPU_RESOURCE_TYPE type = pResource->GetResourceType();
     uint32 cpuMemoryUsage, gpuMemoryUsage;
@@ -577,7 +580,7 @@ void RendererStats::OnResourceCreated(const GPUResource *pResource)
     Y_AtomicAdd(m_resourceGPUMemoryUsage[type], (ptrdiff_t)gpuMemoryUsage);
 }
 
-void RendererStats::OnResourceDeleted(const GPUResource *pResource)
+void RendererCounters::OnResourceDeleted(const GPUResource *pResource)
 {
     GPU_RESOURCE_TYPE type = pResource->GetResourceType();
     uint32 cpuMemoryUsage, gpuMemoryUsage;
@@ -588,8 +591,11 @@ void RendererStats::OnResourceDeleted(const GPUResource *pResource)
 
 void Renderer::BeginFrame()
 {
-    m_frameNumber++;
-    m_stats.ResetCounters();
+    DebugAssert(IsOnRenderThread());
+
+    m_stats.ResetPerFrameCounters();
+
+    s_pCurrentThreadGPUContext->BeginFrame();
 }
 
 bool Renderer::EnableResourceCreationForCurrentThread()

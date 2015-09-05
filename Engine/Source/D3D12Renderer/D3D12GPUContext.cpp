@@ -230,7 +230,8 @@ bool D3D12GPUContext::CreateCommandList()
 
 void D3D12GPUContext::BeginFrame()
 {
-    g_pRenderer->BeginFrame();
+    FlushCommandList(true, false, true);
+    RestoreCommandListDependantState();
 }
 
 void D3D12GPUContext::Flush()
@@ -909,11 +910,25 @@ void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
     ResourceBarrier(m_pCurrentSwapChain->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
     // ensure all commands have been queued, and get a new set of allocators
-    FlushCommandList(true, false, true);
+    //FlushCommandList(true, false, true);
+    FlushCommandList(true, false, false);
 
-    // present the image
+#if 0
+    // test if we can present
+    DWORD waitResult = WaitForSingleObject(m_pCurrentSwapChain->GetDXGISwapChain()->GetFrameLatencyWaitableObject(), 0);
+    if (waitResult == WAIT_OBJECT_0)
+    {
+        // present the image
+        m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
+    }
+    else
+    {
+        // skip the frame
+        g_pRenderer->GetCounters()->IncrementFramesDroppedCounter();
+    }
+#else
     m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
-    m_pCurrentSwapChain->MoveToNextBackBuffer();
+#endif
 
     // restore state (since new command list)
     RestoreCommandListDependantState();
@@ -1210,6 +1225,7 @@ void D3D12GPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)
     if ((m_pCurrentShaderProgram = static_cast<D3D12GPUShaderProgram *>(pShaderProgram)) != nullptr)
         m_pCurrentShaderProgram->AddRef();
 
+    g_pRenderer->GetCounters()->IncrementPipelineChangeCounter();
     m_pipelineChanged = true;
 }
 
@@ -1464,6 +1480,7 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
             return false;
 
         // up-to-date
+        g_pRenderer->GetCounters()->IncrementPipelineChangeCounter();
         m_pipelineChanged = false;
     }
 
@@ -1630,7 +1647,7 @@ void D3D12GPUContext::Draw(uint32 firstVertex, uint32 nVertices)
         return;
     
     m_pCommandList->DrawInstanced(nVertices, 1, firstVertex, 0);
-    g_pRenderer->GetStats()->IncrementDrawCallCounter();
+    g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
 void D3D12GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32 nInstances)
@@ -1639,7 +1656,7 @@ void D3D12GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32
         return;
 
     m_pCommandList->DrawInstanced(nVertices, nInstances, firstVertex, 0);
-    g_pRenderer->GetStats()->IncrementDrawCallCounter();
+    g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
 void D3D12GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 baseVertex)
@@ -1648,7 +1665,7 @@ void D3D12GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 bas
         return;
 
     m_pCommandList->DrawIndexedInstanced(nIndices, 1, startIndex, baseVertex, 0);
-    g_pRenderer->GetStats()->IncrementDrawCallCounter();
+    g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
 void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, uint32 baseVertex, uint32 nInstances)
@@ -1657,7 +1674,7 @@ void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, u
         return;
 
     m_pCommandList->DrawIndexedInstanced(nIndices, nInstances, startIndex, baseVertex, 0);
-    g_pRenderer->GetStats()->IncrementDrawCallCounter();
+    g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
 void D3D12GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ)
@@ -1666,7 +1683,7 @@ void D3D12GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCount
         return;
 
     m_pCommandList->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
-    g_pRenderer->GetStats()->IncrementDrawCallCounter();
+    g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
 void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices)
@@ -1757,7 +1774,7 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(pResource2);
 #endif
 
-    g_pRenderer->GetStats()->IncrementDrawCallCounter();
+    g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
 

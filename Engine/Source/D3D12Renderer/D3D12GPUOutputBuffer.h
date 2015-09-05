@@ -28,7 +28,6 @@ public:
     ID3D12Resource *GetCurrentBackBufferResource() const;
     D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferViewDescriptorCPUHandle() const;
     bool UpdateCurrentBackBuffer();
-    void MoveToNextBackBuffer();
 
     // DS access
     ID3D12Resource *GetDepthStencilBufferResource() const { return m_pDepthStencilBuffer; }
@@ -58,7 +57,6 @@ private:
     DXGI_FORMAT m_depthStencilDXGIFormat;
 
     uint32 m_currentBackBufferIndex;
-    uint32 m_nextBackBufferIndex;
     PODArray<ID3D12Resource *> m_backBuffers;
     ID3D12Resource *m_pDepthStencilBuffer;
 

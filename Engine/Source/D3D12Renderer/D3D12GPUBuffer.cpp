@@ -14,12 +14,12 @@ D3D12GPUBuffer::D3D12GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, ID3D12Resourc
     , m_mapType(GPU_MAP_TYPE_COUNT)
 {
     // @TODO virtual call bad here, should just adjust the counter directly.
-    g_pRenderer->GetStats()->OnResourceCreated(this);
+    g_pRenderer->GetCounters()->OnResourceCreated(this);
 }
 
 D3D12GPUBuffer::~D3D12GPUBuffer()
 {
-    g_pRenderer->GetStats()->OnResourceDeleted(this);
+    g_pRenderer->GetCounters()->OnResourceDeleted(this);
 
     DebugAssert(m_pD3DMapResource == nullptr);
     

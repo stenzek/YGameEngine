@@ -32,7 +32,7 @@ D3D12LinearBufferHeap *D3D12LinearBufferHeap::Create(ID3D12Device *pDevice, uint
 
     byte *pMappedPointer = nullptr;
     D3D12_RANGE readRange = { 0, 0 };
-    hResult = pResource->Map(0, nullptr/*&readRange*/, (void **)&pMappedPointer);
+    hResult = pResource->Map(0, &readRange, (void **)&pMappedPointer);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("Map failed with hResult %08X", hResult);

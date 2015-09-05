@@ -85,7 +85,7 @@ GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
         // map the upload resource
         D3D12_RANGE readRange = { 0, 0 };
         void *pMappedPointer;
-        hResult = pUploadResource->Map(0, nullptr/*&readRange*/, &pMappedPointer);
+        hResult = pUploadResource->Map(0, &readRange, &pMappedPointer);
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("Map for upload resource failed with hResult %08X", hResult);
@@ -97,7 +97,7 @@ GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
         // fill it
         D3D12_RANGE writeRange = { 0, pDesc->Size };
         Y_memcpy(pMappedPointer, pInitialData, pDesc->Size);
-        pUploadResource->Unmap(0, nullptr/*&writeRange*/);
+        pUploadResource->Unmap(0, &writeRange);
 
         // copy from the upload buffer to the real buffer
         GetCommandList()->CopyBufferRegion(pResource, 0, pUploadResource, 0, pDesc->Size);
@@ -168,7 +168,7 @@ bool D3D12GPUContext::ReadBuffer(GPUBuffer *pBuffer, void *pDestination, uint32 
     // map the readback buffer
     void *pMappedPointer;
     D3D12_RANGE readRange = { start, start + count };
-    HRESULT hResult = pReadbackBuffer->Map(0, nullptr/*&readRange*/, &pMappedPointer);
+    HRESULT hResult = pReadbackBuffer->Map(0, &readRange, &pMappedPointer);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("Failed to map readback buffer: %08X", hResult);
@@ -179,7 +179,7 @@ bool D3D12GPUContext::ReadBuffer(GPUBuffer *pBuffer, void *pDestination, uint32 
     // copy the contents over, and unmap the buffer
     D3D12_RANGE writeRange = { 0, 0 };
     Y_memcpy(pDestination, pMappedPointer, count);
-    pReadbackBuffer->Unmap(0, nullptr/*&writeRange*/);
+    pReadbackBuffer->Unmap(0, &writeRange);
     pReadbackBuffer->Release();
     return true;
 }
@@ -221,7 +221,7 @@ bool D3D12GPUContext::WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint3
     // map the upload buffer
     void *pMappedPointer;
     D3D12_RANGE readRange = { 0, 0 };
-    HRESULT hResult = pUploadBuffer->Map(0, nullptr/*&readRange*/, &pMappedPointer);
+    HRESULT hResult = pUploadBuffer->Map(0, &readRange, &pMappedPointer);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("Failed to map upload buffer: %08X", hResult);
@@ -232,7 +232,7 @@ bool D3D12GPUContext::WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint3
     // copy the contents over, and unmap the buffer
     D3D12_RANGE writeRange = { start, start + count };
     Y_memcpy(pMappedPointer, pSource, count);
-    pUploadBuffer->Unmap(0, nullptr/*&writeRange*/);
+    pUploadBuffer->Unmap(0, &writeRange);
 
     // transition to copy state, and queue a copy from the upload buffer
     ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
@@ -293,7 +293,7 @@ bool D3D12GPUContext::MapBuffer(GPUBuffer *pBuffer, GPU_MAP_TYPE mapType, void *
 
         // not reading anything
         D3D12_RANGE readRange = { 0, 0 };
-        HRESULT hResult = pMapBuffer->Map(0, nullptr/*&readRange*/, ppPointer);
+        HRESULT hResult = pMapBuffer->Map(0, &readRange, ppPointer);
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("Failed to map buffer: %08X", hResult);
@@ -320,7 +320,7 @@ void D3D12GPUContext::Unmapbuffer(GPUBuffer *pBuffer, void *pPointer)
     {
         // unmap, assume the entire range was written
         D3D12_RANGE writtenRange = { 0, pD3D12Buffer->GetDesc()->Size };
-        pMapBuffer->Unmap(0, nullptr/*&writtenRange*/);
+        pMapBuffer->Unmap(0, &writtenRange);
 
         // read/write has to be transitioned
         if (mapMode == GPU_MAP_TYPE_READ_WRITE)
@@ -338,7 +338,7 @@ void D3D12GPUContext::Unmapbuffer(GPUBuffer *pBuffer, void *pPointer)
     {
         // unmap, nothing was written
         D3D12_RANGE writtenRange = { 0, 0 };
-        pMapBuffer->Unmap(0, nullptr/*&writtenRange*/);
+        pMapBuffer->Unmap(0, &writtenRange);
 
         // this was only a read mapping, so we can just nuke the resource right now (the gpu won't touch it)
         pMapBuffer->Release();

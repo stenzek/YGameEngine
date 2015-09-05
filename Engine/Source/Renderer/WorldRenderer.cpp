@@ -6,7 +6,6 @@
 #include "Renderer/WorldRenderers/FullBrightWorldRenderer.h"
 #include "Renderer/WorldRenderers/MobileWorldRenderer.h"
 #include "Renderer/Renderer.h"
-#include "Renderer/RenderProfiler.h"
 #include "Renderer/RenderProxy.h"
 #include "Renderer/RenderWorld.h"
 #include "Renderer/ShaderProgram.h"
@@ -483,9 +482,10 @@ void WorldRenderer::FillRenderQueue(const Camera *pCamera, const RenderWorld *pR
 
 void WorldRenderer::DrawDebugInfo(const Camera *pCamera, RenderProfiler *pRenderProfiler)
 {
-    SmallString tempString;
-
+    MICROPROFILE_SCOPEI("WorldRenderer", "DrawDebugInfo", MAKE_COLOR_R8G8B8_UNORM(185, 20, 185));
+    
     // batch batch batch!
+    SmallString tempString;
     m_pGUIContext->PushManualFlush();
 
     // draw infos
@@ -493,24 +493,26 @@ void WorldRenderer::DrawDebugInfo(const Camera *pCamera, RenderProfiler *pRender
     for (uint32 i = 0; i < debugInfoObjects.GetSize(); i++)
         debugInfoObjects[i]->DrawDebugInfo(pCamera, m_pGPUContext, m_pGUIContext);
 
-    // override cameras
-    if (pRenderProfiler != nullptr && pRenderProfiler->GetCameraCount() > 0)
-    {
-        tempString.Format("Total camera count: %u, camera override: %i", pRenderProfiler->GetCameraCount(), pRenderProfiler->GetCameraOverrideIndex());
-        m_pGUIContext->DrawText(g_pRenderer->GetFixedResources()->GetDebugFont(), 16, 16, 4, tempString, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255));
-
-        for (uint32 i = 0; i < pRenderProfiler->GetCameraCount(); i++)
-        {
-            tempString.Format("Camera %u: '%s' at (%s)", i, pRenderProfiler->GetCameraName(i).GetCharArray(), StringConverter::Vector3fToString(pRenderProfiler->GetCamera(i)->GetPosition()).GetCharArray());
-            m_pGUIContext->DrawText(g_pRenderer->GetFixedResources()->GetDebugFont(), 16, 20, i * 16 + 20, tempString, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255));
-        }
-    }
+//     // override cameras
+//     if (pRenderProfiler != nullptr && pRenderProfiler->GetCameraCount() > 0)
+//     {
+//         tempString.Format("Total camera count: %u, camera override: %i", pRenderProfiler->GetCameraCount(), pRenderProfiler->GetCameraOverrideIndex());
+//         m_pGUIContext->DrawText(g_pRenderer->GetFixedResources()->GetDebugFont(), 16, 16, 4, tempString, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255));
+// 
+//         for (uint32 i = 0; i < pRenderProfiler->GetCameraCount(); i++)
+//         {
+//             tempString.Format("Camera %u: '%s' at (%s)", i, pRenderProfiler->GetCameraName(i).GetCharArray(), StringConverter::Vector3fToString(pRenderProfiler->GetCamera(i)->GetPosition()).GetCharArray());
+//             m_pGUIContext->DrawText(g_pRenderer->GetFixedResources()->GetDebugFont(), 16, 20, i * 16 + 20, tempString, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255));
+//         }
+//     }
     
     m_pGUIContext->PopManualFlush();
 }
 
 void WorldRenderer::DrawWireframeOverlay(const Camera *pCamera, const RenderQueue::RenderableArray *pRenderables)
 {
+    MICROPROFILE_SCOPEI("WorldRenderer", "DrawWireframeOverlay", MAKE_COLOR_R8G8B8_UNORM(20, 185, 185));
+
     // set common state
     m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_WIREFRAME, RENDERER_CULL_BACK, true, false, false));
     m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(true, false, GPU_COMPARISON_FUNC_LESS_EQUAL), 0);
@@ -564,6 +566,8 @@ void WorldRenderer::DrawWireframeOverlay(const Camera *pCamera, const RenderQueu
 
 void WorldRenderer::DrawOcclusionCullingProxies(const Camera *pCamera)
 {
+    MICROPROFILE_SCOPEI("WorldRenderer", "DrawOcclusionCullingProxies", MAKE_COLOR_R8G8B8_UNORM(20, 20, 185));
+
     // Everything here uses the normal rasterizer state, so set that up here.
     m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_NONE));
     m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(true, false, GPU_COMPARISON_FUNC_LESS_EQUAL), 0);
@@ -698,6 +702,7 @@ void WorldRenderer::DrawOcclusionCullingProxies(const Camera *pCamera)
 void WorldRenderer::CollectOcclusionCullingResults()
 {
     static const uint32 keepRenderPasses = RENDER_PASS_OCCLUSION_CULLING_PROXY;
+    MICROPROFILE_SCOPEI("WorldRenderer", "CollectOcclusionCullingResults", MAKE_COLOR_R8G8B8_UNORM(20, 50, 120));
 
     uint32 queryFlags = 0;
     bool waitForResults = CVars::r_occlusion_culling_wait_for_results.GetBool();
@@ -745,6 +750,8 @@ void WorldRenderer::CollectOcclusionCullingResults()
 
 void WorldRenderer::BindOcclusionQueriesToQueueEntries()
 {
+    MICROPROFILE_SCOPEI("WorldRenderer", "BindOcclusionQueriesToQueueEntries", MAKE_COLOR_R8G8B8_UNORM(120, 50, 120));
+
     // kill the render passes of any OPAQUE objects that's occluding
     for (uint32 i = 0; i < m_occlusionCullingPendingQueries.GetSize(); i++)
     {
@@ -946,6 +953,7 @@ void WorldRenderer::DrawIntermediateBuffers()
     uint32 PREVIEW_TEXTURE_WIDTH = 128;
     uint32 PREVIEW_TEXTURE_HEIGHT = 128;
     uint32 PREVIEW_TEXTURE_MARGIN = 8;
+    MICROPROFILE_SCOPEI("WorldRenderer", "DrawIntermediateBuffers", MAKE_COLOR_R8G8B8_UNORM(120, 120, 45));
 
     // can't do much without gui context
     if (m_pGUIContext != nullptr)

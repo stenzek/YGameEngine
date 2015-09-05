@@ -3,11 +3,12 @@
 #include "Renderer/Shaders/ShadowMapShader.h"
 #include "Renderer/RenderWorld.h"
 #include "Renderer/RenderQueue.h"
-#include "Renderer/RenderProfiler.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/ShaderProgram.h"
+#include "Engine/Camera.h"
 #include "Engine/Material.h"
 #include "Engine/EngineCVars.h"
+#include "Engine/Profiling.h"
 
 Log_SetChannel(CubeMapShadowMapRenderer);
 
@@ -137,8 +138,9 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapD
         m_renderQueue.Clear();
 
         // find renderables
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DiscoverRenderables", false);
         {
+            MICROPROFILE_SCOPEI("CubeMapShadowMapRenderer", "EnumerateRenerables", MAKE_COLOR_R8G8B8_UNORM(50, 150, 100));
+
             // enumerate everything in frustum
             pRenderWorld->EnumerateRenderablesInFrustum(lightCamera.GetFrustum(), [this, &lightCamera](const RenderProxy *pRenderProxy)
             {
@@ -146,7 +148,6 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapD
                 pRenderProxy->QueueForRender(&lightCamera, &m_renderQueue);
             });
         }
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
         // no renderables?
         if (m_renderQueue.GetQueueSize() == 0)
@@ -163,10 +164,10 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapD
         m_renderQueue.Sort();
 
         // opaque
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawOpaqueObjects", true);
         {
             RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetOpaqueRenderables().GetBasePointer();
             RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetOpaqueRenderables().GetBasePointer() + m_renderQueue.GetOpaqueRenderables().GetSize();
+            MICROPROFILE_SCOPEI("CubeMapShadowMapRenderer", "DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(150, 50, 100));
 
             for (; pQueueEntry != pQueueEntryEnd; pQueueEntry++)
             {
@@ -196,13 +197,12 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapD
                 }
             }
         }
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
         // translucent
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawTranslucentObjects", true);
         {
             RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetTranslucentRenderables().GetBasePointer();
             RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetTranslucentRenderables().GetBasePointer() + m_renderQueue.GetTranslucentRenderables().GetSize();
+            MICROPROFILE_SCOPEI("CubeMapShadowMapRenderer", "DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(150, 100, 50));
 
             for (; pQueueEntry != pQueueEntryEnd; pQueueEntry++)
             {
@@ -219,6 +219,5 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapD
                 }
             }
         }
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
     }
 }

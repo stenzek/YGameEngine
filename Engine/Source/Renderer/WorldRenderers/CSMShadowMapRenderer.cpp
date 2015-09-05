@@ -8,6 +8,7 @@
 #include "Renderer/Renderer.h"
 #include "Engine/Material.h"
 #include "Engine/EngineCVars.h"
+#include "Engine/Profiling.h"
 Log_SetChannel(CSMShadowMapRenderer);
 
 CSMShadowMapRenderer::CSMShadowMapRenderer(uint32 shadowMapResolution /* = 256 */, PIXEL_FORMAT shadowMapFormat /* = PIXEL_FORMAT_D16_UNORM */, uint32 cascadeCount /* = 3 */, float splitLambda /* = 0.95f */)
@@ -244,6 +245,8 @@ void CSMShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapData 
 
 void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
 {
+    MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "DrawMultiPass", MAKE_COLOR_R8G8B8_UNORM(200, 47, 85));
+
     // work out shadow draw distance
     float shadowDrawDistance = Min(shadowDistance, pViewCamera->GetFarPlaneDistance() - pViewCamera->GetNearPlaneDistance());
 
@@ -271,7 +274,7 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
         BuildCascadeCamera(&lightCamera, pViewCamera, pLight->Direction, i, m_cascadeCount, m_splitLambda, shadowDrawDistance, pRenderWorld);
 
         // add cascade camera
-        RENDER_PROFILER_ADD_CAMERA(pRenderProfiler, &lightCamera, String::FromFormat("PSSM cascade %u camera", i));
+        //RENDER_PROFILER_ADD_CAMERA(pRenderProfiler, &lightCamera, String::FromFormat("PSSM cascade %u camera", i));
 
         // store vp matrix
         pShadowMapData->CascadeFrustumEyeSpaceDepths[i] = m_splitDepths[i + 1];
@@ -282,8 +285,9 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
         m_renderQueue.Clear();
 
         // find renderables
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DiscoverRenderables", false);
         {
+            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "EnumerateRenderables", MAKE_COLOR_R8G8B8_UNORM(47, 200, 85));
+
             // find everything in this cascade's frustum
             pRenderWorld->EnumerateRenderablesInFrustum(lightCamera.GetFrustum(), [this, &lightCamera](const RenderProxy *pRenderProxy)
             {
@@ -291,7 +295,6 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
                 pRenderProxy->QueueForRender(&lightCamera, &m_renderQueue);
             });
         }
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
         // got any?
         if (!m_renderQueue.GetQueueSize())
@@ -304,8 +307,9 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
         m_renderQueue.Sort();
 
         // draw opaque objects
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawOpaqueObjects", true);
         {           
+            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "EnumerateRenderables", MAKE_COLOR_R8G8B8_UNORM(47, 85, 200));
+
             // initialize selector -- fixme for global flags?
             ShaderProgramSelector shaderSelector(0);
             shaderSelector.SetBaseShader(OBJECT_TYPEINFO(ShadowMapShader), 0);
@@ -330,11 +334,11 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
                 }
             }
         }
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
         // draw transparent objects
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawTranslucentObjects", true);
         {
+            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "EnumerateRenderables", MAKE_COLOR_R8G8B8_UNORM(200, 85, 47));
+
             // initialize selector
             ShaderProgramSelector shaderSelector(0);
             shaderSelector.SetBaseShader(OBJECT_TYPEINFO(ShadowMapShader), 0);
@@ -359,7 +363,6 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
                 }
             }
         }
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
     }
 
     // set everything else to infinte as not to break it

@@ -3,13 +3,13 @@
 #include "Renderer/ShaderComponent.h"
 #include "Renderer/ShaderCompilerFrontend.h"
 #include "Renderer/Renderer.h"
-#include "Renderer/RenderProfiler.h"
 #include "Renderer/RenderProxy.h"
 #include "Renderer/ShaderProgram.h"
 #include "Renderer/ShaderProgramSelector.h"
 #include "Engine/Camera.h"
 #include "Engine/EngineCVars.h"
 #include "Engine/Material.h"
+#include "Engine/Profiling.h"
 Log_SetChannel(CompositingWorldRenderer);
 
 class GaussianBlurShader : public ShaderComponent
@@ -316,6 +316,8 @@ void CompositingWorldRenderer::BlurTexture(GPUTexture2D *pBlurTexture, GPURender
 
 void CompositingWorldRenderer::ApplyFinalCompositePostProcess(const ViewParameters *pViewParameters, GPUTexture2D *pSceneColorTexture, GPURenderTargetView *pOutputRTV)
 {
+    MICROPROFILE_SCOPEI("CompositingWorldRenderer", "ApplyFinalCompositePostProcess", MAKE_COLOR_R8G8B8_UNORM(42, 20, 90));
+
     // common setup
     m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
     m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
@@ -329,6 +331,8 @@ void CompositingWorldRenderer::ApplyFinalCompositePostProcess(const ViewParamete
     // run extract shader, generate mipmaps on luminance buffer
     if (!pViewParameters->EnableManualExposure)
     {
+        MICROPROFILE_SCOPEI("CompositingWorldRenderer", "Generate Luminance Buffer", MAKE_COLOR_R8G8B8_UNORM(100, 100, 100));
+
         m_pGPUContext->SetRenderTargets(1, &pLuminanceBuffer->pRTV, nullptr);
         m_pGPUContext->SetFullViewport(pLuminanceBuffer->pTexture);
         m_pGPUContext->SetShaderProgram(m_pExtractLuminanceProgram->GetGPUProgram());
@@ -346,6 +350,8 @@ void CompositingWorldRenderer::ApplyFinalCompositePostProcess(const ViewParamete
     // only fill bloom buffer when enabled
     if (pViewParameters->EnableBloom)
     {
+        MICROPROFILE_SCOPEI("CompositingWorldRenderer", "Generate Bloom Buffer", MAKE_COLOR_R8G8B8_UNORM(100, 20, 20));
+
         // generate bloom texture
         m_pGPUContext->SetRenderTargets(1, &pBloomBuffer->pRTV, nullptr);
         m_pGPUContext->SetFullViewport(pBloomBuffer->pTexture);

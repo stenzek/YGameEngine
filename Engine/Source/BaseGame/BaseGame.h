@@ -91,7 +91,6 @@ protected:
     GPUContext *m_pGPUContext;
     RendererOutputWindow *m_pOutputWindow;
     WorldRenderer *m_pWorldRenderer;
-    RenderProfiler *m_pRenderProfiler;
     MiniGUIContext m_guiContext;
     Event m_renderThreadEventsReadyEvent;
     Event m_renderThreadFrameCompleteEvent;

@@ -2,13 +2,13 @@
 #include "Renderer/WorldRenderers/SingleShaderWorldRenderer.h"
 #include "Renderer/RenderWorld.h"
 #include "Renderer/RenderQueue.h"
-#include "Renderer/RenderProfiler.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/ShaderProgram.h"
 #include "Engine/Material.h"
 #include "Engine/ResourceManager.h"
 #include "Engine/Texture.h"
 #include "Engine/EngineCVars.h"
+#include "Engine/Profiling.h"
 
 SingleShaderWorldRenderer::SingleShaderWorldRenderer(GPUContext *pGPUContext, const Options *pOptions)
     : WorldRenderer(pGPUContext, pOptions)
@@ -31,9 +31,12 @@ SingleShaderWorldRenderer::~SingleShaderWorldRenderer()
 
 void SingleShaderWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView, RenderProfiler *pRenderProfiler)
 {
+    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawWorld", MAKE_COLOR_R8G8B8_UNORM(47, 85, 200));
+
     // initialize and clear render targets, kick this off first
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "Prepare", false);
     {
+        MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "Prepare", MAKE_COLOR_R8G8B8_UNORM(45, 75, 200));
+
         // set render targets, for pipelining we do this before sorting
         m_pGPUContext->SetRenderTargets(1, &pRenderTargetView, pDepthStencilBufferView);
         m_pGPUContext->SetViewport(&pViewParameters->Viewport);
@@ -47,19 +50,15 @@ void SingleShaderWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const
         pConstants->SetWorldTime(pViewParameters->WorldTime, false);
         pConstants->CommitChanges();
     }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // fill render queue
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "FillRenderQueue", false);
     FillRenderQueue(&pViewParameters->ViewCamera, pRenderWorld);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // no renderables?
     if (m_renderQueue.GetQueueSize() == 0)
         return;
 
     // opaque
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawOpqaueObjects", true);
     {
         PreDraw(pViewParameters);
         DrawOpqaueObjects(pViewParameters);
@@ -68,41 +67,24 @@ void SingleShaderWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const
         if (m_options.ShowWireframeOverlay)
             DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetOpaqueRenderables());
     }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // postprocess
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawPostProcessObjects", true);
     {
         PreDraw(pViewParameters);
         DrawPostProcessObjects(pViewParameters);
         PostDraw(pViewParameters);
-
-        if (m_options.ShowWireframeOverlay)
-            DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetPostProcessRenderables());
     }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // translucent
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawTranslucentObjects", true);
     {
         PreDraw(pViewParameters);
         DrawTranslucentObjects(pViewParameters);
         PostDraw(pViewParameters);
-
-        if (m_options.ShowWireframeOverlay)
-            DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetTranslucentRenderables());
     }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // debug info
     if (m_options.ShowDebugInfo && m_pGUIContext != nullptr)
-    {
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawDebugInfo", false);
-        {
-            DrawDebugInfo(&pViewParameters->ViewCamera, pRenderProfiler);
-        }
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
-    }
+        DrawDebugInfo(&pViewParameters->ViewCamera, pRenderProfiler);
 
     // clear targets and shaders
     m_pGPUContext->ClearState(true, true, true, true);
@@ -111,6 +93,8 @@ void SingleShaderWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const
 
 void SingleShaderWorldRenderer::DrawOpqaueObjects(const ViewParameters *pViewParameters)
 {
+    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(200, 75, 200));
+
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetOpaqueRenderables().GetBasePointer();
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetOpaqueRenderables().GetBasePointer() + m_renderQueue.GetOpaqueRenderables().GetSize();
     for (; pQueueEntry != pQueueEntryEnd; pQueueEntry++)
@@ -118,10 +102,15 @@ void SingleShaderWorldRenderer::DrawOpqaueObjects(const ViewParameters *pViewPar
         if (pQueueEntry->RenderPassMask & (RENDER_PASS_EMISSIVE | RENDER_PASS_LIGHTMAP | RENDER_PASS_STATIC_LIGHTING | RENDER_PASS_DYNAMIC_LIGHTING | RENDER_PASS_SHADOWED_LIGHTING))
             DrawQueueEntry(pViewParameters, pQueueEntry);
     }
+
+    if (m_options.ShowWireframeOverlay)
+        DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetOpaqueRenderables());
 }
 
 void SingleShaderWorldRenderer::DrawPostProcessObjects(const ViewParameters *pViewParameters)
 {
+    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawPostProcessObjects", MAKE_COLOR_R8G8B8_UNORM(45, 200, 75));
+
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetPostProcessRenderables().GetBasePointer();
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetPostProcessRenderables().GetBasePointer() + m_renderQueue.GetPostProcessRenderables().GetSize();
     for (; pQueueEntry != pQueueEntryEnd; pQueueEntry++)
@@ -129,10 +118,15 @@ void SingleShaderWorldRenderer::DrawPostProcessObjects(const ViewParameters *pVi
         if (pQueueEntry->RenderPassMask & (RENDER_PASS_EMISSIVE | RENDER_PASS_LIGHTMAP | RENDER_PASS_STATIC_LIGHTING | RENDER_PASS_DYNAMIC_LIGHTING | RENDER_PASS_SHADOWED_LIGHTING))
             DrawQueueEntry(pViewParameters, pQueueEntry);
     }
+
+    if (m_options.ShowWireframeOverlay)
+        DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetPostProcessRenderables());
 }
 
 void SingleShaderWorldRenderer::DrawTranslucentObjects(const ViewParameters *pViewParameters)
 {
+    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawTranslucentObjects", MAKE_COLOR_R8G8B8_UNORM(75, 45, 200));
+
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetTranslucentRenderables().GetBasePointer();
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetTranslucentRenderables().GetBasePointer() + m_renderQueue.GetTranslucentRenderables().GetSize();
     for (; pQueueEntry != pQueueEntryEnd; pQueueEntry++)
@@ -140,6 +134,9 @@ void SingleShaderWorldRenderer::DrawTranslucentObjects(const ViewParameters *pVi
         if (pQueueEntry->RenderPassMask & (RENDER_PASS_EMISSIVE | RENDER_PASS_LIGHTMAP | RENDER_PASS_STATIC_LIGHTING | RENDER_PASS_DYNAMIC_LIGHTING | RENDER_PASS_SHADOWED_LIGHTING))
             DrawQueueEntry(pViewParameters, pQueueEntry);
     }
+
+    if (m_options.ShowWireframeOverlay)
+        DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetTranslucentRenderables());
 }
 
 void SingleShaderWorldRenderer::SetCommonShaderProgramParameters(const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, ShaderProgram *pShaderProgram)

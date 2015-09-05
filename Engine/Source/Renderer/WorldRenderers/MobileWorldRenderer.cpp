@@ -93,113 +93,81 @@ void MobileWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewP
     MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawWorld", MAKE_COLOR_R8G8B8_UNORM(200, 100, 0));
 
     // add the main camera
-    RENDER_PROFILER_ADD_CAMERA(pRenderProfiler, &pViewParameters->ViewCamera, "World View Camera");
+    //RENDER_PROFILER_ADD_CAMERA(pRenderProfiler, &pViewParameters->ViewCamera, "World View Camera");
 
     // culling
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "FillRenderQueue", false);
     FillRenderQueue(&pViewParameters->ViewCamera, pRenderWorld);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // draw shadow maps
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawShadowMaps", true);
     DrawShadowMaps(pRenderWorld, pViewParameters, pRenderProfiler);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
-    // handle override cameras
-    if (pRenderProfiler != nullptr && pRenderProfiler->HasCameraOverride())
-    {
-        // clone view parameters
-        ViewParameters *viewParametersCopy = (ViewParameters *)alloca(sizeof(ViewParameters));
-        Y_memcpy(viewParametersCopy, pViewParameters, sizeof(ViewParameters));
-        viewParametersCopy->ViewCamera = *pRenderProfiler->GetCameraOverrideCamera();
-        pViewParameters = viewParametersCopy;
-
-        // reissue renderable query with new camera
-        FillRenderQueue(&viewParametersCopy->ViewCamera, pRenderWorld);
-    }
+//     // handle override cameras
+//     if (pRenderProfiler != nullptr && pRenderProfiler->HasCameraOverride())
+//     {
+//         // clone view parameters
+//         ViewParameters *viewParametersCopy = (ViewParameters *)alloca(sizeof(ViewParameters));
+//         Y_memcpy(viewParametersCopy, pViewParameters, sizeof(ViewParameters));
+//         viewParametersCopy->ViewCamera = *pRenderProfiler->GetCameraOverrideCamera();
+//         pViewParameters = viewParametersCopy;
+// 
+//         // reissue renderable query with new camera
+//         FillRenderQueue(&viewParametersCopy->ViewCamera, pRenderWorld);
+//     }
 
     // clear render targets
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "ClearTargets", true);
     {
+        MICROPROFILE_SCOPEI("MobileWorldRenderer", "ClearTargets", MAKE_COLOR_R8G8B8_UNORM(200, 100, 20));
+
         // need a seperate viewport
         RENDERER_VIEWPORT bufferViewport(0, 0, m_options.RenderWidth, m_options.RenderHeight, 0.0f, 1.0f);
         m_pGPUContext->SetRenderTargets(1, &pRenderTargetView, pDepthStencilBufferView);
         m_pGPUContext->SetViewport(&bufferViewport);
         m_pGPUContext->ClearTargets(true, true, true, pViewParameters->FogColor);
     }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // set constants
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "SetConstants", false);
     {
+        MICROPROFILE_SCOPEI("MobileWorldRenderer", "SetConstants", MAKE_COLOR_R8G8B8_UNORM(200, 100, 20));
+
         // set up view-dependent constants
         GPUContextConstants *pConstants = m_pGPUContext->GetConstants();
         pConstants->SetFromCamera(pViewParameters->ViewCamera, false);
         pConstants->SetWorldTime(pViewParameters->WorldTime, false);
         pConstants->CommitChanges();
     }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // pull occlusion results back from gpu
     if (m_options.EnableOcclusionCulling)
-    {
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "CollectOcclusionCullingResults", false);
         CollectOcclusionCullingResults();
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
-    }
     else if (m_options.EnableOcclusionPredication)
-    {
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "BindOcclusionQueriesToQueueEntries", false);
         BindOcclusionQueriesToQueueEntries();
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
-    }
 
     // depth prepass
     if (m_options.EnableDepthPrepass)
-    {
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawDepthPrepass", true);
         DrawDepthPrepass(pViewParameters);
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
-    }
 
     // opaque objects
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawOpaqueObjects", true);
     DrawOpaqueObjects(pViewParameters);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // if occlusion culling is enabled, draw proxies
     if ((m_options.EnableOcclusionCulling | m_options.EnableOcclusionPredication) != 0)
-    {
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawOcclusionCullingProxies", true);
         DrawOcclusionCullingProxies(&pViewParameters->ViewCamera);
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
-    }
 
     // transparent objects
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawTranslucentObjects", true);
     DrawTranslucentObjects(pViewParameters);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // tonemap to present buffer
-    //RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawFinalPass", true);
+    //MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawFinalPass", MAKE_COLOR_R8G8B8_UNORM(200, 100, 20));
     //DrawFinalPass(pViewParameters, pRenderTargetView);
-    //RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // debug info - draw to backbuffer
     if (m_pGUIContext != nullptr)
     {
         if (m_options.ShowDebugInfo)
-        {
-            RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawDebugInfo", false);
             DrawDebugInfo(&pViewParameters->ViewCamera, pRenderProfiler);
-            RENDER_PROFILER_END_SECTION(pRenderProfiler);
-        }
+
         if (m_options.ShowIntermediateBuffers)
-        {
-            RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawIntermediateBuffers", false);
             DrawIntermediateBuffers();
-            RENDER_PROFILER_END_SECTION(pRenderProfiler);
-        }
     }
 
     // frame complete
@@ -245,7 +213,6 @@ void MobileWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld, const 
 
 bool MobileWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
 {
-    MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawDirectionalShadowMap", MAKE_COLOR_R8G8B8_UNORM(200, 0, 0));
     if (m_pDirectionalShadowMapRenderer == nullptr)
         return false;
 
@@ -276,12 +243,7 @@ bool MobileWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pRenderWor
     pLight->ShadowMapIndex = shadowMapIndex;
 
     // invoke draw
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawDirectionalShadowMap", false);
-    {
-        // pass on to the sm renderer
-        m_pDirectionalShadowMapRenderer->DrawDirectionalShadowMap(m_pGPUContext, pShadowMapData, pRenderWorld, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pLight, pRenderProfiler);
-    }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
+    m_pDirectionalShadowMapRenderer->DrawDirectionalShadowMap(m_pGPUContext, pShadowMapData, pRenderWorld, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pLight, pRenderProfiler);
 
     // add to buffer list
     AddDebugBufferView(pShadowMapData->pShadowMapTexture, "DirectionalShadowMap");

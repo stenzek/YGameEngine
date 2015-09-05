@@ -5,7 +5,6 @@
 #include "Renderer/WorldRenderers/CubeMapShadowMapRenderer.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderWorld.h"
-#include "Renderer/RenderProfiler.h"
 #include "Renderer/ShaderProgram.h"
 #include "Renderer/ShaderProgramSelector.h"
 #include "Renderer/Shaders/DepthOnlyShader.h"
@@ -155,139 +154,89 @@ void DeferredShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, co
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawWorld", MAKE_COLOR_R8G8B8_UNORM(255, 100, 100));
 
     // add the main camera
-    RENDER_PROFILER_ADD_CAMERA(pRenderProfiler, &pViewParameters->ViewCamera, "World View Camera");
+    //RENDER_PROFILER_ADD_CAMERA(pRenderProfiler, &pViewParameters->ViewCamera, "World View Camera");
 
     // culling
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "FillRenderQueue", false);
     FillRenderQueue(&pViewParameters->ViewCamera, pRenderWorld);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
     
     // draw shadow maps
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawShadowMaps", true);
     DrawShadowMaps(pRenderWorld, pViewParameters, pRenderProfiler);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // clear render targets
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "ClearTargets", true);
     {
+        MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "Prepare", MAKE_COLOR_R8G8B8_UNORM(100, 150, 75));
+
         // need a seperate viewport, skip color clear it'll be done when gbuffers are combined
         RENDERER_VIEWPORT bufferViewport(0, 0, m_options.RenderWidth, m_options.RenderHeight, 0.0f, 1.0f);
         m_pGPUContext->SetRenderTargets(0, nullptr, m_pSceneDepthBuffer->pDSV);
         m_pGPUContext->SetViewport(&bufferViewport);
         m_pGPUContext->ClearTargets(false, true, true);
-    }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
-    // set constants
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "SetConstants", false);
-    {
         // set up view-dependent constants
         GPUContextConstants *pConstants = m_pGPUContext->GetConstants();
         pConstants->SetFromCamera(pViewParameters->ViewCamera, false);
         pConstants->SetWorldTime(pViewParameters->WorldTime, false);
         pConstants->CommitChanges();
     }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
-    // handle override cameras
-    if (pRenderProfiler != nullptr && pRenderProfiler->HasCameraOverride())
-    {
-        // clone view parameters
-        ViewParameters *viewParametersCopy = (ViewParameters *)alloca(sizeof(ViewParameters));
-        Y_memcpy(viewParametersCopy, pViewParameters, sizeof(ViewParameters));
-        viewParametersCopy->ViewCamera = *pRenderProfiler->GetCameraOverrideCamera();
-        pViewParameters = viewParametersCopy;
-
-        // reissue renderable query with new camera
-        FillRenderQueue(&viewParametersCopy->ViewCamera, pRenderWorld);
-    }
+//     // handle override cameras
+//     if (pRenderProfiler != nullptr && pRenderProfiler->HasCameraOverride())
+//     {
+//         // clone view parameters
+//         ViewParameters *viewParametersCopy = (ViewParameters *)alloca(sizeof(ViewParameters));
+//         Y_memcpy(viewParametersCopy, pViewParameters, sizeof(ViewParameters));
+//         viewParametersCopy->ViewCamera = *pRenderProfiler->GetCameraOverrideCamera();
+//         pViewParameters = viewParametersCopy;
+// 
+//         // reissue renderable query with new camera
+//         FillRenderQueue(&viewParametersCopy->ViewCamera, pRenderWorld);
+//     }
 
     // pull occlusion results back from gpu
     if (m_options.EnableOcclusionCulling)
-    {
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "CollectOcclusionCullingResults", false);
         CollectOcclusionCullingResults();
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
-    }
     else if (m_options.EnableOcclusionPredication)
-    {
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "BindOcclusionQueriesToQueueEntries", false);
         BindOcclusionQueriesToQueueEntries();
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
-    }
 
     // depth prepass
     if (m_options.EnableDepthPrepass)
-    {
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawDepthPrepass", true);
         DrawDepthPrepass(pViewParameters);
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
-    }
 
     // gbuffer
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawGBuffers", true);
     DrawGBuffers(pViewParameters);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // if occlusion culling is enabled, draw proxies
     if ((m_options.EnableOcclusionCulling | m_options.EnableOcclusionPredication) != 0)
-    {
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawOcclusionCullingProxies", true);
         DrawOcclusionCullingProxies(&pViewParameters->ViewCamera);
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
-    }
 
     // draw lights
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawLights", true);
     DrawLights(pViewParameters);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // unlit objects
-    //RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawUnlitObjects", true);
     //DrawUnlitObjects(pViewParameters);
-    //RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // apply AO
     if (m_options.EnableSSAO)
-    {
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "ApplyAmbientOcclusion", true);
         ApplyAmbientOcclusion(pViewParameters, pRenderProfiler);
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
-    }
 
     // apply fog
     if (pViewParameters->FogMode != RENDERER_FOG_MODE_NONE)
-    {
-        RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "ApplyFog", true);
         ApplyFog(pViewParameters);
-        RENDER_PROFILER_END_SECTION(pRenderProfiler);
-    }
 
     // transparent objects
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawPostProcessAndTranslucentObjects", true);
     DrawPostProcessAndTranslucentObjects(pViewParameters);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // tonemap to present buffer
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "ApplyToneMapping", true);
     ApplyFinalCompositePostProcess(pViewParameters, m_pSceneColorBuffer->pTexture, pRenderTargetView);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // debug info - draw to backbuffer
     if (m_pGUIContext != nullptr)
     {
         if (m_options.ShowDebugInfo)
-        {
-            RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawDebugInfo", false);
             DrawDebugInfo(&pViewParameters->ViewCamera, pRenderProfiler);
-            RENDER_PROFILER_END_SECTION(pRenderProfiler);
-        }
+
         if (m_options.ShowIntermediateBuffers)
-        {
-            RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawIntermediateBuffers", false);
             DrawIntermediateBuffers();
-            RENDER_PROFILER_END_SECTION(pRenderProfiler);
-        }
     }
 
     // frame complete
@@ -397,13 +346,8 @@ bool DeferredShadingWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *p
     // bind the shadow map to the light
     pLight->ShadowMapIndex = shadowMapIndex;
 
-    // invoke draw
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawDirectionalShadowMap", false);
-    {
-        // pass on to the sm renderer
-        m_pDirectionalShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight, pRenderProfiler);
-    }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
+    // pass on to the sm renderer
+    m_pDirectionalShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight, pRenderProfiler);
 
     // ok
     return true;
@@ -440,13 +384,8 @@ bool DeferredShadingWorldRenderer::DrawPointShadowMap(const RenderWorld *pRender
     // bind the shadow map to the light
     pLight->ShadowMapIndex = shadowMapIndex;
 
-    // invoke draw
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "DrawPointShadowMap", false);
-    {
-        // pass on to the sm renderer
-        m_pPointShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight, pRenderProfiler);
-    }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
+    // pass on to the sm renderer
+    m_pPointShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight, pRenderProfiler);
 
     // ok
     return true;
@@ -758,7 +697,7 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewP
 
 void DeferredShadingWorldRenderer::DrawDepthPrepass(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawDepthPrepass", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
+    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawDepthPrepass", MAKE_COLOR_R8G8B8_UNORM(255, 100, 100));
 
     ShaderProgramSelector shaderSelector(m_globalShaderFlags);
     shaderSelector.SetBaseShader(OBJECT_TYPEINFO(DepthOnlyShader), 0);
@@ -806,7 +745,7 @@ void DeferredShadingWorldRenderer::DrawDepthPrepass(const ViewParameters *pViewP
 
 void DeferredShadingWorldRenderer::DrawUnlitObjects(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawUnlitObjects", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
+    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawUnlitObjects", MAKE_COLOR_R8G8B8_UNORM(255, 20, 255));
 
     // Bind light buffer and depth buffer.
     m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, m_pSceneDepthBuffer->pDSV);
@@ -830,7 +769,7 @@ void DeferredShadingWorldRenderer::DrawUnlitObjects(const ViewParameters *pViewP
 
 void DeferredShadingWorldRenderer::DrawGBuffers(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawGBuffers", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
+    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawGBuffers", MAKE_COLOR_R8G8B8_UNORM(50, 150, 255));
 
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry;
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd;
@@ -927,6 +866,8 @@ void DeferredShadingWorldRenderer::DrawGBuffers(const ViewParameters *pViewParam
 
 void DeferredShadingWorldRenderer::ApplyAmbientOcclusion(const ViewParameters *pViewParameters, RenderProfiler *pRenderProfiler)
 {
+    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "SSAO", MAKE_COLOR_R8G8B8_UNORM(75, 20, 150));
+
     IntermediateBuffer *pSSAOBuffer = RequestIntermediateBuffer(m_options.RenderWidth, m_options.RenderHeight, PIXEL_FORMAT_R8_UNORM, 1);
     if (pSSAOBuffer == nullptr)
         return;
@@ -939,8 +880,9 @@ void DeferredShadingWorldRenderer::ApplyAmbientOcclusion(const ViewParameters *p
     }
 
     // run ssao shader
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "SSAO", true);
     {
+        MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "Generate SSAO", MAKE_COLOR_R8G8B8_UNORM(75, 20, 150));
+
         m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
         m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
         m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
@@ -949,19 +891,20 @@ void DeferredShadingWorldRenderer::ApplyAmbientOcclusion(const ViewParameters *p
         SSAOShader::SetProgramParameters(m_pGPUContext, m_pSSAOProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer1->pTexture);
         g_pRenderer->DrawFullScreenQuad(m_pGPUContext);
     }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // downsample the AO buffer
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "Downsample", true);
-    ScaleTexture(pSSAOBuffer->pTexture, pDownscaledSSAOBuffer->pRTV, true, false);
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
+    {
+        MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "Downsample SSAO", MAKE_COLOR_R8G8B8_UNORM(20, 75, 150));
+        ScaleTexture(pSSAOBuffer->pTexture, pDownscaledSSAOBuffer->pRTV, true, false);
+    }
 
     // unbind source/dest from state
     m_pGPUContext->ClearState(true, false, false, true);
 
     // draw/blend to light buffer
-    RENDER_PROFILER_BEGIN_SECTION(pRenderProfiler, "Apply", true);
     {
+        MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "Apply SSAO", MAKE_COLOR_R8G8B8_UNORM(20, 150, 75));
+
         m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
         m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
         m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStatePremultipliedAlpha());
@@ -970,7 +913,6 @@ void DeferredShadingWorldRenderer::ApplyAmbientOcclusion(const ViewParameters *p
         SSAOApplyShader::SetProgramParameters(m_pGPUContext, m_pSSAOApplyProgram, pDownscaledSSAOBuffer->pTexture);
         g_pRenderer->DrawFullScreenQuad(m_pGPUContext);
     }
-    RENDER_PROFILER_END_SECTION(pRenderProfiler);
 
     // clear shader resources out
     m_pGPUContext->ClearState(true, false, false, false);
@@ -982,6 +924,8 @@ void DeferredShadingWorldRenderer::ApplyAmbientOcclusion(const ViewParameters *p
 
 void DeferredShadingWorldRenderer::ApplyFog(const ViewParameters *pViewParameters)
 {
+    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "ApplyFog", MAKE_COLOR_R8G8B8_UNORM(50, 42, 150));
+
     // draw/blend to light buffer
     m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
     m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
@@ -1003,6 +947,8 @@ void DeferredShadingWorldRenderer::ApplyFog(const ViewParameters *pViewParameter
 
 void DeferredShadingWorldRenderer::DrawLights(const ViewParameters *pViewParameters)
 {
+    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawLights", MAKE_COLOR_R8G8B8_UNORM(42, 100, 25));
+
     // bind the light buffer without any depth buffer, and clear it
     m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
 
@@ -1021,6 +967,8 @@ void DeferredShadingWorldRenderer::DrawLights(const ViewParameters *pViewParamet
 
 void DeferredShadingWorldRenderer::DrawLights_DirectionalLights(const ViewParameters *pViewParameters)
 {
+    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawLights_DirectionalLights", MAKE_COLOR_R8G8B8_UNORM(42, 25, 100));
+
     // setup state for directional lights -- possibly use stencil buffer for pixels that have to be shaded??
     m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false, false));
     m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false, GPU_COMPARISON_FUNC_ALWAYS), 0);
@@ -1061,6 +1009,8 @@ void DeferredShadingWorldRenderer::DrawLights_DirectionalLights(const ViewParame
 
 void DeferredShadingWorldRenderer::DrawLights_PointLights_ByLightVolumes(const ViewParameters *pViewParameters)
 {
+    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawLights_PointLights_ByLightVolumes", MAKE_COLOR_R8G8B8_UNORM(25, 90, 100));
+
     m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false, false));
     m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false, GPU_COMPARISON_FUNC_ALWAYS), 0);
     m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAdditive());
@@ -1162,6 +1112,8 @@ void DeferredShadingWorldRenderer::DrawLights_PointLights_ByLightVolumes(const V
 
 void DeferredShadingWorldRenderer::DrawLights_PointLights_Tiled(const ViewParameters *pViewParameters)
 {
+    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawLights_PointLights_Tiled", MAKE_COLOR_R8G8B8_UNORM(25, 90, 100));
+
     // setup for drawing volumes
     m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false, false));
     m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false, GPU_COMPARISON_FUNC_ALWAYS), 0);
@@ -1266,6 +1218,7 @@ void DeferredShadingWorldRenderer::DrawPostProcessAndTranslucentObjects(const Vi
 {
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry;
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd;
+    MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawPostProcessAndTranslucentObjects", MAKE_COLOR_R8G8B8_UNORM(90, 25, 80));
 
     // set render target to the light buffer
     m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, m_pSceneDepthBuffer->pDSV);

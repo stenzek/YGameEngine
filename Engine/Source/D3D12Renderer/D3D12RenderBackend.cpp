@@ -313,6 +313,9 @@ bool D3D12RenderBackend::Create(const RendererInitializationParameters *pCreateP
         m_pGPUContext->SetOutputBuffer(pOutputBuffer);
     }
 
+    // clear state ready for rendering
+    m_pGPUContext->ClearState(true, true, true);
+
     // add references for returned pointers
     m_pGPUDevice->AddRef();
     m_pGPUContext->AddRef();

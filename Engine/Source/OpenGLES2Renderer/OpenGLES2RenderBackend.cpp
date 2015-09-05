@@ -207,6 +207,9 @@ bool OpenGLES2RenderBackend::Create(const RendererInitializationParameters *pCre
         return false;
     }
 
+    // clear state ready for rendering
+    m_pGPUContext->ClearState(true, true, true);
+
     // add references for returned pointers
     m_pGPUDevice->AddRef();
     m_pGPUContext->AddRef();

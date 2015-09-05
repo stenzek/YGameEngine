@@ -298,14 +298,13 @@ void OpenGLGPUContext::ClearState(bool clearShaders /* = true */, bool clearBuff
 
     if (clearStates)
     {
-        SetRasterizerState(nullptr);
-        SetDepthStencilState(nullptr, 0);
-        SetBlendState(nullptr);
-
-        RENDERER_VIEWPORT viewport(0, 0, 0, 0, 0.0f, 1.0f);
-        SetViewport(&viewport);
+        SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState());
+        SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(), 0);
+        SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
+        SetDrawTopology(DRAW_TOPOLOGY_UNDEFINED);
 
         RENDERER_SCISSOR_RECT scissor(0, 0, 0, 0);
+        SetFullViewport(nullptr);
         SetScissorRect(&scissor);
     }
 

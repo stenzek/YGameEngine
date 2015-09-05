@@ -626,13 +626,14 @@ void D3D12GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffe
 
     if (clearStates)
     {
-        SetRasterizerState(nullptr);
-        SetDepthStencilState(nullptr, 0);
-        SetBlendState(nullptr);
+        SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState());
+        SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(), 0);
+        SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
         SetDrawTopology(DRAW_TOPOLOGY_UNDEFINED);
 
-        RENDERER_VIEWPORT viewport(0, 0, 0, 0, 0.0f, 1.0f);
-        SetViewport(&viewport);
+        RENDERER_SCISSOR_RECT scissor(0, 0, 0, 0);
+        SetFullViewport(nullptr);
+        SetScissorRect(&scissor);
     }
 
     if (clearRenderTargets)

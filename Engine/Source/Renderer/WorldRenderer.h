@@ -8,7 +8,6 @@ class Material;
 class MaterialShader;
 
 class RenderWorld;
-class RenderProfiler;
 
 class ShaderProgram;
 
@@ -116,7 +115,7 @@ public:
     virtual bool Initialize();
 
     // Draws the world.
-    virtual void DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView, RenderProfiler *pRenderProfiler);
+    virtual void DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView);
 
     // Get render stats.
     virtual void GetRenderStats(RenderStats *pRenderStats) const;
@@ -173,7 +172,7 @@ protected:
     void FillRenderQueue(const Camera *pCamera, const RenderWorld *pRenderWorld);
 
     // debug drawing
-    void DrawDebugInfo(const Camera *pCamera, RenderProfiler *pRenderProfiler);
+    void DrawDebugInfo(const Camera *pCamera);
 
     // wireframe overlay drawing
     void DrawWireframeOverlay(const Camera *pCamera, const RenderQueue::RenderableArray *pRenderables);

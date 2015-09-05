@@ -24,7 +24,7 @@ protected:
     void ApplyFinalCompositePostProcess(const ViewParameters *pViewParameters, GPUTexture2D *pSceneColorTexture, GPURenderTargetView *pOutputRTV);
 
     // debug drawing
-    void DrawDebugInfo(const Camera *pCamera, RenderProfiler *pRenderProfiler);
+    void DrawDebugInfo(const Camera *pCamera);
 
     // composite programs
     ShaderProgram *m_pExtractLuminanceProgram;

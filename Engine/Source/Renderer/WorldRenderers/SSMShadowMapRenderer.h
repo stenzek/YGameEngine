@@ -3,7 +3,6 @@
 #include "Renderer/RenderQueue.h"
 
 class Camera;
-class RenderProfiler;
 class RenderWorld;
 
 class SSMShadowMapRenderer
@@ -27,8 +26,8 @@ public:
     bool AllocateShadowMap(ShadowMapData *pShadowMapData);
     void FreeShadowMap(ShadowMapData *pShadowMapData);
 
-    void DrawDirectionalShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const RenderWorld *pRenderWorld, const Camera *pViewCamera, float shadowDistance, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler);
-    void DrawSpotShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const RenderWorld *pRenderWorld, const Camera *pViewCamera, float shadowDistance, const RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler);
+    void DrawDirectionalShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const RenderWorld *pRenderWorld, const Camera *pViewCamera, float shadowDistance, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight);
+    void DrawSpotShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const RenderWorld *pRenderWorld, const Camera *pViewCamera, float shadowDistance, const RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight);
 
 private:
     uint32 m_shadowMapResolution;

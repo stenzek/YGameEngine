@@ -19,7 +19,6 @@ BaseGame::BaseGame()
     , m_pGPUContext(nullptr)
     , m_pWorldRenderer(nullptr)
     , m_pOutputWindow(nullptr)
-    , m_pRenderProfiler(nullptr)
     , m_renderThreadEventsReadyEvent(true)
     , m_renderThreadFrameCompleteEvent(true)
     , m_pGameState(nullptr)
@@ -324,21 +323,21 @@ void BaseGame::BindBaseInputEvents()
 
 void BaseGame::InputActionHandler_PreviousDebugCamera()
 {
-    if (m_pRenderProfiler == nullptr)
-        return;
-
-    if (m_pRenderProfiler->GetCameraOverrideIndex() <= 0)
-        m_pRenderProfiler->ClearCameraOverride();
-    else
-        m_pRenderProfiler->SetCameraOverride(m_pRenderProfiler->GetCameraOverrideIndex() - 1);
+//     if (m_pRenderProfiler == nullptr)
+//         return;
+// 
+//     if (m_pRenderProfiler->GetCameraOverrideIndex() <= 0)
+//         m_pRenderProfiler->ClearCameraOverride();
+//     else
+//         m_pRenderProfiler->SetCameraOverride(m_pRenderProfiler->GetCameraOverrideIndex() - 1);
 }
 
 void BaseGame::InputActionHandler_NextDebugCamera()
 {
-    if (m_pRenderProfiler == nullptr)
-        return;
-
-    m_pRenderProfiler->SetCameraOverride(m_pRenderProfiler->GetCameraOverrideIndex() + 1);
+//     if (m_pRenderProfiler == nullptr)
+//         return;
+// 
+//     m_pRenderProfiler->SetCameraOverride(m_pRenderProfiler->GetCameraOverrideIndex() + 1);
 }
 
 void BaseGame::SetNextGameState(GameState *pGameState)
@@ -725,13 +724,6 @@ bool BaseGame::RendererStart()
         }
 #endif
 
-        // add render profiler
-        if (CVars::r_render_profiler.GetBool())
-        {
-            m_pRenderProfiler = new RenderProfiler(m_pGPUContext);
-            m_pRenderProfiler->CreateRendererResources();
-        }
-
         // create world renderer
         WorldRenderer::Options renderOptions;
         renderOptions.InitFromCVars();
@@ -740,8 +732,6 @@ bool BaseGame::RendererStart()
         if (m_pWorldRenderer == nullptr)
         {
             Log_ErrorPrintf("Failed to create world renderer instance.");
-            delete m_pRenderProfiler;
-            m_pRenderProfiler = nullptr;
 #ifdef WITH_IMGUI
             ImGui::FreeResources();
 #endif
@@ -842,31 +832,6 @@ void BaseGame::RenderThreadRestartRenderer()
 #ifdef WITH_IMGUI
     ImGui::SetViewportDimensions(bufferWidth, bufferHeight);
 #endif
-
-    // update render profiler
-    if (CVars::r_render_profiler.GetBool())
-    {
-        if (m_pRenderProfiler == nullptr)
-        {
-            m_pRenderProfiler = new RenderProfiler(m_pGPUContext);
-            m_pRenderProfiler->BeginFrame();
-        }
-
-        if (CVars::r_render_profiler_gpu_time.GetBool() != m_pRenderProfiler->GetGPUStatsEnabled())
-            m_pRenderProfiler->SetGPUStatsEnabled(CVars::r_render_profiler_gpu_time.GetBool());
-    }
-    else
-    {
-        if (m_pRenderProfiler != nullptr)
-        {
-            m_pRenderProfiler->EndFrame();
-            delete m_pRenderProfiler;
-            m_pRenderProfiler = nullptr;
-        }
-    }
-
-    // set a default viewport on the main context, most likely the game will override this but it's good for loading etc
-    m_pGPUContext->SetFullViewport();
 }
 
 void BaseGame::RenderThreadFrame(float deltaTime)
@@ -1560,23 +1525,6 @@ void BaseGame::RenderThreadDrawImGuiOverlays()
                 if (ImGui::Checkbox("Show Cascades", &boolValue))
                 {
                     g_pConsole->SetCVar(&CVars::r_show_cascades, boolValue);
-                    QueueRendererRestart();
-                }
-            }
-
-            if (ImGui::CollapsingHeader("Profiler", nullptr, true, true))
-            {
-                boolValue = CVars::r_render_profiler.GetBool();
-                if (ImGui::Checkbox("Enabled", &boolValue))
-                {
-                    g_pConsole->SetCVar(&CVars::r_render_profiler, boolValue);
-                    QueueRendererRestart();
-                }
-
-                boolValue = CVars::r_render_profiler_gpu_time.GetBool();
-                if (ImGui::Checkbox("Profile GPU time", &boolValue))
-                {
-                    g_pConsole->SetCVar(&CVars::r_render_profiler_gpu_time, boolValue);
                     QueueRendererRestart();
                 }
             }

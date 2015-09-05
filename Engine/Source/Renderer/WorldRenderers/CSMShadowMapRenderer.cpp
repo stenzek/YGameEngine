@@ -237,13 +237,13 @@ void CSMShadowMapRenderer::BuildCascadeCamera(Camera *pOutCascadeCamera, const C
     }
 }
 
-void CSMShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+void CSMShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
 {
     // draw using multipass technique
-    DrawMultiPass(pGPUContext, pShadowMapData, pViewCamera, shadowDistance, pRenderWorld, pLight, pRenderProfiler);
+    DrawMultiPass(pGPUContext, pShadowMapData, pViewCamera, shadowDistance, pRenderWorld, pLight);
 }
 
-void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
 {
     MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "DrawMultiPass", MAKE_COLOR_R8G8B8_UNORM(200, 47, 85));
 
@@ -294,6 +294,9 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
                 // add to render queue
                 pRenderProxy->QueueForRender(&lightCamera, &m_renderQueue);
             });
+
+            // sort queue
+            m_renderQueue.Sort();
         }
 
         // got any?
@@ -303,12 +306,9 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
         // set constants
         pGPUContext->GetConstants()->SetFromCamera(lightCamera, true);
 
-        // sort queue
-        m_renderQueue.Sort();
-
         // draw opaque objects
         {           
-            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "EnumerateRenderables", MAKE_COLOR_R8G8B8_UNORM(47, 85, 200));
+            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(47, 85, 200));
 
             // initialize selector -- fixme for global flags?
             ShaderProgramSelector shaderSelector(0);
@@ -337,7 +337,7 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
 
         // draw transparent objects
         {
-            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "EnumerateRenderables", MAKE_COLOR_R8G8B8_UNORM(200, 85, 47));
+            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "DrawTransparentObjects", MAKE_COLOR_R8G8B8_UNORM(200, 85, 47));
 
             // initialize selector
             ShaderProgramSelector shaderSelector(0);

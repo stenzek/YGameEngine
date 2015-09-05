@@ -149,7 +149,7 @@ bool DeferredShadingWorldRenderer::Initialize()
     return true;
 }
 
-void DeferredShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView, RenderProfiler *pRenderProfiler)
+void DeferredShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView)
 {
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawWorld", MAKE_COLOR_R8G8B8_UNORM(255, 100, 100));
 
@@ -160,7 +160,7 @@ void DeferredShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, co
     FillRenderQueue(&pViewParameters->ViewCamera, pRenderWorld);
     
     // draw shadow maps
-    DrawShadowMaps(pRenderWorld, pViewParameters, pRenderProfiler);
+    DrawShadowMaps(pRenderWorld, pViewParameters);
 
     // clear render targets
     {
@@ -217,7 +217,7 @@ void DeferredShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, co
 
     // apply AO
     if (m_options.EnableSSAO)
-        ApplyAmbientOcclusion(pViewParameters, pRenderProfiler);
+        ApplyAmbientOcclusion(pViewParameters);
 
     // apply fog
     if (pViewParameters->FogMode != RENDERER_FOG_MODE_NONE)
@@ -233,7 +233,7 @@ void DeferredShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, co
     if (m_pGUIContext != nullptr)
     {
         if (m_options.ShowDebugInfo)
-            DrawDebugInfo(&pViewParameters->ViewCamera, pRenderProfiler);
+            DrawDebugInfo(&pViewParameters->ViewCamera);
 
         if (m_options.ShowIntermediateBuffers)
             DrawIntermediateBuffers();
@@ -277,7 +277,7 @@ void DeferredShadingWorldRenderer::OnFrameComplete()
     m_lastVolumetricLightIndex = 0xFFFFFFFF;
 }
 
-void DeferredShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RenderProfiler *pRenderProfiler)
+void DeferredShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawShadowMaps", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
 
@@ -296,7 +296,7 @@ void DeferredShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorl
         {
             RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight = &directionalLights[i];
             if (pLight->ShadowFlags & LIGHT_SHADOW_FLAG_CAST_DYNAMIC_SHADOWS)
-                DrawDirectionalShadowMap(pRenderWorld, pViewParameters, pLight, pRenderProfiler);
+                DrawDirectionalShadowMap(pRenderWorld, pViewParameters, pLight);
         }
     }
 
@@ -307,7 +307,7 @@ void DeferredShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorl
         {
             RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight = &pointLights[i];
             if (pLight->ShadowFlags & LIGHT_SHADOW_FLAG_CAST_DYNAMIC_SHADOWS)
-                DrawPointShadowMap(pRenderWorld, pViewParameters, pLight, pRenderProfiler);
+                DrawPointShadowMap(pRenderWorld, pViewParameters, pLight);
         }
     }
 
@@ -315,7 +315,7 @@ void DeferredShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorl
     m_pGPUContext->ClearState(true, false, false, true);
 }
 
-bool DeferredShadingWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+bool DeferredShadingWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
 {
     if (m_pDirectionalShadowMapRenderer == nullptr)
         return false;
@@ -347,13 +347,13 @@ bool DeferredShadingWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *p
     pLight->ShadowMapIndex = shadowMapIndex;
 
     // pass on to the sm renderer
-    m_pDirectionalShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight, pRenderProfiler);
+    m_pDirectionalShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight);
 
     // ok
     return true;
 }
 
-bool DeferredShadingWorldRenderer::DrawPointShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+bool DeferredShadingWorldRenderer::DrawPointShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight)
 {
     if (m_pPointShadowMapRenderer == nullptr)
         return false;
@@ -385,13 +385,13 @@ bool DeferredShadingWorldRenderer::DrawPointShadowMap(const RenderWorld *pRender
     pLight->ShadowMapIndex = shadowMapIndex;
 
     // pass on to the sm renderer
-    m_pPointShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight, pRenderProfiler);
+    m_pPointShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight);
 
     // ok
     return true;
 }
 
-bool DeferredShadingWorldRenderer::DrawSpotShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+bool DeferredShadingWorldRenderer::DrawSpotShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight)
 {
     return false;
 }
@@ -864,7 +864,7 @@ void DeferredShadingWorldRenderer::DrawGBuffers(const ViewParameters *pViewParam
     AddDebugBufferView(m_pGBuffer2, "GBuffer2", false);
 }
 
-void DeferredShadingWorldRenderer::ApplyAmbientOcclusion(const ViewParameters *pViewParameters, RenderProfiler *pRenderProfiler)
+void DeferredShadingWorldRenderer::ApplyAmbientOcclusion(const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "SSAO", MAKE_COLOR_R8G8B8_UNORM(75, 20, 150));
 
@@ -1298,7 +1298,7 @@ void DeferredShadingWorldRenderer::DrawPostProcessAndTranslucentObjects(const Vi
         DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetTranslucentRenderables());
 }
 
-void DeferredShadingWorldRenderer::DrawDebugInfo(const Camera *pCamera, RenderProfiler *pRenderProfiler)
+void DeferredShadingWorldRenderer::DrawDebugInfo(const Camera *pCamera)
 {
-    CompositingWorldRenderer::DrawDebugInfo(pCamera, pRenderProfiler);
+    CompositingWorldRenderer::DrawDebugInfo(pCamera);
 }

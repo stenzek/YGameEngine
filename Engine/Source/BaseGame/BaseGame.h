@@ -3,7 +3,6 @@
 #include "BaseGame/GameState.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/WorldRenderer.h"
-#include "Renderer/RenderProfiler.h"
 #include "Renderer/MiniGUIContext.h"
 #include "Engine/FPSCounter.h"
 #include "Engine/OverlayConsole.h"
@@ -45,7 +44,6 @@ public:
     GPUContext *GetGPUContext() { return m_pGPUContext; }
     RendererOutputWindow *GetOutputWindow() { return m_pOutputWindow; }
     WorldRenderer *GetWorldRenderer() { return m_pWorldRenderer; }
-    RenderProfiler *GetRenderProfiler() { return m_pRenderProfiler; }
     MiniGUIContext *GetGUIContext() { return &m_guiContext; }
     void QueueRendererRestart() { m_restartRendererFlag = true; }
     void SetRelativeMouseMovement(bool enabled);

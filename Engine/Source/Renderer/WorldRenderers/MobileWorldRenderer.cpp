@@ -88,7 +88,7 @@ bool MobileWorldRenderer::Initialize()
     return true;
 }
 
-void MobileWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView, RenderProfiler *pRenderProfiler)
+void MobileWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView)
 {
     MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawWorld", MAKE_COLOR_R8G8B8_UNORM(200, 100, 0));
 
@@ -99,7 +99,7 @@ void MobileWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewP
     FillRenderQueue(&pViewParameters->ViewCamera, pRenderWorld);
 
     // draw shadow maps
-    DrawShadowMaps(pRenderWorld, pViewParameters, pRenderProfiler);
+    DrawShadowMaps(pRenderWorld, pViewParameters);
 
 //     // handle override cameras
 //     if (pRenderProfiler != nullptr && pRenderProfiler->HasCameraOverride())
@@ -164,7 +164,7 @@ void MobileWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewP
     if (m_pGUIContext != nullptr)
     {
         if (m_options.ShowDebugInfo)
-            DrawDebugInfo(&pViewParameters->ViewCamera, pRenderProfiler);
+            DrawDebugInfo(&pViewParameters->ViewCamera);
 
         if (m_options.ShowIntermediateBuffers)
             DrawIntermediateBuffers();
@@ -192,7 +192,7 @@ void MobileWorldRenderer::OnFrameComplete()
     m_lastVolumetricLightIndex = 0xFFFFFFFF;
 }
 
-void MobileWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RenderProfiler *pRenderProfiler)
+void MobileWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawShadowMaps", MAKE_COLOR_R8G8B8_UNORM(200, 200, 200));
 
@@ -203,7 +203,7 @@ void MobileWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld, const 
         {
             RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight = &directionalLights[i];
             if (pLight->ShadowFlags & LIGHT_SHADOW_FLAG_CAST_DYNAMIC_SHADOWS)
-                DrawDirectionalShadowMap(pRenderWorld, pViewParameters, pLight, pRenderProfiler);
+                DrawDirectionalShadowMap(pRenderWorld, pViewParameters, pLight);
         }
     }
 
@@ -211,7 +211,7 @@ void MobileWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld, const 
     m_pGPUContext->ClearState(true, false, false, true);
 }
 
-bool MobileWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+bool MobileWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
 {
     if (m_pDirectionalShadowMapRenderer == nullptr)
         return false;
@@ -243,7 +243,7 @@ bool MobileWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pRenderWor
     pLight->ShadowMapIndex = shadowMapIndex;
 
     // invoke draw
-    m_pDirectionalShadowMapRenderer->DrawDirectionalShadowMap(m_pGPUContext, pShadowMapData, pRenderWorld, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pLight, pRenderProfiler);
+    m_pDirectionalShadowMapRenderer->DrawDirectionalShadowMap(m_pGPUContext, pShadowMapData, pRenderWorld, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pLight);
 
     // add to buffer list
     AddDebugBufferView(pShadowMapData->pShadowMapTexture, "DirectionalShadowMap");
@@ -252,7 +252,7 @@ bool MobileWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pRenderWor
     return true;
 }
 
-bool MobileWorldRenderer::DrawSpotShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+bool MobileWorldRenderer::DrawSpotShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight)
 {
     return false;
 }

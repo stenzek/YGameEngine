@@ -136,7 +136,7 @@ static void BuildDirectionalLightCamera(Camera *pShadowCamera, const Camera *pVi
     //pShadowCamera->SetFarPlaneDistance(8000.0f);
 }
 
-void SSMShadowMapRenderer::DrawDirectionalShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const RenderWorld *pRenderWorld, const Camera *pViewCamera, float shadowDistance, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+void SSMShadowMapRenderer::DrawDirectionalShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const RenderWorld *pRenderWorld, const Camera *pViewCamera, float shadowDistance, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
 {
     MICROPROFILE_SCOPEI("SSMShadowMapRenderer", "DrawDirectionalShadowMap", MAKE_COLOR_R8G8B8_UNORM(200, 0, 0));
 
@@ -274,7 +274,7 @@ void SSMShadowMapRenderer::DrawDirectionalShadowMap(GPUContext *pGPUContext, Sha
     }
 }
 
-void SSMShadowMapRenderer::DrawSpotShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const RenderWorld *pRenderWorld, const Camera *pViewCamera, float shadowDistance, const RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+void SSMShadowMapRenderer::DrawSpotShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const RenderWorld *pRenderWorld, const Camera *pViewCamera, float shadowDistance, const RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight)
 {
 
 }

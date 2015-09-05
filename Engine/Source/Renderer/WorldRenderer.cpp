@@ -289,7 +289,7 @@ bool WorldRenderer::Initialize()
     return true;
 }
 
-void WorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView, RenderProfiler *pRenderProfiler)
+void WorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView)
 {
 
 }
@@ -480,7 +480,7 @@ void WorldRenderer::FillRenderQueue(const Camera *pCamera, const RenderWorld *pR
     m_renderQueue.Sort();
 }
 
-void WorldRenderer::DrawDebugInfo(const Camera *pCamera, RenderProfiler *pRenderProfiler)
+void WorldRenderer::DrawDebugInfo(const Camera *pCamera)
 {
     MICROPROFILE_SCOPEI("WorldRenderer", "DrawDebugInfo", MAKE_COLOR_R8G8B8_UNORM(185, 20, 185));
     

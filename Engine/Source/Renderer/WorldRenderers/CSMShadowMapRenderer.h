@@ -3,7 +3,6 @@
 #include "Renderer/RenderQueue.h"
 
 class Camera;
-class RenderProfiler;
 class RenderWorld;
 
 class CSMShadowMapRenderer
@@ -39,7 +38,7 @@ public:
     void FreeShadowMap(ShadowMapData *pShadowMapData);
 
     // drawer
-    void DrawShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler);
+    void DrawShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight);
 
 private:
     // calculate split depths, store in m_splitDepths
@@ -52,7 +51,7 @@ private:
     void BuildCascadeCamera(Camera *pOutCascadeCamera, const Camera *pViewCamera, const float3 &lightDirection, uint32 splitIndex, uint32 splitCount, float lambda, float shadowDrawDistance, const RenderWorld *pRenderWorld);
 
     // draw using multipass technique
-    void DrawMultiPass(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler);
+    void DrawMultiPass(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight);
 
     // in vars
     uint32 m_shadowMapResolution;

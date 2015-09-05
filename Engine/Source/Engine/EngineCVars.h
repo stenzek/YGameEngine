@@ -29,8 +29,6 @@ namespace CVars
     extern CVar r_show_fps;
     extern CVar r_show_debug_info;
     extern CVar r_show_frame_times;
-    extern CVar r_render_profiler;
-    extern CVar r_render_profiler_gpu_time;
     extern CVar r_texture_filtering;
     extern CVar r_max_anisotropy;
     extern CVar r_material_debug_mode;

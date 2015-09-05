@@ -35,8 +35,6 @@ namespace CVars
     CVar r_show_fps("r_show_fps", 0, "1", "Show current FPS on screen", "bool");
     CVar r_show_debug_info("r_show_debug_info", CVAR_FLAG_REQUIRE_RENDER_RESTART, "1", "Show debug info", "bool");
     CVar r_show_frame_times("r_show_frame_times", 0, "1", "Show frame times on screen", "bool");
-    CVar r_render_profiler("r_render_profiler", CVAR_FLAG_REQUIRE_RENDER_RESTART, "0", "Enable render profiler", "bool");
-    CVar r_render_profiler_gpu_time("r_render_profiler_gpu_time", CVAR_FLAG_REQUIRE_RENDER_RESTART, "0", "Enable render profiler GPU time capturing", "bool");
     CVar r_texture_filtering("r_texture_filtering", CVAR_FLAG_REQUIRE_APP_RESTART, "3", "Default texture filter, 0 - point, 1 - bilinear, 2 - trilinear, 3 - anistropic", "uint:0-3");
     CVar r_max_anisotropy("r_max_anistropy", CVAR_FLAG_REQUIRE_APP_RESTART, "16", "Maximum anisotropy when using anisotropic filtering", "uint:1-16");
     CVar r_material_debug_mode("r_material_debug_mode", 0, "0", "Material debug mode", "uint");

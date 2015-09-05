@@ -267,9 +267,9 @@ void CompositingWorldRenderer::OnFrameComplete()
     WorldRenderer::OnFrameComplete();
 }
 
-void CompositingWorldRenderer::DrawDebugInfo(const Camera *pCamera, RenderProfiler *pRenderProfiler)
+void CompositingWorldRenderer::DrawDebugInfo(const Camera *pCamera)
 {
-    WorldRenderer::DrawDebugInfo(pCamera, pRenderProfiler);
+    WorldRenderer::DrawDebugInfo(pCamera);
 }
 
 void CompositingWorldRenderer::BlurTexture(GPUTexture2D *pBlurTexture, GPURenderTargetView *pBlurTextureRTV, float blurSigma /* = 0.8f */, bool restoreViewport /* = true */)

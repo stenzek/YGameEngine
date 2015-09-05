@@ -222,7 +222,7 @@ void BaseDemoWorldGameState::OnRenderThreadBeginFrame(float deltaTime)
 void BaseDemoWorldGameState::OnRenderThreadDraw(float deltaTime)
 {
     // draw world
-    m_pDemoGame->GetWorldRenderer()->DrawWorld(m_pWorld->GetRenderWorld(), &m_viewParameters, nullptr, nullptr, m_pDemoGame->GetRenderProfiler());
+    m_pDemoGame->GetWorldRenderer()->DrawWorld(m_pWorld->GetRenderWorld(), &m_viewParameters, nullptr, nullptr);
 
     // setup overlay draws
     m_pDemoGame->GetGPUContext()->SetRenderTargets(0, nullptr, nullptr);

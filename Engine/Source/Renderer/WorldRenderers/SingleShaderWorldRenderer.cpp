@@ -29,7 +29,7 @@ SingleShaderWorldRenderer::~SingleShaderWorldRenderer()
 
 }
 
-void SingleShaderWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView, RenderProfiler *pRenderProfiler)
+void SingleShaderWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView)
 {
     MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawWorld", MAKE_COLOR_R8G8B8_UNORM(47, 85, 200));
 
@@ -84,7 +84,7 @@ void SingleShaderWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const
 
     // debug info
     if (m_options.ShowDebugInfo && m_pGUIContext != nullptr)
-        DrawDebugInfo(&pViewParameters->ViewCamera, pRenderProfiler);
+        DrawDebugInfo(&pViewParameters->ViewCamera);
 
     // clear targets and shaders
     m_pGPUContext->ClearState(true, true, true, true);

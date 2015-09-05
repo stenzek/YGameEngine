@@ -7,7 +7,7 @@ public:
     SingleShaderWorldRenderer(GPUContext *pGPUContext, const Options *pOptions);
     virtual ~SingleShaderWorldRenderer();
 
-    virtual void DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView, RenderProfiler *pRenderProfiler) override;
+    virtual void DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView) override;
 
 protected:
     // Set by derived classes.

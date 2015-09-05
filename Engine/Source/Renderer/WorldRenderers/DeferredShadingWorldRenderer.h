@@ -35,16 +35,16 @@ public:
 
     virtual bool Initialize() override;
 
-    virtual void DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView, RenderProfiler *pRenderProfiler) override;
+    virtual void DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView) override;
     virtual void GetRenderStats(RenderStats *pRenderStats) const override;
     virtual void OnFrameComplete() override;
 
 private:
     // draw shadow maps from needed lights
-    void DrawShadowMaps(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RenderProfiler *pRenderProfiler);
-    bool DrawDirectionalShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler);
-    bool DrawPointShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler);
-    bool DrawSpotShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler);
+    void DrawShadowMaps(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters);
+    bool DrawDirectionalShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight);
+    bool DrawPointShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight);
+    bool DrawSpotShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight);
 
     // set shader program parameters for queue entry
     void SetCommonShaderProgramParameters(const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, ShaderProgram *pShaderProgram);
@@ -74,7 +74,7 @@ private:
     void DrawLights_PointLights_Tiled(const ViewParameters *pViewParameters);
 
     // build ambient occlusion terms (Overwrites render targets)
-    void ApplyAmbientOcclusion(const ViewParameters *pViewParameters, RenderProfiler *pRenderProfiler);
+    void ApplyAmbientOcclusion(const ViewParameters *pViewParameters);
 
     // apply fog post-process
     void ApplyFog(const ViewParameters *pViewParameters);
@@ -83,7 +83,7 @@ private:
     void DrawPostProcessAndTranslucentObjects(const ViewParameters *pViewParameters);
 
     // draw any object debug info
-    void DrawDebugInfo(const Camera *pCamera, RenderProfiler *pRenderProfiler);
+    void DrawDebugInfo(const Camera *pCamera);
 
     // shadow map renderers
     DirectionalShadowMapRenderer *m_pDirectionalShadowMapRenderer;

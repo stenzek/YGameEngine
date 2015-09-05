@@ -109,7 +109,7 @@ void CubeMapShadowMapRenderer::FreeShadowMap(ShadowMapData *pShadowMapData)
     pShadowMapData->pShadowMapTexture->Release();
 }
 
-void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight)
 {
     // get shadow distance
     shadowDistance = Min(shadowDistance, pViewCamera->GetFarPlaneDistance() - pViewCamera->GetNearPlaneDistance());
@@ -128,7 +128,7 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapD
         BuildCubeMapCamera(&lightCamera, pLight, cubeFace);
 
         // add camera
-        RENDER_PROFILER_ADD_CAMERA(pRenderProfiler, &lightCamera, String::FromFormat("Point Shadow Camera Face %u", cubeFaceIndex));
+        //RENDER_PROFILER_ADD_CAMERA(pRenderProfiler, &lightCamera, String::FromFormat("Point Shadow Camera Face %u", cubeFaceIndex));
 
         // set+clear the shadow map
         pGPUContext->SetRenderTargets(0, nullptr, pShadowMapData->pShadowMapDSV[cubeFaceIndex]);

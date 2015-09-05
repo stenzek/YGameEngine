@@ -93,7 +93,7 @@ bool ForwardShadingWorldRenderer::Initialize()
     return true;
 }
 
-void ForwardShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView, RenderProfiler *pRenderProfiler)
+void ForwardShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView)
 {
     // add the main camera
     //RENDER_PROFILER_ADD_CAMERA(pRenderProfiler, &pViewParameters->ViewCamera, "World View Camera");
@@ -102,7 +102,7 @@ void ForwardShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, con
     FillRenderQueue(&pViewParameters->ViewCamera, pRenderWorld);
 
     // draw shadow maps
-    DrawShadowMaps(pRenderWorld, pViewParameters, pRenderProfiler);
+    DrawShadowMaps(pRenderWorld, pViewParameters);
 
 //     // handle override cameras
 //     if (pRenderProfiler != nullptr && pRenderProfiler->HasCameraOverride())
@@ -164,7 +164,7 @@ void ForwardShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, con
     if (m_pGUIContext != nullptr)
     {
         if (m_options.ShowDebugInfo)
-            DrawDebugInfo(&pViewParameters->ViewCamera, pRenderProfiler);
+            DrawDebugInfo(&pViewParameters->ViewCamera);
 
         if (m_options.ShowIntermediateBuffers)
             DrawIntermediateBuffers();
@@ -194,7 +194,7 @@ void ForwardShadingWorldRenderer::OnFrameComplete()
     m_lastVolumetricLightIndex = 0xFFFFFFFF;
 }
 
-void ForwardShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RenderProfiler *pRenderProfiler)
+void ForwardShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "DrawShadowMaps", MAKE_COLOR_R8G8B8_UNORM(127, 98, 42));
 
@@ -205,7 +205,7 @@ void ForwardShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld
         {
             RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight = &directionalLights[i];
             if (pLight->ShadowFlags & LIGHT_SHADOW_FLAG_CAST_DYNAMIC_SHADOWS)
-                DrawDirectionalShadowMap(pRenderWorld, pViewParameters, pLight, pRenderProfiler);
+                DrawDirectionalShadowMap(pRenderWorld, pViewParameters, pLight);
         }
     }
 
@@ -216,7 +216,7 @@ void ForwardShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld
         {
             RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight = &pointLights[i];
             if (pLight->ShadowFlags & LIGHT_SHADOW_FLAG_CAST_DYNAMIC_SHADOWS)
-                DrawPointShadowMap(pRenderWorld, pViewParameters, pLight, pRenderProfiler);
+                DrawPointShadowMap(pRenderWorld, pViewParameters, pLight);
         }
     }
 
@@ -224,7 +224,7 @@ void ForwardShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld
     m_pGPUContext->ClearState(true, false, false, true);
 }
 
-bool ForwardShadingWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+bool ForwardShadingWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
 {
     if (m_pDirectionalShadowMapRenderer == nullptr)
         return false;
@@ -256,13 +256,13 @@ bool ForwardShadingWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pR
     pLight->ShadowMapIndex = shadowMapIndex;
 
     // invoke draw
-    m_pDirectionalShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight, pRenderProfiler);
+    m_pDirectionalShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight);
 
     // ok
     return true;
 }
 
-bool ForwardShadingWorldRenderer::DrawPointShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+bool ForwardShadingWorldRenderer::DrawPointShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight)
 {
     if (m_pPointShadowMapRenderer == nullptr)
         return false;
@@ -294,13 +294,13 @@ bool ForwardShadingWorldRenderer::DrawPointShadowMap(const RenderWorld *pRenderW
     pLight->ShadowMapIndex = shadowMapIndex;
 
     // invoke draw
-    m_pPointShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight, pRenderProfiler);
+    m_pPointShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight);
 
     // ok
     return true;
 }
 
-bool ForwardShadingWorldRenderer::DrawSpotShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight, RenderProfiler *pRenderProfiler)
+bool ForwardShadingWorldRenderer::DrawSpotShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight)
 {
     return false;
 }

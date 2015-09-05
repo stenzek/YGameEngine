@@ -398,6 +398,9 @@ bool Renderer::Create(const RendererInitializationParameters *pCreateParameters)
             Log_DevPrintf(" Attempting to switch to fullscreen...");
             g_pRenderer->ChangeResolution(RENDERER_FULLSCREEN_STATE_FULLSCREEN, pCreateParameters->ImplicitSwapChainWidth, pCreateParameters->ImplicitSwapChainHeight, 60);
         }
+
+        // clear state ready for rendering
+        pGPUContext->ClearState(true, true, true, true);
     });
 
     // fail?

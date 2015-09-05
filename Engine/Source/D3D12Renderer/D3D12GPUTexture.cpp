@@ -241,9 +241,9 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         // get the footprints of each subresource
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT *pSubResourceFootprints = (D3D12_PLACED_SUBRESOURCE_FOOTPRINT *)alloca(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) * pTextureDesc->MipLevels);
         UINT *pRowCounts = (UINT *)alloca(sizeof(UINT) * pTextureDesc->MipLevels);
-        UINT64 *pRowPitches = (UINT64 *)alloca(sizeof(UINT64) * pTextureDesc->MipLevels);
+        UINT64 *pRowSizes = (UINT64 *)alloca(sizeof(UINT64) * pTextureDesc->MipLevels);
         UINT64 intermediateSize;
-        m_pD3DDevice->GetCopyableFootprints(&resourceDesc, 0, pTextureDesc->MipLevels, 0, pSubResourceFootprints, pRowCounts, pRowPitches, &intermediateSize);
+        m_pD3DDevice->GetCopyableFootprints(&resourceDesc, 0, pTextureDesc->MipLevels, 0, pSubResourceFootprints, pRowCounts, pRowSizes, &intermediateSize);
 
         // create upload buffer
         ID3D12Resource *pUploadResource;
@@ -262,7 +262,7 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         // map the upload resource
         byte *pMappedPointer;
         D3D12_RANGE readRange = { 0, 0 };
-        hResult = pUploadResource->Map(0, nullptr/*&readRange*/, (void **)&pMappedPointer);
+        hResult = pUploadResource->Map(0, &readRange, (void **)&pMappedPointer);
         if (FAILED(hResult))
         {
             Log_ErrorPrintf("Map upload subresource for upload resource failed with hResult %08X", hResult);
@@ -280,14 +280,15 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         for (uint32 mipLevel = 0; mipLevel < pTextureDesc->MipLevels; mipLevel++)
         {
             // map this mip level
-            UINT64 subResourceSize = pRowCounts[mipLevel] * pRowPitches[mipLevel];
-            DebugAssert(pSubResourceFootprints[mipLevel].Offset + subResourceSize <= intermediateSize);
+            uint32 rowPitch = pSubResourceFootprints[mipLevel].Footprint.RowPitch;
+            DebugAssert(pRowSizes[mipLevel] <= rowPitch && pRowSizes[mipLevel] <= pInitialDataPitch[mipLevel]);
 
-            // copy in data
-            if (pRowPitches[mipLevel] == pInitialDataPitch[mipLevel])
-                Y_memcpy(pMappedPointer + pSubResourceFootprints[mipLevel].Offset, ppInitialData[mipLevel], (size_t)pRowPitches[mipLevel] * pRowCounts[mipLevel]);
+            // copy in data. this could result in a buffer overflow, except for the fact that we're only copying as much data as we can,
+            // so if the gpu is aligning each row, we won't copy past the actual data
+            if (rowPitch == pInitialDataPitch[mipLevel])
+                Y_memcpy(pMappedPointer + (size_t)pSubResourceFootprints[mipLevel].Offset, ppInitialData[mipLevel], rowPitch * pRowCounts[mipLevel]);
             else
-                Y_memcpy_stride(pMappedPointer + pSubResourceFootprints[mipLevel].Offset, (size_t)pRowPitches[mipLevel], ppInitialData[mipLevel], pInitialDataPitch[mipLevel], Min((size_t)pRowPitches[mipLevel], (size_t)pInitialDataPitch[mipLevel]), pRowCounts[mipLevel]);
+                Y_memcpy_stride(pMappedPointer + (size_t)pSubResourceFootprints[mipLevel].Offset, rowPitch, ppInitialData[mipLevel], pInitialDataPitch[mipLevel], (size_t)pRowSizes[mipLevel], pRowCounts[mipLevel]);
 
             // invoke a copy of this subresource
             D3D12_TEXTURE_COPY_LOCATION sourceCopyLocation = { pUploadResource, D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT, pSubResourceFootprints[mipLevel] };
@@ -295,8 +296,9 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
             GetCommandList()->CopyTextureRegion(&destCopyLocation, 0, 0, 0, &sourceCopyLocation, nullptr);
         }
 
-        // release the mapping - wrote the whole range, so null
-        pUploadResource->Unmap(0, nullptr);
+        // release the mapping - wrote the whole range
+        D3D12_RANGE writeRange = { 0, (size_t)intermediateSize };
+        pUploadResource->Unmap(0, &writeRange);
 
         // transition to its real resource state
         ResourceBarrier(pD3DResource, D3D12_RESOURCE_STATE_COPY_DEST, defaultResourceState);

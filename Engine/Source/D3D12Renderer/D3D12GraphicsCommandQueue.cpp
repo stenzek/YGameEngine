@@ -371,7 +371,7 @@ void D3D12GraphicsCommandQueue::WaitForFence(uint64 fence)
 
     if (m_lastCompletedFenceValue < fence)
     {
-#ifdef Y_BUILD_CONFIG_DEBUG
+#if defined(Y_BUILD_CONFIG_DEBUG) && 0
         Timer waitTimer;
         m_pD3DFence->SetEventOnCompletion(fence, m_fenceEvent);
         WaitForSingleObject(m_fenceEvent, INFINITE);

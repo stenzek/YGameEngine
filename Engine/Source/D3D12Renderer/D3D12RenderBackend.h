@@ -26,12 +26,17 @@ public:
     ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
     D3D12GPUDevice *GetGPUDevice() const { return m_pGPUDevice; }
     D3D12GPUContext *GetGPUContext() const { return m_pGPUContext; }
-    D3D12DescriptorHeap *GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) { return m_pCPUDescriptorHeaps[type]; }
     uint32 GetFrameLatency() const { return m_frameLatency; }
 
     // legacy root signatures
     ID3D12RootSignature *GetLegacyGraphicsRootSignature() const { return m_pLegacyGraphicsRootSignature; }
     ID3D12RootSignature *GetLegacyComputeRootSignature() const { return m_pLegacyComputeRootSignature; }
+
+    // cpu descriptor heaps
+    D3D12DescriptorHeap *GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) { return m_pCPUDescriptorHeaps[type]; }
+    const D3D12DescriptorHandle GetNullCBVDescriptorHandle() { return m_nullCBVDescriptorHandle; }
+    const D3D12DescriptorHandle GetNullSRVDescriptorHandle() { return m_nullSRVDescriptorHandle; }
+    const D3D12DescriptorHandle GetNullSamplerHandle() { return m_nullSamplerHandle; }
 
     // constant buffer management
     ID3D12Resource *GetConstantBufferResource(uint32 index);
@@ -92,6 +97,9 @@ private:
 
     // descriptor heaps
     D3D12DescriptorHeap *m_pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+    D3D12DescriptorHandle m_nullCBVDescriptorHandle;
+    D3D12DescriptorHandle m_nullSRVDescriptorHandle;
+    D3D12DescriptorHandle m_nullSamplerHandle;
 
     // constant buffer storage
     MemArray<ConstantBufferStorage> m_constantBufferStorage;

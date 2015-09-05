@@ -456,6 +456,23 @@ bool D3D12RenderBackend::CreateCPUDescriptorHeaps()
         }
     }
 
+    // allocate null cbv
+    m_pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->Allocate(&m_nullCBVDescriptorHandle);
+    m_pD3DDevice->CreateConstantBufferView(nullptr, m_nullCBVDescriptorHandle);
+
+    // allocate null srv
+    D3D12_SHADER_RESOURCE_VIEW_DESC nullSrvDesc = { DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING };
+    nullSrvDesc.Texture2D = { 0, 1, 0, 0.0f };
+    m_pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->Allocate(&m_nullSRVDescriptorHandle);
+    m_pD3DDevice->CreateShaderResourceView(nullptr, &nullSrvDesc, m_nullSRVDescriptorHandle);
+
+    // allocate null sampler
+    D3D12_SAMPLER_DESC samplerDesc = { D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+                                       0.0f, 1, D3D12_COMPARISON_FUNC_NEVER, { 0.0f, 0.0f, 0.0f, 0.0f }, 0.0f, Y_FLT_MAX };
+    m_pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER]->Allocate(&m_nullSamplerHandle);
+    m_pD3DDevice->CreateSampler(&samplerDesc, m_nullSamplerHandle);
+
+    // done
     return true;
 }
 
@@ -566,6 +583,9 @@ void D3D12RenderBackend::Shutdown()
     SAFE_RELEASE(m_pConstantBufferStorageHeap);
 
     // remove descriptor heaps
+    m_pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->Free(m_nullCBVDescriptorHandle);
+    m_pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->Free(m_nullSRVDescriptorHandle);
+    m_pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER]->Free(m_nullSamplerHandle);
     for (uint32 i = 0; i < countof(m_pCPUDescriptorHeaps); i++)
     {
         if (m_pCPUDescriptorHeaps[i] != nullptr)

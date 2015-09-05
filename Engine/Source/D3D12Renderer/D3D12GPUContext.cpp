@@ -370,6 +370,11 @@ void D3D12GPUContext::UpdateShaderDescriptorHeaps()
 
 void D3D12GPUContext::ClearCommandListDependantState()
 {
+    // graphics root
+    m_pCommandList->SetGraphicsRootSignature(m_pBackend->GetLegacyGraphicsRootSignature());
+    m_pCommandList->SetComputeRootSignature(m_pBackend->GetLegacyComputeRootSignature());
+    UpdateShaderDescriptorHeaps();
+
     // pipeline state
     m_shaderStates.ZeroContents();
     SAFE_RELEASE(m_pCurrentShaderProgram);
@@ -398,9 +403,9 @@ void D3D12GPUContext::ClearCommandListDependantState()
 void D3D12GPUContext::RestoreCommandListDependantState()
 {
     // graphics root
-    UpdateShaderDescriptorHeaps();
     m_pCommandList->SetGraphicsRootSignature(m_pBackend->GetLegacyGraphicsRootSignature());
     m_pCommandList->SetComputeRootSignature(m_pBackend->GetLegacyComputeRootSignature());
+    UpdateShaderDescriptorHeaps();
 
     // pipeline state
     UpdatePipelineState(true);
@@ -1503,7 +1508,9 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
 
     // allocate an array of cpu pointers, uses alloca so it's at the end of the stack
     D3D12_CPU_DESCRIPTOR_HANDLE *pCPUHandles = (D3D12_CPU_DESCRIPTOR_HANDLE *)alloca(sizeof(D3D12_CPU_DESCRIPTOR_HANDLE) * 32);
-
+    uint32 *pCPUHandleCounts = (uint32 *)alloca(sizeof(uint32) * 32);
+    for (uint32 i = 0; i < 32; i++)
+        pCPUHandleCounts[i] = 1;
 
     // update states
     for (uint32 stage = 0; stage < SHADER_PROGRAM_STAGE_COUNT; stage++)
@@ -1514,61 +1521,46 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
         if (state->ConstantBuffersDirty || force)
         {
             // find the new bind count
-            uint32 bindCount = 0;
             for (uint32 i = 0; i < state->ConstantBufferBindCount; i++)
             {
                 if (!state->ConstantBuffers[i].IsNull())
-                {
                     pCPUHandles[i] = state->ConstantBuffers[i];
-                    bindCount = i + 1;
-                }
                 else
-                {
-                    pCPUHandles[i].ptr = 0;
-                    break;
-                }
+                    pCPUHandles[i] = m_pBackend->GetNullCBVDescriptorHandle();
             }
-            state->ConstantBufferBindCount = bindCount;
-            state->ConstantBuffersDirty = false;
+            for (uint32 i = state->ConstantBufferBindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS; i++)
+                pCPUHandles[i] = m_pBackend->GetNullCBVDescriptorHandle();
 
             // allocate scratch descriptors and copy
-            if (bindCount > 0 && AllocateScratchView(D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS, &state->CBVTableCPUHandle, &state->CBVTableGPUHandle))
+            if (AllocateScratchView(D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS, &state->CBVTableCPUHandle, &state->CBVTableGPUHandle))
             {
-                m_pD3DDevice->CopyDescriptors(1, &state->CBVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-                uint32 incrementSize = m_pD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                D3D12_CPU_DESCRIPTOR_HANDLE offsetHandle = { state->CBVTableCPUHandle.ptr + incrementSize * bindCount };
-                for (uint32 i = bindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS; i++)
-                {
-                    //m_pD3DDevice->CreateConstantBufferView(nullptr, offsetHandle);
-                    m_pD3DDevice->CopyDescriptorsSimple(1, offsetHandle, pCPUHandles[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                    offsetHandle.ptr += incrementSize;
-                }
+                uint32 count = D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS;
+                m_pD3DDevice->CopyDescriptors(1, &state->CBVTableCPUHandle, &count, count, pCPUHandles, pCPUHandleCounts, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
                 m_pCommandList->SetGraphicsRootDescriptorTable(3 * stage + 0, state->CBVTableGPUHandle);
             }
+
+            state->ConstantBuffersDirty = false;
         }
 
         // Resources
         if (state->ResourcesDirty || force)
         {
-            if (state->ResourceBindCount > 0 && AllocateScratchView(D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS, &state->SRVTableCPUHandle, &state->SRVTableGPUHandle))
+            // find the new bind count
+            for (uint32 i = 0; i < state->ResourceBindCount; i++)
             {
-                uint32 incrementSize = m_pD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                D3D12_CPU_DESCRIPTOR_HANDLE offsetHandle = { state->SRVTableCPUHandle.ptr };
-                D3D12_SHADER_RESOURCE_VIEW_DESC nullSrvDesc = { DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING };
-                nullSrvDesc.Texture2D = { 0, 1, 0, 0.0f };
+                if (!state->Resources[i].IsNull())
+                    pCPUHandles[i] = state->Resources[i];
+                else
+                    pCPUHandles[i] = m_pBackend->GetNullSRVDescriptorHandle();
+            }
+            for (uint32 i = state->ResourceBindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS; i++)
+                pCPUHandles[i] = m_pBackend->GetNullSRVDescriptorHandle();
 
-                // find the new bind count
-                for (uint32 i = 0; i < D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS; i++)
-                {
-                    if (!state->Resources[i].IsNull())
-                        m_pD3DDevice->CopyDescriptorsSimple(1, offsetHandle, state->Resources[i], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                    else
-                        m_pD3DDevice->CreateShaderResourceView(nullptr, &nullSrvDesc, offsetHandle);
-
-                    offsetHandle.ptr += incrementSize;
-                }
-
+            // allocate scratch descriptors and copy
+            if (AllocateScratchView(D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS, &state->SRVTableCPUHandle, &state->SRVTableGPUHandle))
+            {
+                uint32 count = D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS;
+                m_pD3DDevice->CopyDescriptors(1, &state->SRVTableCPUHandle, &count, count, pCPUHandles, pCPUHandleCounts, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
                 m_pCommandList->SetGraphicsRootDescriptorTable(3 * stage + 1, state->SRVTableGPUHandle);
             }
 
@@ -1579,37 +1571,25 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
         if (state->SamplersDirty || force)
         {
             // find the new bind count
-            uint32 bindCount = 0;
             for (uint32 i = 0; i < state->SamplerBindCount; i++)
             {
                 if (!state->Samplers[i].IsNull())
-                {
                     pCPUHandles[i] = state->Samplers[i];
-                    bindCount = i + 1;
-                }
                 else
-                {
-                    pCPUHandles[i].ptr = 0;
-                    break;
-                }
+                    pCPUHandles[i] = m_pBackend->GetNullSamplerHandle();
             }
-            state->SamplerBindCount = bindCount;
-            state->SamplersDirty = false;
+            for (uint32 i = state->SamplerBindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS; i++)
+                pCPUHandles[i] = m_pBackend->GetNullSamplerHandle();
 
             // allocate scratch descriptors and copy
-            if (bindCount > 0 && AllocateScratchSamplers(D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS, &state->SamplerTableCPUHandle, &state->SamplerTableGPUHandle))
+            if (AllocateScratchSamplers(D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS, &state->SamplerTableCPUHandle, &state->SamplerTableGPUHandle))
             {
-                m_pD3DDevice->CopyDescriptors(1, &state->SamplerTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-
-                uint32 incrementSize = m_pD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-                D3D12_CPU_DESCRIPTOR_HANDLE offsetHandle = { state->SamplerTableCPUHandle.ptr + incrementSize * bindCount };
-                for (uint32 i = bindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS; i++)
-                {
-                    m_pD3DDevice->CopyDescriptorsSimple(1, offsetHandle, pCPUHandles[0], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-                    offsetHandle.ptr += incrementSize;
-                }
+                uint32 count = D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS;
+                m_pD3DDevice->CopyDescriptors(1, &state->SamplerTableCPUHandle, &count, count, pCPUHandles, pCPUHandleCounts, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
                 m_pCommandList->SetGraphicsRootDescriptorTable(3 * stage + 2, state->SamplerTableGPUHandle);
             }
+
+            state->SamplersDirty = false;
         }
 
         // UAVs

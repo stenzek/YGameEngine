@@ -363,11 +363,11 @@ bool D3D12Helpers::GetResourceSRVHandle(GPUResource *pResource, D3D12DescriptorH
         *pHandle = static_cast<D3D12GPUTexture2D *>(pResource)->GetSRVHandle();
         return (!pHandle->IsNull());
 
-#if 0
     case GPU_RESOURCE_TYPE_TEXTURE2DARRAY:
         *pHandle = static_cast<D3D12GPUTexture2DArray *>(pResource)->GetSRVHandle();
         return (!pHandle->IsNull());
 
+#if 0
     case GPU_RESOURCE_TYPE_TEXTURE3D:
         *pHandle = static_cast<D3D12GPUTexture3D *>(pResource)->GetSRVHandle();
         return (!pHandle->IsNull());

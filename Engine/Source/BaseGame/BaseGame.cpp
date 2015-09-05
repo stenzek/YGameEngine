@@ -40,7 +40,6 @@ BaseGame::~BaseGame()
 {
     DebugAssert(m_pNextGameState == nullptr);
     DebugAssert(m_pGameState == nullptr);
-    DebugAssert(m_pRenderProfiler == nullptr);
     DebugAssert(m_pWorldRenderer == nullptr);
     DebugAssert(m_pOutputWindow == nullptr);
     DebugAssert(m_pGPUContext == nullptr);

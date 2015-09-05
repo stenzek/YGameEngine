@@ -44,6 +44,9 @@ D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *p
     m_pCurrentShaderProgram = nullptr;
     m_shaderStates.Resize(SHADER_PROGRAM_STAGE_COUNT);
     m_shaderStates.ZeroContents();
+    m_perDrawConstantBuffers.Resize(D3D12_LEGACY_GRAPHICS_ROOT_PER_DRAW_CONSTANT_BUFFER_SLOTS);
+    m_perDrawConstantBufferCount = 0;
+    m_perDrawConstantBuffersDirty = false;
 
     m_pCurrentRasterizerState = nullptr;
     m_pCurrentDepthStencilState = nullptr;
@@ -200,6 +203,9 @@ void D3D12GPUContext::CreateConstantBuffers()
         constantBuffer->DirtyLowerBounds = constantBuffer->DirtyUpperBounds = -1;
         constantBuffer->pLocalMemory = new byte[constantBuffer->Size];
         Y_memzero(constantBuffer->pLocalMemory, constantBuffer->Size);
+
+        // create per-draw constant buffers
+        constantBuffer->PerDraw = (declaration->GetUpdateFrequency() == SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY_PER_DRAW);
     }
 }
 
@@ -224,7 +230,7 @@ bool D3D12GPUContext::CreateCommandList()
     }
 
     // set initial state
-    RestoreCommandListDependantState();
+    ClearCommandListDependantState();
     return true;
 }
 
@@ -360,6 +366,22 @@ void D3D12GPUContext::GetNewAllocators(uint64 fenceValue)
         m_pGraphicsCommandQueue->ReleaseLinearSamplerHeap(m_pCurrentScratchSamplerHeap, fenceValue);
         m_pCurrentScratchSamplerHeap = pSamplerHeap;
     }
+
+    // update per-draw constant buffers, they need new pointers.
+    for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
+    {
+        ConstantBuffer *pConstantBuffer = &m_constantBuffers[i];
+        if (pConstantBuffer->PerDraw)
+        {
+            void *pCPUPointer;
+            D3D12_GPU_VIRTUAL_ADDRESS pGPUAddress;
+            if (AllocateScratchBufferMemory(pConstantBuffer->Size, D3D12_CONSTANT_BUFFER_ALIGNMENT, nullptr, nullptr, &pCPUPointer, &pGPUAddress))
+            {
+                Y_memcpy(pCPUPointer, pConstantBuffer->pLocalMemory, pConstantBuffer->Size);
+                pConstantBuffer->LastAddress = pGPUAddress;
+            }
+        }
+    }
 }
 
 void D3D12GPUContext::UpdateShaderDescriptorHeaps()
@@ -378,7 +400,11 @@ void D3D12GPUContext::ClearCommandListDependantState()
     // pipeline state
     m_shaderStates.ZeroContents();
     SAFE_RELEASE(m_pCurrentShaderProgram);
+    m_perDrawConstantBuffers.ZeroContents();
+    m_perDrawConstantBufferCount = 0;
+    m_perDrawConstantBuffersDirty = false;
     m_pipelineChanged = false;
+    UpdatePipelineState(true);
 
     // render targets -- still needs to be re-synced
     for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
@@ -422,14 +448,26 @@ void D3D12GPUContext::RestoreCommandListDependantState()
     m_pCommandList->OMSetStencilRef(m_currentDepthStencilRef);
 }
 
-bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress)
+bool D3D12GPUContext::GetPerDrawConstantBufferGPUAddress(uint32 index, D3D12_GPU_VIRTUAL_ADDRESS *pAddress)
+{
+    DebugAssert(index < m_constantBuffers.GetSize());
+    if (m_constantBuffers[index].PerDraw)
+    {
+        *pAddress = m_constantBuffers[index].LastAddress;
+        return true;
+    }
+
+    return false;
+}
+
+bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, uint32 alignment, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress)
 {
     // outright refuse if it's larger than the buffer size (since the alloc will always fail)
     if (size > m_pGraphicsCommandQueue->GetLinearBufferHeapSize())
         return false;
 
     uint32 offset;
-    if (!m_pCurrentScratchBuffer->Allocate(size, &offset))
+    if (!m_pCurrentScratchBuffer->AllocateAligned(size, alignment, &offset))
     {
         // get a new buffer (well, try to)
         // this could possibly be improved by caching the fence value from the last command list, though then it won't be re-used as soon as possible.
@@ -449,7 +487,7 @@ bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, ID3D12Resource **
         }
 
         // retry allocation on new buffer
-        if (!m_pCurrentScratchBuffer->Allocate(size, &offset))
+        if (!m_pCurrentScratchBuffer->AllocateAligned(size, alignment, &offset))
         {
             Log_ErrorPrintf("Failed to allocate on new scratch buffer (this shouldn't happen)");
             return false;
@@ -1090,11 +1128,20 @@ uint32 D3D12GPUContext::GetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GP
 void D3D12GPUContext::SetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUBuffer *const *ppVertexBuffers, const uint32 *pVertexBufferOffsets, const uint32 *pVertexBufferStrides)
 {
     D3D12_VERTEX_BUFFER_VIEW vertexBufferViews[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
+    uint32 dirtyFirst = Y_UINT32_MAX;
+    uint32 dirtyLast = 0;
 
     for (uint32 i = 0; i < nBuffers; i++)
     {
         D3D12GPUBuffer *pD3D12VertexBuffer = static_cast<D3D12GPUBuffer *>(ppVertexBuffers[i]);
         uint32 bufferIndex = firstBuffer + i;
+
+        if (m_pCurrentVertexBuffers[bufferIndex] == ppVertexBuffers[i] &&
+            m_currentVertexBufferOffsets[bufferIndex] == pVertexBufferOffsets[i] &&
+            m_currentVertexBufferStrides[bufferIndex] == pVertexBufferStrides[i])
+        {
+            continue;
+        }
 
         if (m_pCurrentVertexBuffers[bufferIndex] != nullptr)
         {
@@ -1120,11 +1167,18 @@ void D3D12GPUContext::SetVertexBuffers(uint32 firstBuffer, uint32 nBuffers, GPUB
             m_currentVertexBufferStrides[bufferIndex] = 0;
             Y_memzero(&vertexBufferViews[i], sizeof(vertexBufferViews[0]));
         }
+
+        dirtyFirst = Min(dirtyFirst, bufferIndex);
+        dirtyLast = Max(dirtyLast, bufferIndex);
     }
+
+    // changes?
+    if (dirtyFirst == Y_UINT32_MAX)
+        return;
 
     // pass to command list
     // @TODO may be worth batching this to a dirty range?
-    m_pCommandList->IASetVertexBuffers(firstBuffer, nBuffers, vertexBufferViews);
+    m_pCommandList->IASetVertexBuffers(dirtyFirst, dirtyLast - dirtyFirst + 1, &vertexBufferViews[dirtyFirst - firstBuffer]);
 
     // update new bind count
     uint32 bindCount = 0;
@@ -1308,33 +1362,55 @@ void D3D12GPUContext::CommitConstantBuffer(uint32 bufferIndex)
     // work out count to modify
     uint32 modifySize = cbInfo->DirtyUpperBounds - cbInfo->DirtyLowerBounds + 1;
 
-    // allocate scratch buffer memory
-    ID3D12Resource *pScratchBufferResource;
-    uint32 scratchBufferOffset;
-    void *pCPUPointer;
-    if (!AllocateScratchBufferMemory(modifySize, &pScratchBufferResource, &scratchBufferOffset, &pCPUPointer, nullptr))
+    // handle per-draw constant buffers
+    if (!cbInfo->PerDraw)
     {
-        Log_ErrorPrintf("D3D12GPUContext::CommitConstantBuffer: Failed to allocate scratch buffer memory.");
-        return;
+        // allocate scratch buffer memory
+        ID3D12Resource *pScratchBufferResource;
+        uint32 scratchBufferOffset;
+        void *pCPUPointer;
+        if (!AllocateScratchBufferMemory(modifySize, 0, &pScratchBufferResource, &scratchBufferOffset, &pCPUPointer, nullptr))
+        {
+            Log_ErrorPrintf("D3D12GPUContext::CommitConstantBuffer: Failed to allocate scratch buffer memory.");
+            return;
+        }
+
+        // copy from the constant memory store to the scratch buffer
+        Y_memcpy(pCPUPointer, cbInfo->pLocalMemory + cbInfo->DirtyLowerBounds, modifySize);
+
+        // get constant buffer pointer
+        ID3D12Resource *pConstantBufferResource = m_pBackend->GetConstantBufferResource(bufferIndex);
+        DebugAssert(pConstantBufferResource != nullptr);
+
+        // block predicates
+        BypassPredication();
+
+        // queue a copy to the actual buffer
+        ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
+        m_pCommandList->CopyBufferRegion(pConstantBufferResource, cbInfo->DirtyLowerBounds, pScratchBufferResource, scratchBufferOffset, modifySize);
+        ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+        // restore predicates
+        RestorePredication();
     }
+    else
+    {
+        void *pCPUPointer;
+        D3D12_GPU_VIRTUAL_ADDRESS pGPUPointer;
+        if (!AllocateScratchBufferMemory(cbInfo->Size, D3D12_CONSTANT_BUFFER_ALIGNMENT, nullptr, nullptr, &pCPUPointer, &pGPUPointer))
+        {
+            Log_ErrorPrintf("D3D12GPUContext::CommitConstantBuffer: Failed to allocate per-draw scratch buffer memory.");
+            return;
+        }
 
-    // block predicates
-    BypassPredication();
+        // copy from the constant memory store to the scratch buffer
+        Y_memcpy(pCPUPointer, cbInfo->pLocalMemory, cbInfo->Size);
 
-    // copy from the constant memory store to the scratch buffer
-    Y_memcpy(pCPUPointer, cbInfo->pLocalMemory + cbInfo->DirtyLowerBounds, modifySize);
-
-    // get constant buffer pointer
-    ID3D12Resource *pConstantBufferResource = m_pBackend->GetConstantBufferResource(bufferIndex);
-    DebugAssert(pConstantBufferResource != nullptr);
-
-    // queue a copy to the actual buffer
-    ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
-    m_pCommandList->CopyBufferRegion(pConstantBufferResource, cbInfo->DirtyLowerBounds, pScratchBufferResource, scratchBufferOffset, modifySize);
-    ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
-    // restore predicates
-    RestorePredication();
+        // per-draw
+        cbInfo->LastAddress = pGPUPointer;
+        if (m_pCurrentShaderProgram != nullptr && !m_pipelineChanged)
+            m_pCurrentShaderProgram->RebindPerDrawConstantBuffer(this, bufferIndex, pGPUPointer);
+    }
 
     // reset range
     cbInfo->DirtyLowerBounds = cbInfo->DirtyUpperBounds = -1;
@@ -1398,6 +1474,17 @@ void D3D12GPUContext::SetShaderUAVs(SHADER_PROGRAM_STAGE stage, uint32 index, co
     state->UAVsDirty = true;
 }
 
+void D3D12GPUContext::SetPerDrawConstantBuffer(uint32 index, D3D12_GPU_VIRTUAL_ADDRESS address)
+{
+    DebugAssert(index < m_perDrawConstantBuffers.GetSize());
+    if (m_perDrawConstantBuffers[index] == address)
+        return;
+
+    m_perDrawConstantBuffers[index] = address;
+    m_perDrawConstantBufferCount = Max(m_perDrawConstantBufferCount, index + 1);
+    m_perDrawConstantBuffersDirty = true;
+}
+
 void D3D12GPUContext::SynchronizeRenderTargetsAndUAVs()
 {
     D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandles[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT];
@@ -1454,56 +1541,61 @@ void D3D12GPUContext::SynchronizeRenderTargetsAndUAVs()
 bool D3D12GPUContext::UpdatePipelineState(bool force)
 {
     // new pipeline state required?
-    if (m_pipelineChanged || force)
+    if (m_pCurrentShaderProgram != nullptr)
     {
-        if (m_pCurrentShaderProgram == nullptr)
-            return false;
-
-        // fill pipeline state key
-        D3D12GPUShaderProgram::PipelineStateKey key;
-        Y_memzero(&key, sizeof(key));
-
-        // render targets
-        if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
+        if (m_pipelineChanged || force)
         {
-            if (m_pCurrentSwapChain != nullptr)
+            // fill pipeline state key
+            D3D12GPUShaderProgram::PipelineStateKey key;
+            Y_memzero(&key, sizeof(key));
+
+            // render targets
+            if (m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
             {
-                key.RenderTargetCount = 1;
-                key.RTVFormats[0] = m_pCurrentSwapChain->GetBackBufferFormat();
-                key.DSVFormat = m_pCurrentSwapChain->GetDepthStencilBufferFormat();
+                if (m_pCurrentSwapChain != nullptr)
+                {
+                    key.RenderTargetCount = 1;
+                    key.RTVFormats[0] = m_pCurrentSwapChain->GetBackBufferFormat();
+                    key.DSVFormat = m_pCurrentSwapChain->GetDepthStencilBufferFormat();
+                }
             }
+            else
+            {
+                key.RenderTargetCount = m_nCurrentRenderTargets;
+                for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
+                    key.RTVFormats[i] = (m_pCurrentRenderTargetViews[i] != nullptr) ? m_pCurrentRenderTargetViews[i]->GetDesc()->Format : PIXEL_FORMAT_UNKNOWN;
+                key.DSVFormat = (m_pCurrentDepthBufferView != nullptr) ? m_pCurrentDepthBufferView->GetDesc()->Format : PIXEL_FORMAT_UNKNOWN;
+            }
+
+            // rasterizer state
+            if (m_pCurrentRasterizerState == nullptr)
+                return false;
+            Y_memcpy(&key.RasterizerState, m_pCurrentRasterizerState->GetD3DRasterizerStateDesc(), sizeof(key.RasterizerState));
+
+            // depthstencil state
+            if (m_pCurrentDepthStencilState == nullptr)
+                return false;
+            Y_memcpy(&key.DepthStencilState, m_pCurrentDepthStencilState->GetD3DDepthStencilDesc(), sizeof(key.DepthStencilState));
+
+            // blend state
+            if (m_pCurrentBlendState == nullptr)
+                return false;
+            Y_memcpy(&key.BlendState, m_pCurrentBlendState->GetD3DBlendDesc(), sizeof(key.BlendState));
+
+            // topology
+            key.PrimitiveTopologyType = m_currentD3DTopologyType;
+            if (!m_pCurrentShaderProgram->Switch(this, m_pCommandList, &key))
+                return false;
+
+            // up-to-date
+            g_pRenderer->GetCounters()->IncrementPipelineChangeCounter();
+            m_pipelineChanged = false;
         }
-        else
-        {
-            key.RenderTargetCount = m_nCurrentRenderTargets;
-            for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
-                key.RTVFormats[i] = (m_pCurrentRenderTargetViews[i] != nullptr) ? m_pCurrentRenderTargetViews[i]->GetDesc()->Format : PIXEL_FORMAT_UNKNOWN;
-            key.DSVFormat = (m_pCurrentDepthBufferView != nullptr) ? m_pCurrentDepthBufferView->GetDesc()->Format : PIXEL_FORMAT_UNKNOWN;
-        }
-
-        // rasterizer state
-        if (m_pCurrentRasterizerState == nullptr)
-            return false;
-        Y_memcpy(&key.RasterizerState, m_pCurrentRasterizerState->GetD3DRasterizerStateDesc(), sizeof(key.RasterizerState));
-
-        // depthstencil state
-        if (m_pCurrentDepthStencilState == nullptr)
-            return false;
-        Y_memcpy(&key.DepthStencilState, m_pCurrentDepthStencilState->GetD3DDepthStencilDesc(), sizeof(key.DepthStencilState));
-
-        // blend state
-        if (m_pCurrentBlendState == nullptr)
-            return false;
-        Y_memcpy(&key.BlendState, m_pCurrentBlendState->GetD3DBlendDesc(), sizeof(key.BlendState));
-
-        // topology
-        key.PrimitiveTopologyType = m_currentD3DTopologyType;
-        if (!m_pCurrentShaderProgram->Switch(this, m_pCommandList, &key))
-            return false;
-
-        // up-to-date
-        g_pRenderer->GetCounters()->IncrementPipelineChangeCounter();
-        m_pipelineChanged = false;
+    }
+    else if (!force)
+    {
+        // no shader bound and not restoring
+        return false;
     }
 
     // allocate an array of cpu pointers, uses alloca so it's at the end of the stack
@@ -1513,7 +1605,7 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
         pCPUHandleCounts[i] = 1;
 
     // update states
-    for (uint32 stage = 0; stage < SHADER_PROGRAM_STAGE_COUNT; stage++)
+    for (uint32 stage = 0; stage <= SHADER_PROGRAM_STAGE_PIXEL_SHADER; stage++)
     {
         ShaderStageState *state = &m_shaderStates[stage];
 
@@ -1592,37 +1684,49 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
             state->SamplersDirty = false;
         }
 
-        // UAVs
-        if (stage == SHADER_PROGRAM_STAGE_PIXEL_SHADER && (state->UAVsDirty || force))
-        {
-            // find the new bind count
-            uint32 bindCount = 0;
-            for (uint32 i = 0; i < state->SamplerBindCount; i++)
-            {
-                if (!state->UAVs[i].IsNull())
-                {
-                    pCPUHandles[i] = state->UAVs[i];
-                    bindCount = i + 1;
-                }
-                else
-                {
-                    pCPUHandles[i].ptr = 0;
-                }
-            }
-            state->UAVBindCount = bindCount;
-            state->UAVsDirty = false;
-
-            // allocate scratch descriptors and copy
-            if (bindCount > 0 && AllocateScratchView(bindCount, &state->UAVTableCPUHandle, &state->UAVTableGPUHandle))
-            {
-                m_pD3DDevice->CopyDescriptors(1, &state->UAVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                m_pCommandList->SetGraphicsRootDescriptorTable(15, state->UAVTableGPUHandle);
-            }
-        }
+//         // UAVs
+//         if (stage == SHADER_PROGRAM_STAGE_PIXEL_SHADER && (state->UAVsDirty || force))
+//         {
+//             // find the new bind count
+//             uint32 bindCount = 0;
+//             for (uint32 i = 0; i < state->SamplerBindCount; i++)
+//             {
+//                 if (!state->UAVs[i].IsNull())
+//                 {
+//                     pCPUHandles[i] = state->UAVs[i];
+//                     bindCount = i + 1;
+//                 }
+//                 else
+//                 {
+//                     pCPUHandles[i].ptr = 0;
+//                 }
+//             }
+//             state->UAVBindCount = bindCount;
+//             state->UAVsDirty = false;
+// 
+//             // allocate scratch descriptors and copy
+//             if (bindCount > 0 && AllocateScratchView(bindCount, &state->UAVTableCPUHandle, &state->UAVTableGPUHandle))
+//             {
+//                 m_pD3DDevice->CopyDescriptors(1, &state->UAVTableCPUHandle, &bindCount, bindCount, pCPUHandles, nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+//                 m_pCommandList->SetGraphicsRootDescriptorTable(15, state->UAVTableGPUHandle);
+//             }
+//         }
     }
 
     // Commit global constant buffer
     m_pConstants->CommitGlobalConstantBufferChanges();
+
+    // per-draw constants
+    if (m_perDrawConstantBuffersDirty || force)
+    {
+        for (uint32 i = 0; i < m_perDrawConstantBufferCount; i++)
+            m_pCommandList->SetGraphicsRootConstantBufferView(16 + i, m_perDrawConstantBuffers[i]);
+        for (uint32 i = m_perDrawConstantBufferCount; i < D3D12_LEGACY_GRAPHICS_ROOT_PER_DRAW_CONSTANT_BUFFER_SLOTS; i++)
+            m_pCommandList->SetGraphicsRootConstantBufferView(16 + i, m_pCurrentScratchBuffer->GetGPUAddress(0));
+
+        m_perDrawConstantBuffersDirty = false;
+    }
+
     return true;
 }
 
@@ -1684,7 +1788,7 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     void *pScratchBufferCPUPointer;
     D3D12_GPU_VIRTUAL_ADDRESS scratchBufferGPUPointer;
     uint32 scratchBufferOffset;
-    if (!AllocateScratchBufferMemory(bufferSpaceRequired, &pScratchBufferResource, &scratchBufferOffset, &pScratchBufferCPUPointer, &scratchBufferGPUPointer))
+    if (!AllocateScratchBufferMemory(bufferSpaceRequired, 0, &pScratchBufferResource, &scratchBufferOffset, &pScratchBufferCPUPointer, &scratchBufferGPUPointer))
         return;
 
     // copy the contents in

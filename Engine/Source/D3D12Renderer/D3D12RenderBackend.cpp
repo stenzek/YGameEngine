@@ -371,7 +371,10 @@ bool D3D12RenderBackend::CreateLegacyRootSignatures()
         { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[2] }, D3D12_SHADER_VISIBILITY_PIXEL },
 
         // UAVs
-        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[3] }, D3D12_SHADER_VISIBILITY_PIXEL }
+        { D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { 1, &descriptorRanges[3] }, D3D12_SHADER_VISIBILITY_PIXEL },
+
+        // Per-draw constant buffers
+        { D3D12_ROOT_PARAMETER_TYPE_CBV, { D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS, 0 }, D3D12_SHADER_VISIBILITY_ALL }
     };
 
     D3D12_ROOT_PARAMETER computeRootParameters[] = 
@@ -502,7 +505,7 @@ bool D3D12RenderBackend::CreateConstantStorage()
         pConstantBufferStorage->Size = ALIGNED_SIZE(declaration->GetBufferSize(), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
         // align next buffer to 64kb
-        memoryUsage = (memoryUsage > 0) ? ALIGNED_SIZE(memoryUsage, D3D12_CONSTANT_BUFFER_ALIGNMENT) : 0;
+        memoryUsage = (memoryUsage > 0) ? ALIGNED_SIZE(memoryUsage, D3D12_PLACED_CONSTANT_BUFFER_ALIGNMENT) : 0;
         memoryUsage += pConstantBufferStorage->Size;
         activeCount++;
     }
@@ -512,7 +515,7 @@ bool D3D12RenderBackend::CreateConstantStorage()
     {
         memoryUsage,
         { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 },
-        D3D12_CONSTANT_BUFFER_ALIGNMENT,
+        D3D12_PLACED_CONSTANT_BUFFER_ALIGNMENT,
         D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS
     };
     hResult = m_pD3DDevice->CreateHeap(&heapDesc, __uuidof(ID3D12Heap), (void **)&m_pConstantBufferStorageHeap);
@@ -532,10 +535,10 @@ bool D3D12RenderBackend::CreateConstantStorage()
             continue;
 
         // align buffer to 64kb
-        currentOffset = (currentOffset > 0) ? ALIGNED_SIZE(currentOffset, D3D12_CONSTANT_BUFFER_ALIGNMENT) : 0;
+        currentOffset = (currentOffset > 0) ? ALIGNED_SIZE(currentOffset, D3D12_PLACED_CONSTANT_BUFFER_ALIGNMENT) : 0;
 
         // allocate resource in heap
-        D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, D3D12_CONSTANT_BUFFER_ALIGNMENT, pConstantBufferStorage->Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+        D3D12_RESOURCE_DESC resourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, D3D12_PLACED_CONSTANT_BUFFER_ALIGNMENT, pConstantBufferStorage->Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
         hResult = m_pD3DDevice->CreatePlacedResource(m_pConstantBufferStorageHeap, currentOffset, &resourceDesc, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr, IID_PPV_ARGS(&pConstantBufferStorage->pResource));
         if (FAILED(hResult))
         {

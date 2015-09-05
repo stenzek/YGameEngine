@@ -197,7 +197,7 @@ bool D3D12GPUContext::WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint3
         ID3D12Resource *pScratchBufferResource;
         void *pScratchBufferCPUPointer;
         uint32 scratchBufferOffset;
-        if (AllocateScratchBufferMemory(count, &pScratchBufferResource, &scratchBufferOffset, &pScratchBufferCPUPointer, nullptr))
+        if (AllocateScratchBufferMemory(count, 0, &pScratchBufferResource, &scratchBufferOffset, &pScratchBufferCPUPointer, nullptr))
         {
             // copy to scratch buffer
             Y_memcpy(pScratchBufferCPUPointer, pSource, count);

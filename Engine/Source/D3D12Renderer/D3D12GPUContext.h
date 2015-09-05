@@ -143,11 +143,15 @@ public:
     // create device
     bool Create();
 
+    // access the gpu virtual address for a constant buffer
+    bool GetPerDrawConstantBufferGPUAddress(uint32 index, D3D12_GPU_VIRTUAL_ADDRESS *pAddress);
+
     // access to shader states for the shader mutators to modify
     void SetShaderConstantBuffers(SHADER_PROGRAM_STAGE stage, uint32 index, const D3D12DescriptorHandle &handle);
     void SetShaderResources(SHADER_PROGRAM_STAGE stage, uint32 index, const D3D12DescriptorHandle &handle);
     void SetShaderSamplers(SHADER_PROGRAM_STAGE stage, uint32 index, const D3D12DescriptorHandle &handle);
     void SetShaderUAVs(SHADER_PROGRAM_STAGE stage, uint32 index, const D3D12DescriptorHandle &handle);
+    void SetPerDrawConstantBuffer(uint32 index, D3D12_GPU_VIRTUAL_ADDRESS address);
 
     // synchronize the states with the d3d context
     void SynchronizeRenderTargetsAndUAVs();
@@ -159,6 +163,11 @@ public:
     // create a resource barrier on the current command list
     void ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
     void ResourceBarrier(ID3D12Resource *pResource, uint32 subResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
+
+    // allocate from scratch buffer
+    bool AllocateScratchBufferMemory(uint32 size, uint32 alignment, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress);
+    bool AllocateScratchView(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle);
+    bool AllocateScratchSamplers(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle);
 
 private:
     // preallocate constant buffers
@@ -172,11 +181,6 @@ private:
     bool UpdatePipelineState(bool force);
     void GetCurrentRenderTargetDimensions(uint32 *width, uint32 *height);
     void UpdateScissorRect();
-
-    // allocate from scratch buffer
-    bool AllocateScratchBufferMemory(uint32 size, ID3D12Resource **ppScratchBufferResource, uint32 *pScratchBufferOffset, void **ppCPUPointer, D3D12_GPU_VIRTUAL_ADDRESS *pGPUAddress);
-    bool AllocateScratchView(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle);
-    bool AllocateScratchSamplers(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle);
 
     D3D12RenderBackend *m_pBackend;
     D3D12GraphicsCommandQueue *m_pGraphicsCommandQueue;
@@ -218,6 +222,8 @@ private:
         uint32 Size;
         int32 DirtyLowerBounds;
         int32 DirtyUpperBounds;
+        D3D12_GPU_VIRTUAL_ADDRESS LastAddress;
+        bool PerDraw;
     };
     MemArray<ConstantBuffer> m_constantBuffers;
 
@@ -252,6 +258,10 @@ private:
         uint32 UAVBindCount;
     };
     MemArray<ShaderStageState> m_shaderStates;
+
+    MemArray<D3D12_GPU_VIRTUAL_ADDRESS> m_perDrawConstantBuffers;
+    uint32 m_perDrawConstantBufferCount;
+    bool m_perDrawConstantBuffersDirty;
 
     D3D12GPURasterizerState *m_pCurrentRasterizerState;
     D3D12GPUDepthStencilState *m_pCurrentDepthStencilState;

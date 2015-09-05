@@ -10,6 +10,7 @@
     #define END_CONSTANT_BUFFER(BufferName, InstanceName) InstanceName; }
 #endif
 
+#if !PLATFORM_D3D12
 // Constant buffers
 BEGIN_CONSTANT_BUFFER(ObjectConstantsBuffer, ObjectConstants, b1)
 {
@@ -18,6 +19,14 @@ BEGIN_CONSTANT_BUFFER(ObjectConstantsBuffer, ObjectConstants, b1)
     float4 MaterialTintColor;
 }
 END_CONSTANT_BUFFER(ObjectConstantsBuffer, ObjectConstants)
+#else
+cbuffer ObjectConstantsBuffer : register(b4) { struct ObjectConstants_s 
+{
+    float4x4 WorldMatrix;
+    float4x4 InverseWorldMatrix;
+    float4 MaterialTintColor;
+} ObjectConstants; }
+#endif
 
 // Camera Constants
 BEGIN_CONSTANT_BUFFER(ViewConstantsBuffer, ViewConstants, b2)

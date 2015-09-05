@@ -15,6 +15,7 @@ public:
     D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(uint32 offset) const;
 
     bool Allocate(uint32 size, uint32 *pOutOffset);
+    bool AllocateAligned(uint32 size, uint32 alignment, uint32 *pOutOffset);
     bool Reset(bool resetPosition);
     void Commit();
     

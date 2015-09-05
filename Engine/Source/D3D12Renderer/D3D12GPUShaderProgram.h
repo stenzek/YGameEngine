@@ -2,6 +2,8 @@
 #include "D3D12Renderer/D3D12Common.h"
 #include "D3D11Renderer/D3DShaderCacheEntry.h"
 
+class ShaderConstantBuffer;
+
 class D3D12GPUShaderProgram : public GPUShaderProgram
 {
 public:
@@ -12,6 +14,7 @@ public:
         uint32 ParameterIndex;
         uint32 MinimumSize;
         uint32 EngineConstantBufferIndex;
+        const ShaderConstantBuffer *pEngineConstantBuffer;
     };
 
     struct ShaderParameter
@@ -52,6 +55,7 @@ public:
 
     // switch context to a new shader
     bool Switch(D3D12GPUContext *pContext, ID3D12GraphicsCommandList *pCommandList, const PipelineStateKey *pKey);
+    void RebindPerDrawConstantBuffer(D3D12GPUContext *pContext, uint32 constantBufferIndex, D3D12_GPU_VIRTUAL_ADDRESS address);
 
     // --- internal query api ---
     uint32 InternalGetParameterCount() const { return m_parameters.GetSize(); }

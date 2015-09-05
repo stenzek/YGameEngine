@@ -63,11 +63,25 @@ D3D12_GPU_VIRTUAL_ADDRESS D3D12LinearBufferHeap::GetGPUAddress(uint32 offset) co
 bool D3D12LinearBufferHeap::Allocate(uint32 size, uint32 *pOutOffset)
 {
     DebugAssert(m_pMappedPointer != nullptr);
-    if ((m_position + size) >= m_size)
+    if ((m_position + size) > m_size)
         return false;
 
     *pOutOffset = m_position;
     m_position += size;
+    return true;
+}
+
+bool D3D12LinearBufferHeap::AllocateAligned(uint32 size, uint32 alignment, uint32 *pOutOffset)
+{
+    if (alignment == 0)
+        return Allocate(size, pOutOffset);
+
+    uint32 alignedStart = (m_position > 0) ? ALIGNED_SIZE(m_position, alignment) : 0;
+    if ((alignedStart + size) > m_size)
+        return false;
+
+    *pOutOffset = alignedStart;
+    m_position = alignedStart + size;
     return true;
 }
 

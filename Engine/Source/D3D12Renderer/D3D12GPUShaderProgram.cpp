@@ -362,18 +362,27 @@ bool D3D12GPUShaderProgram::Switch(D3D12GPUContext *pContext, ID3D12GraphicsComm
     // bind constant buffers
     for (const ConstantBuffer &constantBuffer : m_constantBuffers)
     {
-        const D3D12DescriptorHandle *pHandle = D3D12RenderBackend::GetInstance()->GetConstantBufferDescriptor(constantBuffer.EngineConstantBufferIndex);
-        if (pHandle != nullptr)
+        const ShaderParameter &parameter = m_parameters[constantBuffer.ParameterIndex];
+        DebugAssert(parameter.Type == SHADER_PARAMETER_TYPE_CONSTANT_BUFFER);
+
+        for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
         {
-            const ShaderParameter &parameter = m_parameters[constantBuffer.ParameterIndex];
-            DebugAssert(parameter.Type == SHADER_PARAMETER_TYPE_CONSTANT_BUFFER);
+            if (parameter.BindPoint[stageIndex] < 0)
+                continue;
 
-            for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
+            if (parameter.BindPoint[stageIndex] < D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS)
             {
-                if (parameter.BindPoint[stageIndex] < 0)
-                    continue;
-
-                pContext->SetShaderConstantBuffers((SHADER_PROGRAM_STAGE)stageIndex, parameter.BindPoint[stageIndex], *pHandle);
+                // bind to table
+                const D3D12DescriptorHandle *pHandle = D3D12RenderBackend::GetInstance()->GetConstantBufferDescriptor(constantBuffer.EngineConstantBufferIndex);
+                if (pHandle != nullptr)
+                    pContext->SetShaderConstantBuffers((SHADER_PROGRAM_STAGE)stageIndex, parameter.BindPoint[stageIndex], *pHandle);
+            }
+            else
+            {
+                // bind to per-draw
+                D3D12_GPU_VIRTUAL_ADDRESS virtualAddress;
+                if (pContext->GetPerDrawConstantBufferGPUAddress(constantBuffer.EngineConstantBufferIndex, &virtualAddress))
+                    pContext->SetPerDrawConstantBuffer(parameter.BindPoint[stageIndex] - D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS, virtualAddress);
             }
         }
     }
@@ -381,6 +390,25 @@ bool D3D12GPUShaderProgram::Switch(D3D12GPUContext *pContext, ID3D12GraphicsComm
     // done
     return true;
 }
+
+void D3D12GPUShaderProgram::RebindPerDrawConstantBuffer(D3D12GPUContext *pContext, uint32 constantBufferIndex, D3D12_GPU_VIRTUAL_ADDRESS address)
+{
+    for (const ConstantBuffer &constantBuffer : m_constantBuffers)
+    {
+        if (constantBuffer.EngineConstantBufferIndex == constantBufferIndex)
+        {
+            const ShaderParameter &parameter = m_parameters[constantBuffer.ParameterIndex];
+            DebugAssert(parameter.Type == SHADER_PARAMETER_TYPE_CONSTANT_BUFFER);
+
+            for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
+            {
+                if (parameter.BindPoint[stageIndex] >= D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS)
+                    pContext->SetPerDrawConstantBuffer(parameter.BindPoint[stageIndex] - D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS, address);
+            }
+        }
+    }
+}
+
 void D3D12GPUShaderProgram::InternalSetParameterValue(D3D12GPUContext *pContext, uint32 parameterIndex, SHADER_PARAMETER_TYPE valueType, const void *pValue)
 {
     const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];

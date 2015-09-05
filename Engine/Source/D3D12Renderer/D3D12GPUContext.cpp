@@ -1022,11 +1022,19 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
         // kill current targets
         for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
         {
+            D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentRenderTargetViews[i]->GetTargetTexture());
+            if (defaultState != D3D12_RESOURCE_STATE_RENDER_TARGET)
+                ResourceBarrier(m_pCurrentRenderTargetViews[i]->GetD3DResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, defaultState);
+
             m_pCurrentRenderTargetViews[i]->Release();
             m_pCurrentRenderTargetViews[i] = nullptr;
         }
         if (m_pCurrentDepthBufferView != nullptr)
         {
+            D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentDepthBufferView->GetTargetTexture());
+            if (defaultState != D3D12_RESOURCE_STATE_DEPTH_WRITE)
+                ResourceBarrier(m_pCurrentDepthBufferView->GetD3DResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, defaultState);
+
             m_pCurrentDepthBufferView->Release();
             m_pCurrentDepthBufferView = nullptr;
         }
@@ -1100,7 +1108,7 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
             {
                 D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentDepthBufferView->GetTargetTexture());
                 if (defaultState != D3D12_RESOURCE_STATE_DEPTH_WRITE)
-                    ResourceBarrier(m_pCurrentRenderTargetViews[slot]->GetD3DResource(), defaultState, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+                    ResourceBarrier(m_pCurrentDepthBufferView->GetD3DResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, defaultState);
 
                 m_pCurrentDepthBufferView->Release();
             }
@@ -1109,7 +1117,7 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
             {
                 D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentDepthBufferView->GetTargetTexture());
                 if (defaultState != D3D12_RESOURCE_STATE_DEPTH_WRITE)
-                    ResourceBarrier(m_pCurrentRenderTargetViews[slot]->GetD3DResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, defaultState);
+                    ResourceBarrier(m_pCurrentDepthBufferView->GetD3DResource(), defaultState, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
                 m_pCurrentDepthBufferView->AddRef();
             }
@@ -1939,7 +1947,7 @@ bool D3D12GPUContext::CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pD
     for (uint32 i = 0; i < pD3D12SourceTexture->GetDesc()->MipLevels; i++)
     {
         D3D12_TEXTURE_COPY_LOCATION sourceLocation = { pD3D12SourceTexture->GetD3DResource(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, i };
-        D3D12_TEXTURE_COPY_LOCATION destinationLocation = { pD3D12SourceTexture->GetD3DResource(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, i };
+        D3D12_TEXTURE_COPY_LOCATION destinationLocation = { pD3D12DestinationTexture->GetD3DResource(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, i };
         m_pCommandList->CopyTextureRegion(&destinationLocation, 0, 0, 0, &sourceLocation, nullptr);
     }
 

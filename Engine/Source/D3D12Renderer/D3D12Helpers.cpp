@@ -1,8 +1,8 @@
 #include "D3D12Renderer/PrecompiledHeader.h"
-#include "D3D12Renderer/D3D12Common.h"
+#include "D3D12Renderer/D3D12Helpers.h"
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUTexture.h"
-#include "D3D12Renderer/D3D12Helpers.h"
+#include "D3D12Renderer/D3D12GPUBuffer.h"
 Log_SetChannel(D3D12RenderBackend);
 
 static const DXGI_FORMAT s_PixelFormatToDXGIFormat[PIXEL_FORMAT_COUNT] =
@@ -446,4 +446,21 @@ bool D3D12Helpers::GetOptimizedClearValue(PIXEL_FORMAT format, D3D12_CLEAR_VALUE
     }
 
     return true;
+}
+
+D3D12_RESOURCE_STATES D3D12Helpers::GetResourceDefaultState(GPUResource *pResource)
+{
+    switch (pResource->GetResourceType())
+    {
+    case GPU_RESOURCE_TYPE_BUFFER:
+        return static_cast<D3D12GPUBuffer *>(pResource)->GetDefaultResourceState();
+
+    case GPU_RESOURCE_TYPE_TEXTURE2D:
+        return static_cast<D3D12GPUTexture2D *>(pResource)->GetDefaultResourceState();
+
+    case GPU_RESOURCE_TYPE_TEXTURE2DARRAY:
+        return static_cast<D3D12GPUTexture2DArray *>(pResource)->GetDefaultResourceState();
+    }
+
+    return D3D12_RESOURCE_STATE_GENERIC_READ;
 }

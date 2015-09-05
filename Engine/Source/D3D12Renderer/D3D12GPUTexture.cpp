@@ -384,8 +384,18 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
 bool D3D12GPUContext::ReadTexture(GPUTexture2D *pTexture, void *pDestination, uint32 destinationRowPitch, uint32 cbDestination, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY)
 {
     // don't support block compression reads atm
-    DXGI_FORMAT textureDXGIFormat = D3D12Helpers::PixelFormatToDXGIFormat(pTexture->GetDesc()->Format);
+    D3D12GPUTexture2D *pWrappedTexture = static_cast<D3D12GPUTexture2D *>(pTexture);
+    DXGI_FORMAT textureDXGIFormat = D3D12Helpers::PixelFormatToDXGIFormat(pWrappedTexture->GetDesc()->Format);
     if (!PixelFormat_GetPixelFormatInfo(pTexture->GetDesc()->Format)->IsBlockCompressed)
+        return false;
+
+    // can't read it if it's currently bound to colour or depth buffer
+    for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
+    {
+        if (m_pCurrentRenderTargetViews[i] != nullptr && m_pCurrentRenderTargetViews[i]->GetTargetTexture() == pWrappedTexture)
+            return false;
+    }
+    if (m_pCurrentDepthBufferView != nullptr && m_pCurrentDepthBufferView->GetTargetTexture() == pWrappedTexture)
         return false;
 
     // fill descriptor information with the size we want to capture
@@ -407,11 +417,17 @@ bool D3D12GPUContext::ReadTexture(GPUTexture2D *pTexture, void *pDestination, ui
         return false;
     }
 
+    // have to have a barrier here
+    ResourceBarrier(pWrappedTexture->GetD3DResource(), pWrappedTexture->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+
     // issue the copy to our readback resource
-    D3D12_TEXTURE_COPY_LOCATION copySource = { static_cast<D3D12GPUTexture2D *>(pTexture)->GetD3DResource(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, mipIndex };
+    D3D12_TEXTURE_COPY_LOCATION copySource = { pWrappedTexture->GetD3DResource(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, mipIndex };
     D3D12_TEXTURE_COPY_LOCATION copyDestination = { pReadbackResource, D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT, regionTextureFootprint };
     D3D12_BOX copySourceBox = { startX, startY, 0, startX + countX, startY + countY, 1 };
     m_pCommandList->CopyTextureRegion(&copyDestination, 0, 0, 0, &copySource, &copySourceBox);
+
+    // have to have a barrier here
+    ResourceBarrier(pWrappedTexture->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, pWrappedTexture->GetDefaultResourceState());
 
     // flush the queue, and wait for all operations to finish
     FlushCommandList(true, true, false);

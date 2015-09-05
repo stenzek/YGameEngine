@@ -1036,10 +1036,22 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
             if (m_pCurrentRenderTargetViews[slot] != ppRenderTargets[slot])
             {
                 if (m_pCurrentRenderTargetViews[slot] != nullptr)
+                {
+                    D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentRenderTargetViews[slot]->GetTargetTexture());
+                    if (defaultState != D3D12_RESOURCE_STATE_RENDER_TARGET)
+                        ResourceBarrier(m_pCurrentRenderTargetViews[slot]->GetD3DResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, defaultState);
+
                     m_pCurrentRenderTargetViews[slot]->Release();
+                }
 
                 if ((m_pCurrentRenderTargetViews[slot] = static_cast<D3D12GPURenderTargetView *>(ppRenderTargets[slot])) != nullptr)
+                {
+                    D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentRenderTargetViews[slot]->GetTargetTexture());
+                    if (defaultState != D3D12_RESOURCE_STATE_RENDER_TARGET)
+                        ResourceBarrier(m_pCurrentRenderTargetViews[slot]->GetD3DResource(), defaultState, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
                     m_pCurrentRenderTargetViews[slot]->AddRef();
+                }
 
                 doUpdate = true;
             }
@@ -1053,6 +1065,10 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
         {
             if (m_pCurrentRenderTargetViews[slot] != nullptr)
             {
+                D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentRenderTargetViews[slot]->GetTargetTexture());
+                if (defaultState != D3D12_RESOURCE_STATE_RENDER_TARGET)
+                    ResourceBarrier(m_pCurrentRenderTargetViews[slot]->GetD3DResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, defaultState);
+
                 m_pCurrentRenderTargetViews[slot]->Release();
                 m_pCurrentRenderTargetViews[slot] = nullptr;
                 doUpdate = true;
@@ -1067,10 +1083,22 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
         if (m_pCurrentDepthBufferView != pDepthBufferView)
         {
             if (m_pCurrentDepthBufferView != nullptr)
+            {
+                D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentDepthBufferView->GetTargetTexture());
+                if (defaultState != D3D12_RESOURCE_STATE_DEPTH_WRITE)
+                    ResourceBarrier(m_pCurrentRenderTargetViews[slot]->GetD3DResource(), defaultState, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
                 m_pCurrentDepthBufferView->Release();
+            }
 
             if ((m_pCurrentDepthBufferView = static_cast<D3D12GPUDepthStencilBufferView *>(pDepthBufferView)) != nullptr)
+            {
+                D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentDepthBufferView->GetTargetTexture());
+                if (defaultState != D3D12_RESOURCE_STATE_DEPTH_WRITE)
+                    ResourceBarrier(m_pCurrentRenderTargetViews[slot]->GetD3DResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, defaultState);
+
                 m_pCurrentDepthBufferView->AddRef();
+            }
 
             doUpdate = true;
         }

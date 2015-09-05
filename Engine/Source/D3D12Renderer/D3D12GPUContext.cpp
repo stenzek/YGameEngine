@@ -1729,7 +1729,7 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     // map the upload buffer
     void *pMappedPointer;
     D3D12_RANGE readRange = { 0, 0 };
-    hResult = pResource->Map(0, &readRange, &pMappedPointer);
+    hResult = pResource->Map(0, D3D12_MAP_RANGE_PARAM(&readRange), &pMappedPointer);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("Failed to map upload buffer: %08X", hResult);
@@ -1740,7 +1740,7 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
     // copy the contents over, and unmap the buffer
     D3D12_RANGE writeRange = { 0, bufferSpaceRequired };
     Y_memcpy(pMappedPointer, pVertices, bufferSpaceRequired);
-    pResource->Unmap(0, &writeRange);
+    pResource->Unmap(0, D3D12_MAP_RANGE_PARAM(&writeRange));
 
     ID3D12Resource *pResource2;
     heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;

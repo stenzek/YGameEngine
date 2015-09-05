@@ -6,6 +6,13 @@
 #define D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS (8)
 #define D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS (8)
 
+// Since map read/write ranges breaks the hell out of the debugger, this lets us compile it out
+#ifdef Y_BUILD_CONFIG_DEBUG
+    #define D3D12_MAP_RANGE_PARAM(value) nullptr
+#else
+    #define D3D12_MAP_RANGE_PARAM(value) value
+#endif
+
 namespace NameTables {
     // This nametable is actually located in the D3D11 library.
     Y_Declare_NameTable(D3DFeatureLevels);

@@ -106,7 +106,7 @@ ID3D12Resource *UploadTextureData(ID3D12Device *pD3DDevice, ID3D12GraphicsComman
     // map the upload resource
     byte *pMappedPointer;
     D3D12_RANGE readRange = { 0, 0 };
-    hResult = pUploadResource->Map(0, &readRange, (void **)&pMappedPointer);
+    hResult = pUploadResource->Map(0, D3D12_MAP_RANGE_PARAM(&readRange), (void **)&pMappedPointer);
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("Map upload subresource for upload resource failed with hResult %08X", hResult);
@@ -176,7 +176,7 @@ ID3D12Resource *UploadTextureData(ID3D12Device *pD3DDevice, ID3D12GraphicsComman
 
     // release the mapping - wrote the whole range
     D3D12_RANGE writeRange = { 0, (size_t)intermediateSize };
-    pUploadResource->Unmap(0, &writeRange);
+    pUploadResource->Unmap(0, D3D12_MAP_RANGE_PARAM(&writeRange));
     return pUploadResource;
 }
 

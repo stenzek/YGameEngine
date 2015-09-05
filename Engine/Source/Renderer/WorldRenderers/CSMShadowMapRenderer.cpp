@@ -348,7 +348,7 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
 
                 // For now, only masked materials are drawn with clipping
                 shaderSelector.SetVertexFactory(pQueueEntry->pVertexFactoryTypeInfo, pQueueEntry->VertexFactoryFlags);
-                shaderSelector.SetMaterial(pQueueEntry->pMaterial);
+                shaderSelector.SetMaterial((pQueueEntry->pMaterial->GetShader()->GetBlendMode() != MATERIAL_BLENDING_MODE_NONE) ? pQueueEntry->pMaterial : nullptr);
 
                 // only continue with shader
                 ShaderProgram *pShaderProgram = shaderSelector.MakeActive(pGPUContext);

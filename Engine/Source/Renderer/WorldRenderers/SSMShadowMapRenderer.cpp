@@ -263,7 +263,7 @@ void SSMShadowMapRenderer::DrawDirectionalShadowMap(GPUContext *pGPUContext, Sha
             {
                 // For now, only masked materials are drawn with clipping, so just use the regular shader here
                 programSelector.SetVertexFactory(pQueueEntry->pVertexFactoryTypeInfo, pQueueEntry->VertexFactoryFlags);
-                programSelector.SetMaterial(pQueueEntry->pMaterial);
+                programSelector.SetMaterial((pQueueEntry->pMaterial->GetShader()->GetBlendMode() != MATERIAL_BLENDING_MODE_NONE) ? pQueueEntry->pMaterial : nullptr);
 
                 ShaderProgram *pShaderProgram = programSelector.MakeActive(pGPUContext);
                 if (pShaderProgram != nullptr)

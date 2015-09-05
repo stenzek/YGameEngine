@@ -45,7 +45,7 @@ void VSMain(in VertexFactoryInput in_input,
 }
 
 void PSMain(in MaterialPSInterpolants in_interpolants
-#if RENDERER_FEATURE_LEVEL < FEATURE_LEVEL_SM4
+#if !HAS_FEATURE_LEVEL_SM4
             , out float4 out_target : SV_Target
 #endif
            )
@@ -55,7 +55,7 @@ void PSMain(in MaterialPSInterpolants in_interpolants
 #if MATERIAL_BLENDING_MODE_MASKED
     // If using masked blending, use CalcOutputColor to clip the pixel
     MaterialCalcOutputColor(MPIParameters, float3(0, 0, 0));
-    #if FEATURE_LEVEL < FEATURE_LEVEL_SM4
+    #if !HAS_FEATURE_LEVEL_SM4
         out_target = float4(0, 0, 0, 0);
     #endif
 #else

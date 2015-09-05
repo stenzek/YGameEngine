@@ -392,7 +392,8 @@ void D3D12GraphicsCommandQueue::UpdateLastCompletedFenceValue()
 
 void D3D12GraphicsCommandQueue::ScheduleResourceForDeletion(ID3D12Pageable *pResource)
 {
-    ScheduleResourceForDeletion(pResource, m_nextFenceValue);
+    // @TODO investigate why this is playing up..
+    ScheduleResourceForDeletion(pResource, m_nextFenceValue + 1);
 }
 
 void D3D12GraphicsCommandQueue::ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)
@@ -400,7 +401,7 @@ void D3D12GraphicsCommandQueue::ScheduleResourceForDeletion(ID3D12Pageable *pRes
     PendingDeletionResource pdr;
     pdr.pResource = pResource;
     pdr.FenceValue = fenceValue;
-    
+
     m_pendingResourceLock.Lock();
     m_pendingDeletionResources.Add(pdr);
     m_pendingResourceLock.Unlock();
@@ -435,8 +436,8 @@ void D3D12GraphicsCommandQueue::DeletePendingResources(uint64 fenceValue)
         }
 
         ID3D12Pageable *pResource = m_pendingDeletionResources[i].pResource;
-        m_pendingDeletionResources.FastRemove(i);
         SAFE_RELEASE_LAST(pResource);
+        m_pendingDeletionResources.FastRemove(i);
     }
 
     for (uint32 i = 0; i < m_pendingDeletionDescriptors.GetSize(); )

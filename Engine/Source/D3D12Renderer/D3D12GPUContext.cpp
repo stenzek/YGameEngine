@@ -1608,6 +1608,8 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
     for (uint32 stage = 0; stage <= SHADER_PROGRAM_STAGE_PIXEL_SHADER; stage++)
     {
         ShaderStageState *state = &m_shaderStates[stage];
+        //uint32 base = (stage == SHADER_PROGRAM_STAGE_PIXEL_SHADER) ? 3 : 0;
+        uint32 base = stage * 3;
 
         // Constant buffers
         if (state->ConstantBuffersDirty || force)
@@ -1628,7 +1630,7 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
             {
                 uint32 count = D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS;
                 m_pD3DDevice->CopyDescriptors(1, &state->CBVTableCPUHandle, &count, count, pCPUHandles, pCPUHandleCounts, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                m_pCommandList->SetGraphicsRootDescriptorTable(3 * stage + 0, state->CBVTableGPUHandle);
+                m_pCommandList->SetGraphicsRootDescriptorTable(base + 0, state->CBVTableGPUHandle);
             }
 
             state->ConstantBuffersDirty = false;
@@ -1653,7 +1655,7 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
             {
                 uint32 count = D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS;
                 m_pD3DDevice->CopyDescriptors(1, &state->SRVTableCPUHandle, &count, count, pCPUHandles, pCPUHandleCounts, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                m_pCommandList->SetGraphicsRootDescriptorTable(3 * stage + 1, state->SRVTableGPUHandle);
+                m_pCommandList->SetGraphicsRootDescriptorTable(base + 1, state->SRVTableGPUHandle);
             }
 
             state->ResourcesDirty = false;
@@ -1678,7 +1680,7 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
             {
                 uint32 count = D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS;
                 m_pD3DDevice->CopyDescriptors(1, &state->SamplerTableCPUHandle, &count, count, pCPUHandles, pCPUHandleCounts, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-                m_pCommandList->SetGraphicsRootDescriptorTable(3 * stage + 2, state->SamplerTableGPUHandle);
+                m_pCommandList->SetGraphicsRootDescriptorTable(base + 2, state->SamplerTableGPUHandle);
             }
 
             state->SamplersDirty = false;
@@ -1869,7 +1871,6 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
 
 bool D3D12GPUContext::CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pDestinationTexture)
 {
-#if 0
     // textures have to be compatible, for now this means same texture format
     D3D12GPUTexture2D *pD3D12SourceTexture = static_cast<D3D12GPUTexture2D *>(pSourceTexture);
     D3D12GPUTexture2D *pD3D12DestinationTexture = static_cast<D3D12GPUTexture2D *>(pDestinationTexture);
@@ -1881,11 +1882,15 @@ bool D3D12GPUContext::CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pD
         return false;
     }
 
-    // copy it
-    m_pCurrentCommandList->CopyResource(pD3D12DestinationTexture->GetD3DTexture(), pD3D12SourceTexture->GetD3DTexture());
+    // copy each mip level
+    for (uint32 i = 0; i < pD3D12SourceTexture->GetDesc()->MipLevels; i++)
+    {
+        D3D12_TEXTURE_COPY_LOCATION sourceLocation = { pD3D12SourceTexture->GetD3DResource(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, i };
+        D3D12_TEXTURE_COPY_LOCATION destinationLocation = { pD3D12SourceTexture->GetD3DResource(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, i };
+        m_pCommandList->CopyTextureRegion(&destinationLocation, 0, 0, 0, &sourceLocation, nullptr);
+    }
+
     return true;
-#endif
-    return false;
 }
 
 bool D3D12GPUContext::CopyTextureRegion(GPUTexture2D *pSourceTexture, uint32 sourceX, uint32 sourceY, uint32 width, uint32 height, uint32 sourceMipLevel, GPUTexture2D *pDestinationTexture, uint32 destX, uint32 destY, uint32 destMipLevel)

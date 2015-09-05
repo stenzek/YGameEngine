@@ -75,7 +75,7 @@ static D3D12_RESOURCE_STATES GetD3DResourceStates(uint32 textureFlags)
     else if (textureFlags & GPU_TEXTURE_FLAG_BIND_RENDER_TARGET)
         defaultResourceState |= D3D12_RESOURCE_STATE_RENDER_TARGET;
     else if (textureFlags & GPU_TEXTURE_FLAG_BIND_DEPTH_STENCIL_BUFFER)
-        defaultResourceState |= D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_DEPTH_WRITE;
+        defaultResourceState |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
     return defaultResourceState;
 }
@@ -85,12 +85,16 @@ ID3D12Resource *UploadTextureData(ID3D12Device *pD3DDevice, ID3D12GraphicsComman
     HRESULT hResult;
     DebugAssert(pResourceDesc->MipLevels > 0);
 
+    // get the total number of subresource to upload
+    uint32 subResourceCount = (pResourceDesc->Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D) ? pResourceDesc->MipLevels : (pResourceDesc->MipLevels * pResourceDesc->DepthOrArraySize);
+    DebugAssert(subResourceCount > 0);
+
     // get the footprints of each subresource
-    D3D12_PLACED_SUBRESOURCE_FOOTPRINT *pSubResourceFootprints = (D3D12_PLACED_SUBRESOURCE_FOOTPRINT *)alloca(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) * pResourceDesc->MipLevels);
-    UINT *pRowCounts = (UINT *)alloca(sizeof(UINT) * pResourceDesc->MipLevels);
-    UINT64 *pRowSizes = (UINT64 *)alloca(sizeof(UINT64) * pResourceDesc->MipLevels);
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT *pSubResourceFootprints = new D3D12_PLACED_SUBRESOURCE_FOOTPRINT[subResourceCount];
+    UINT *pRowCounts = new UINT[subResourceCount];
+    UINT64 *pRowSizes = new UINT64[subResourceCount];
     UINT64 intermediateSize;
-    pD3DDevice->GetCopyableFootprints(pResourceDesc, 0, pResourceDesc->MipLevels, 0, pSubResourceFootprints, pRowCounts, pRowSizes, &intermediateSize);
+    pD3DDevice->GetCopyableFootprints(pResourceDesc, 0, subResourceCount, 0, pSubResourceFootprints, pRowCounts, pRowSizes, &intermediateSize);
 
     // create upload buffer
     ID3D12Resource *pUploadResource;
@@ -117,10 +121,6 @@ ID3D12Resource *UploadTextureData(ID3D12Device *pD3DDevice, ID3D12GraphicsComman
     // uploading a non-3D texture?
     if (pResourceDesc->Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D)
     {
-        // get the total number of subresource to upload
-        uint32 subResourceCount = pResourceDesc->MipLevels * pResourceDesc->DepthOrArraySize;
-        DebugAssert(subResourceCount > 0);
-
         // loop through subresources
         for (uint32 subResourceIndex = 0; subResourceIndex < subResourceCount; subResourceIndex++)
         {
@@ -144,7 +144,7 @@ ID3D12Resource *UploadTextureData(ID3D12Device *pD3DDevice, ID3D12GraphicsComman
     else
     {
         // upload process for 3D Texture is different.
-        for (uint32 mipLevel = 0; mipLevel < pResourceDesc->MipLevels; mipLevel++)
+        for (uint32 mipLevel = 0; mipLevel < subResourceCount; mipLevel++)
         {
             // map this subresource
             uint32 inRowPitch = pInitialDataPitch[mipLevel];
@@ -177,6 +177,11 @@ ID3D12Resource *UploadTextureData(ID3D12Device *pD3DDevice, ID3D12GraphicsComman
     // release the mapping - wrote the whole range
     D3D12_RANGE writeRange = { 0, (size_t)intermediateSize };
     pUploadResource->Unmap(0, D3D12_MAP_RANGE_PARAM(&writeRange));
+
+    // free memory
+    delete[] pRowSizes;
+    delete[] pRowCounts;
+    delete[] pSubResourceFootprints;
     return pUploadResource;
 }
 
@@ -378,7 +383,60 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
 
 bool D3D12GPUContext::ReadTexture(GPUTexture2D *pTexture, void *pDestination, uint32 destinationRowPitch, uint32 cbDestination, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY)
 {
-    return false;
+    // don't support block compression reads atm
+    DXGI_FORMAT textureDXGIFormat = D3D12Helpers::PixelFormatToDXGIFormat(pTexture->GetDesc()->Format);
+    if (!PixelFormat_GetPixelFormatInfo(pTexture->GetDesc()->Format)->IsBlockCompressed)
+        return false;
+
+    // fill descriptor information with the size we want to capture
+    D3D12_RESOURCE_DESC regionDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, countX, countY, 1, 1, textureDXGIFormat, { 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE };
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT regionTextureFootprint;
+    uint64 regionTextureRowSize;
+    uint32 regionTextureRowCount;
+    uint64 regionTextureSize;
+    m_pD3DDevice->GetCopyableFootprints(&regionDesc, 0, 1, 0, &regionTextureFootprint, &regionTextureRowCount, &regionTextureRowSize, &regionTextureSize);
+
+    // allocate a readback texture, with a descriptor matching the texture we're reading from
+    D3D12_HEAP_PROPERTIES readbackHeapProperties = { D3D12_HEAP_TYPE_READBACK, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 1, 1 };
+    D3D12_RESOURCE_DESC readbackTextureDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, regionTextureSize, 1, 1, 1, DXGI_FORMAT_UNKNOWN, { 1, 0 }, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+    ID3D12Resource *pReadbackResource;
+    HRESULT hResult = m_pD3DDevice->CreateCommittedResource(&readbackHeapProperties, D3D12_HEAP_FLAG_NONE, &readbackTextureDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pReadbackResource));
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("CreateCommittedResource failed with HRESULT %08X", hResult);
+        return false;
+    }
+
+    // issue the copy to our readback resource
+    D3D12_TEXTURE_COPY_LOCATION copySource = { static_cast<D3D12GPUTexture2D *>(pTexture)->GetD3DResource(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, mipIndex };
+    D3D12_TEXTURE_COPY_LOCATION copyDestination = { pReadbackResource, D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT, regionTextureFootprint };
+    D3D12_BOX copySourceBox = { startX, startY, 0, startX + countX, startY + countY, 1 };
+    m_pCommandList->CopyTextureRegion(&copyDestination, 0, 0, 0, &copySource, &copySourceBox);
+
+    // flush the queue, and wait for all operations to finish
+    FlushCommandList(true, true, false);
+    RestoreCommandListDependantState();
+
+    // map the readback texture
+    void *pMappedPointer;
+    hResult = pReadbackResource->Map(0, nullptr, &pMappedPointer);
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("Map failed with HRESULT %08X", hResult);
+        return false;
+    }
+
+    // copy from readback resource to the user-provided buffer
+    DebugAssert(cbDestination >= destinationRowPitch * regionTextureRowCount);
+    if (destinationRowPitch == regionTextureFootprint.Footprint.RowPitch)
+        Y_memcpy(pDestination, pMappedPointer, (size_t)regionTextureRowSize * regionTextureRowCount);
+    else
+        Y_memcpy_stride(pDestination, destinationRowPitch, pMappedPointer, regionTextureFootprint.Footprint.RowPitch, Min((uint32)regionTextureRowSize, destinationRowPitch), regionTextureRowCount);
+
+    // release readback resource
+    pReadbackResource->Unmap(0, nullptr);
+    pReadbackResource->Release();
+    return true;
 }
 
 bool D3D12GPUContext::WriteTexture(GPUTexture2D *pTexture, const void *pSource, uint32 sourceRowPitch, uint32 cbSource, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY)

@@ -3,6 +3,15 @@
 #include "Renderer/RendererTypes.h"
 #include "Core/TypeRegistry.h"
 
+enum SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY
+{
+    SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY_PER_DRAW,
+    SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY_PER_PROGRAM,
+    SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY_PER_VIEW,
+    SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY_PER_FRAME,
+    NUM_SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCIES
+};
+
 struct SHADER_CONSTANT_BUFFER_FIELD_DECLARATION
 {
     const char *FieldName;
@@ -16,8 +25,8 @@ struct SHADER_CONSTANT_BUFFER_FIELD_DECLARATION
 class ShaderConstantBuffer
 {
 public:
-    ShaderConstantBuffer(const char *bufferName, const char *instanceName, SHADER_CONSTANT_BUFFER_FIELD_DECLARATION *pFieldDeclarations, RENDERER_PLATFORM platformRequirement, RENDERER_FEATURE_LEVEL minimumFeatureLevel);
-    ShaderConstantBuffer(const char *bufferName, const char *instanceName, uint32 structSize, RENDERER_PLATFORM platformRequirement, RENDERER_FEATURE_LEVEL minimumFeatureLevel);
+    ShaderConstantBuffer(const char *bufferName, const char *instanceName, SHADER_CONSTANT_BUFFER_FIELD_DECLARATION *pFieldDeclarations, RENDERER_PLATFORM platformRequirement, RENDERER_FEATURE_LEVEL minimumFeatureLevel, SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY updateFrequency);
+    ShaderConstantBuffer(const char *bufferName, const char *instanceName, uint32 structSize, RENDERER_PLATFORM platformRequirement, RENDERER_FEATURE_LEVEL minimumFeatureLevel, SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY updateFrequency);
     ~ShaderConstantBuffer();
 
     const uint32 GetIndex() const { return m_index; }
@@ -83,6 +92,7 @@ private:
     const char *m_instanceName;
     RENDERER_PLATFORM m_platformRequirement;
     RENDERER_FEATURE_LEVEL m_minimumFeatureLevel;
+    SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY m_updateFrequency;
 
     // field data
     SHADER_CONSTANT_BUFFER_FIELD_DECLARATION *m_pFields;
@@ -101,11 +111,11 @@ public:
 #define DECLARE_SHADER_CONSTANT_BUFFER(BufferVariableName) extern ShaderConstantBuffer BufferVariableName; extern SHADER_CONSTANT_BUFFER_FIELD_DECLARATION __SCBFields_##BufferVariableName[];
 #define DECLARE_SHADER_CONSTANT_BUFFER_INCLASS(BufferVariableName) static ShaderConstantBuffer BufferVariableName; static SHADER_CONSTANT_BUFFER_FIELD_DECLARATION __SCBFields_##BufferVariableName[];
 
-#define BEGIN_SHADER_CONSTANT_BUFFER(BufferVariableName, ShaderBufferName, ShaderInstanceName, PlatformRequirement, MinimumFeatureLevel) const char *__SCBBufferName_##BufferVariableName = ShaderBufferName; const char *__SCBInstanceName_##BufferVariableName = ShaderInstanceName; RENDERER_PLATFORM __SCBPlatformRequirement_##BufferVariableName = PlatformRequirement; RENDERER_FEATURE_LEVEL __SCBMinimumFeatureLevel_##BufferVariableName = MinimumFeatureLevel; SHADER_CONSTANT_BUFFER_FIELD_DECLARATION __SCBFields_##BufferVariableName[] = {
+#define BEGIN_SHADER_CONSTANT_BUFFER(BufferVariableName, ShaderBufferName, ShaderInstanceName, PlatformRequirement, MinimumFeatureLevel, UpdateFrequency) const char *__SCBBufferName_##BufferVariableName = ShaderBufferName; const char *__SCBInstanceName_##BufferVariableName = ShaderInstanceName; RENDERER_PLATFORM __SCBPlatformRequirement_##BufferVariableName = PlatformRequirement; RENDERER_FEATURE_LEVEL __SCBMinimumFeatureLevel_##BufferVariableName = MinimumFeatureLevel; SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY __SCBUpdateFrequency##BufferVariableName = UpdateFrequency; SHADER_CONSTANT_BUFFER_FIELD_DECLARATION __SCBFields_##BufferVariableName[] = {
 #define SHADER_CONSTANT_BUFFER_FIELD(FieldName, Type, ArraySize) { FieldName, Type, ArraySize, 0, 0 },
 #define SHADER_CONSTANT_BUFFER_FIELD_STRUCT(FieldName, StructSize, ArraySize) { FieldName, SHADER_PARAMETER_TYPE_STRUCT, ArraySize, 0, StructSize },
-#define END_SHADER_CONSTANT_BUFFER(BufferVariableName) { nullptr, SHADER_PARAMETER_TYPE_COUNT, 0, 0, 0 } }; ShaderConstantBuffer BufferVariableName(__SCBBufferName_##BufferVariableName, __SCBInstanceName_##BufferVariableName, __SCBFields_##BufferVariableName, __SCBPlatformRequirement_##BufferVariableName, __SCBMinimumFeatureLevel_##BufferVariableName);
+#define END_SHADER_CONSTANT_BUFFER(BufferVariableName) { nullptr, SHADER_PARAMETER_TYPE_COUNT, 0, 0, 0 } }; ShaderConstantBuffer BufferVariableName(__SCBBufferName_##BufferVariableName, __SCBInstanceName_##BufferVariableName, __SCBFields_##BufferVariableName, __SCBPlatformRequirement_##BufferVariableName, __SCBMinimumFeatureLevel_##BufferVariableName, __SCBUpdateFrequency##BufferVariableName);
 
 #define DECLARE_RAW_SHADER_CONSTANT_BUFFER(BufferVariableName) extern ShaderConstantBuffer BufferVariableName;
 #define DECLARE_RAW_SHADER_CONSTANT_BUFFER_INCLASS(BufferVariableName) static ShaderConstantBuffer BufferVariableName;
-#define DEFINE_RAW_SHADER_CONSTANT_BUFFER(BufferVariableName, ShaderBufferName, ShaderInstanceName, BufferSize, PlatformRequirement, MinimumFeatureLevel) ShaderConstantBuffer BufferVariableName(ShaderBufferName, ShaderInstanceName, BufferSize, PlatformRequirement, MinimumFeatureLevel);
+#define DEFINE_RAW_SHADER_CONSTANT_BUFFER(BufferVariableName, ShaderBufferName, ShaderInstanceName, BufferSize, PlatformRequirement, MinimumFeatureLevel, UpdateFrequency) ShaderConstantBuffer BufferVariableName(ShaderBufferName, ShaderInstanceName, BufferSize, PlatformRequirement, MinimumFeatureLevel, UpdateFrequency);

@@ -9,7 +9,7 @@ ShaderConstantBuffer::RegistryType *ShaderConstantBuffer::GetRegistry()
     return &registry;
 }
 
-ShaderConstantBuffer::ShaderConstantBuffer(const char *bufferName, const char *instanceName, SHADER_CONSTANT_BUFFER_FIELD_DECLARATION *pFieldDeclarations, RENDERER_PLATFORM platformRequirement, RENDERER_FEATURE_LEVEL minimumFeatureLevel)
+ShaderConstantBuffer::ShaderConstantBuffer(const char *bufferName, const char *instanceName, SHADER_CONSTANT_BUFFER_FIELD_DECLARATION *pFieldDeclarations, RENDERER_PLATFORM platformRequirement, RENDERER_FEATURE_LEVEL minimumFeatureLevel, SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY updateFrequency)
     : m_index(0xFFFFFFFF),
       m_bufferName(bufferName),
       m_instanceName(instanceName),
@@ -25,7 +25,7 @@ ShaderConstantBuffer::ShaderConstantBuffer(const char *bufferName, const char *i
     m_index = GetRegistry()->RegisterTypeInfo(this, m_bufferName, 0);
 }
 
-ShaderConstantBuffer::ShaderConstantBuffer(const char *bufferName, const char *instanceName, uint32 structSize, RENDERER_PLATFORM platformRequirement, RENDERER_FEATURE_LEVEL minimumFeatureLevel)
+ShaderConstantBuffer::ShaderConstantBuffer(const char *bufferName, const char *instanceName, uint32 structSize, RENDERER_PLATFORM platformRequirement, RENDERER_FEATURE_LEVEL minimumFeatureLevel, SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY updateFrequency)
     : m_index(0xFFFFFFFF),
       m_bufferName(bufferName),
       m_instanceName(instanceName),

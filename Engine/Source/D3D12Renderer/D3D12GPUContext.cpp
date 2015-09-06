@@ -596,6 +596,45 @@ void D3D12GPUContext::GetCurrentRenderTargetDimensions(uint32 *width, uint32 *he
     *height = textureDimensions.y;
 }
 
+D3D12_RESOURCE_STATES D3D12GPUContext::GetCurrentResourceState(GPUResource *pResource)
+{
+    GPU_RESOURCE_TYPE resourceType = pResource->GetResourceType();
+    if (resourceType == GPU_RESOURCE_TYPE_BUFFER)
+    {
+        for (uint32 i = 0; i < m_currentVertexBufferBindCount; i++)
+        {
+            if (m_pCurrentVertexBuffers[i] == pResource)
+                return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+        }
+
+        if (IsBoundAsUnorderedAccess(pResource))
+            return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+        return static_cast<D3D12GPUBuffer *>(pResource)->GetDefaultResourceState();
+    }
+    else
+    {
+        if (resourceType >= GPU_RESOURCE_TYPE_TEXTURE1D && resourceType <= GPU_RESOURCE_TYPE_DEPTH_TEXTURE)
+        {
+            if (IsBoundAsRenderTarget(static_cast<GPUTexture *>(pResource)))
+                return D3D12_RESOURCE_STATE_RENDER_TARGET;
+            if (IsBoundAsDepthBuffer(static_cast<GPUTexture *>(pResource)))
+                return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
+            switch (resourceType)
+            {
+            case GPU_RESOURCE_TYPE_TEXTURE2D:
+                return static_cast<D3D12GPUTexture2D *>(pResource)->GetDefaultResourceState();
+
+            case GPU_RESOURCE_TYPE_TEXTURE2DARRAY:
+                return static_cast<D3D12GPUTexture2DArray *>(pResource)->GetDefaultResourceState();
+            }
+        }
+    }
+
+    return D3D12_RESOURCE_STATE_COMMON;
+}
+
 bool D3D12GPUContext::IsBoundAsRenderTarget(GPUTexture *pTexture)
 {
     for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
@@ -603,9 +642,17 @@ bool D3D12GPUContext::IsBoundAsRenderTarget(GPUTexture *pTexture)
         if (m_pCurrentRenderTargetViews[i] != nullptr && m_pCurrentRenderTargetViews[i]->GetTargetTexture() == pTexture)
             return true;
     }
-    if (m_pCurrentDepthBufferView != nullptr && m_pCurrentDepthBufferView->GetTargetTexture() == pTexture)
-        return true;
 
+    return false;
+}
+
+bool D3D12GPUContext::IsBoundAsDepthBuffer(GPUTexture *pTexture)
+{
+    return (m_pCurrentDepthBufferView != nullptr && m_pCurrentDepthBufferView->GetTargetTexture() == pTexture);
+}
+
+bool D3D12GPUContext::IsBoundAsUnorderedAccess(GPUResource *pResource)
+{
     // @TODO check UAVs
     return false;
 }
@@ -1932,16 +1979,13 @@ bool D3D12GPUContext::CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pD
         return false;
     }
 
-    // can't copy when we're a render target
-    if (IsBoundAsRenderTarget(pSourceTexture) || IsBoundAsRenderTarget(pDestinationTexture))
-    {
-        Log_ErrorPrintf("Can't copy texture when bound as render target.");
-        return false;
-    }
+    // get old state for both
+    D3D12_RESOURCE_STATES sourceResourceState = GetCurrentResourceState(pSourceTexture);
+    D3D12_RESOURCE_STATES destinationResourceState = GetCurrentResourceState(pDestinationTexture);
 
     // switch to copy states
-    ResourceBarrier(pD3D12SourceTexture->GetD3DResource(), pD3D12SourceTexture->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_SOURCE);
-    ResourceBarrier(pD3D12DestinationTexture->GetD3DResource(), pD3D12DestinationTexture->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
+    ResourceBarrier(pD3D12SourceTexture->GetD3DResource(), sourceResourceState, D3D12_RESOURCE_STATE_COPY_SOURCE);
+    ResourceBarrier(pD3D12DestinationTexture->GetD3DResource(), destinationResourceState, D3D12_RESOURCE_STATE_COPY_DEST);
 
     // copy each mip level
     for (uint32 i = 0; i < pD3D12SourceTexture->GetDesc()->MipLevels; i++)
@@ -1952,8 +1996,8 @@ bool D3D12GPUContext::CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pD
     }
 
     // switch back from copy states
-    ResourceBarrier(pD3D12SourceTexture->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, pD3D12SourceTexture->GetDefaultResourceState());
-    ResourceBarrier(pD3D12DestinationTexture->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12DestinationTexture->GetDefaultResourceState());
+    ResourceBarrier(pD3D12SourceTexture->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, sourceResourceState);
+    ResourceBarrier(pD3D12DestinationTexture->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, destinationResourceState);
     return true;
 }
 

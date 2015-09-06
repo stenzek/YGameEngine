@@ -180,7 +180,10 @@ private:
     void RestoreCommandListDependantState();
     bool UpdatePipelineState(bool force);
     void GetCurrentRenderTargetDimensions(uint32 *width, uint32 *height);
+    D3D12_RESOURCE_STATES GetCurrentResourceState(GPUResource *pResource);
     bool IsBoundAsRenderTarget(GPUTexture *pTexture);
+    bool IsBoundAsDepthBuffer(GPUTexture *pTexture);
+    bool IsBoundAsUnorderedAccess(GPUResource *pResource);
     void UpdateScissorRect();
 
     D3D12RenderBackend *m_pBackend;

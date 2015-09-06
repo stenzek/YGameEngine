@@ -153,10 +153,20 @@ bool Profiling::GetProfilerEnabled()
 void Profiling::SetProfilerEnabled(bool enabled)
 {
     //DebugAssert(IsOnMainThread());
-    if (g_MicroProfile.nRunning == (uint32_t)enabled || g_MicroProfile.nToggleRunning)
-        return;
+    if (g_MicroProfile.nRunning == (uint32_t)enabled)
+    {
+        if (g_MicroProfile.nToggleRunning)
+            g_MicroProfile.nToggleRunning = false;
 
-    MicroProfileTogglePause();
+        return;
+    }
+    else
+    {
+        if (g_MicroProfile.nToggleRunning)
+            return;
+
+        MicroProfileTogglePause();
+    }
 }
 
 bool Profiling::IsProfilerDisplayEnabled()

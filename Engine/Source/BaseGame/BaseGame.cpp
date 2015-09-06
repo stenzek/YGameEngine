@@ -875,7 +875,7 @@ void BaseGame::RenderThreadFrame(float deltaTime)
     // begin frame helper
     {
         MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadBeginFrame", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
-        OnRenderThreadPreFrame(deltaTime);
+        OnRenderThreadBeginFrame(deltaTime);
     }
 
 #ifdef WITH_IMGUI
@@ -1245,6 +1245,7 @@ int32 BaseGame::MainEntryPoint()
     // initialize profiler
     Log_InfoPrintf("Initializing profiler...");
     Profiling::Initialize();
+    Profiling::SetProfilerEnabled(true);
 #endif
 
     // everything started

@@ -389,12 +389,8 @@ bool D3D12GPUContext::ReadTexture(GPUTexture2D *pTexture, void *pDestination, ui
     if (!PixelFormat_GetPixelFormatInfo(pTexture->GetDesc()->Format)->IsBlockCompressed)
         return false;
 
-    // can't read it if it's currently bound to colour or depth buffer
-    if (IsBoundAsRenderTarget(pTexture))
-    {
-        Log_ErrorPrintf("Can't read back texture when bound as render target.");
-        return false;
-    }
+    // get the state we need to restore to
+    D3D12_RESOURCE_STATES returnResourceState = GetCurrentResourceState(pTexture);
 
     // fill descriptor information with the size we want to capture
     D3D12_RESOURCE_DESC regionDesc = { D3D12_RESOURCE_DIMENSION_TEXTURE2D, 0, countX, countY, 1, 1, textureDXGIFormat, { 1, 0 }, D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE };
@@ -416,7 +412,7 @@ bool D3D12GPUContext::ReadTexture(GPUTexture2D *pTexture, void *pDestination, ui
     }
 
     // have to have a barrier here
-    ResourceBarrier(pWrappedTexture->GetD3DResource(), pWrappedTexture->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+    ResourceBarrier(pWrappedTexture->GetD3DResource(), returnResourceState, D3D12_RESOURCE_STATE_COPY_SOURCE);
 
     // issue the copy to our readback resource
     D3D12_TEXTURE_COPY_LOCATION copySource = { pWrappedTexture->GetD3DResource(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, mipIndex };
@@ -425,7 +421,7 @@ bool D3D12GPUContext::ReadTexture(GPUTexture2D *pTexture, void *pDestination, ui
     m_pCommandList->CopyTextureRegion(&copyDestination, 0, 0, 0, &copySource, &copySourceBox);
 
     // have to have a barrier here
-    ResourceBarrier(pWrappedTexture->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, pWrappedTexture->GetDefaultResourceState());
+    ResourceBarrier(pWrappedTexture->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, returnResourceState);
 
     // flush the queue, and wait for all operations to finish
     FlushCommandList(true, true, false);

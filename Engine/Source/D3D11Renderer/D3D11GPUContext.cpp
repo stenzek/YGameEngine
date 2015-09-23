@@ -388,14 +388,22 @@ void D3D11GPUContext::SetFullViewport(GPUTexture *pForRenderTarget /* = NULL */)
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
 
-    if (pForRenderTarget == NULL && m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == NULL)
+    if (pForRenderTarget == nullptr && m_nCurrentRenderTargets == 0 && m_pCurrentDepthBufferView == nullptr)
     {
-        viewport.Width = m_pCurrentSwapChain->GetWidth();
-        viewport.Height = m_pCurrentSwapChain->GetHeight();
+        if (m_pCurrentSwapChain != nullptr)
+        {
+            viewport.Width = m_pCurrentSwapChain->GetWidth();
+            viewport.Height = m_pCurrentSwapChain->GetHeight();
+        }
+        else
+        {
+            viewport.Width = 1;
+            viewport.Height = 1;
+        }        
     }
     else
     {
-        DebugAssert(m_pCurrentRenderTargetViews[0] != NULL || pForRenderTarget != NULL);
+        DebugAssert(m_pCurrentRenderTargetViews[0] != nullptr || pForRenderTarget != nullptr);
 
         GPUTexture *pRT = pForRenderTarget;
         if (pRT != nullptr || m_nCurrentRenderTargets > 0)
@@ -516,7 +524,6 @@ GPUOutputBuffer *D3D11GPUContext::GetOutputBuffer()
 
 void D3D11GPUContext::SetOutputBuffer(GPUOutputBuffer *pSwapChain)
 {
-    DebugAssert(pSwapChain != nullptr);
     if (m_pCurrentSwapChain == pSwapChain)
         return;
 

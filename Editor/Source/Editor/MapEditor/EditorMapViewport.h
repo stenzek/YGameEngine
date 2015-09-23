@@ -111,7 +111,7 @@ private:
     bool m_hardwareResourcesCreated;
 
     // renderer objects
-    RendererOutputBuffer *m_pSwapChain;
+    GPUOutputBuffer *m_pSwapChain;
     GPUTexture2D *m_pPickingRenderTarget;
     GPURenderTargetView *m_pPickingRenderTargetView;
     GPUDepthTexture *m_pPickingDepthStencilBuffer;

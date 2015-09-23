@@ -9,7 +9,7 @@ public:
     EditorRendererSwapChainWidget(QWidget *pParent, Qt::WindowFlags flags = 0);
     ~EditorRendererSwapChainWidget();
 
-    RendererOutputBuffer *GetSwapChain() const;
+    GPUOutputBuffer *GetSwapChain() const;
     void DestroySwapChain();
 
 protected:
@@ -39,6 +39,6 @@ Q_SIGNALS:
 private:
     void RecreateSwapChain();
 
-    RendererOutputBuffer *m_pSwapChain;
+    GPUOutputBuffer *m_pSwapChain;
 };
 

@@ -1953,7 +1953,7 @@ void EditorTerrainEditMode::DrawPostWorldOverlaysTerrainWidget(EditorMapViewport
 {
     if (m_brushVertices.GetSize() > 0)
     {
-        GPUContext *pContext = g_pRenderer->GetMainContext();
+        GPUContext *pContext = g_pRenderer->GetGPUContext();
         
         pContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
         pContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);

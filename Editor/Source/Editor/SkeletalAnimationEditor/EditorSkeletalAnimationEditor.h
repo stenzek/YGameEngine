@@ -130,7 +130,7 @@ private:
     SkeletalMeshRenderProxy *m_pPreviewMeshRenderProxy;
 
     // --- renderer stuff ---
-    RendererOutputBuffer *m_pSwapChain;
+    GPUOutputBuffer *m_pSwapChain;
     WorldRenderer *m_pWorldRenderer;
     MiniGUIContext m_guiContext;
     bool m_bHardwareResourcesCreated;

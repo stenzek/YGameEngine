@@ -18,7 +18,7 @@ EditorRendererSwapChainWidget::~EditorRendererSwapChainWidget()
     SAFE_RELEASE(m_pSwapChain);
 }
 
-RendererOutputBuffer *EditorRendererSwapChainWidget::GetSwapChain() const
+GPUOutputBuffer *EditorRendererSwapChainWidget::GetSwapChain() const
 {
     if (m_pSwapChain == NULL)
         const_cast<EditorRendererSwapChainWidget *>(this)->RecreateSwapChain();
@@ -52,8 +52,14 @@ void EditorRendererSwapChainWidget::resizeEvent(QResizeEvent *pEvent)
 {
     QWidget::resizeEvent(pEvent);
 
-    if (m_pSwapChain == NULL || !m_pSwapChain->ResizeBuffers())
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
+    ReferenceCountedHolder<GPUOutputBuffer> pOldBuffer = pGPUContext->GetOutputBuffer();
+    pGPUContext->SetOutputBuffer(m_pSwapChain);
+
+    if (m_pSwapChain == NULL || !pGPUContext->ResizeOutputBuffer())
         RecreateSwapChain();
+
+    pGPUContext->SetOutputBuffer(pOldBuffer);
 
     ResizedEvent();
 }

@@ -8,6 +8,7 @@
 #include "BlockEngine/BlockWorldVertexFactory.h"
 #include "Engine/Camera.h"
 #include "Engine/Engine.h"
+#include "Engine/ResourceManager.h"
 #include "Renderer/Renderer.h"
 
 //#define USE_LOCAL_TO_WORLD_TRANSFORM
@@ -368,6 +369,8 @@ void BlockWorldChunkRenderProxy::QueueForRender(const Camera *pCamera, RenderQue
     {
         const RenderBatch &renderBatch = m_renderBatches[batchIndex];
         const Material *pMaterial = m_pPalette->GetMaterial(renderBatch.MaterialIndex);
+        //if (renderBatch.MaterialIndex > 2)
+            //pMaterial = g_pResourceManager->GetDefaultMaterial();
 
         // get pass mask
         uint32 renderPassMask = pMaterial->GetShader()->SelectRenderPassMask(wantedRenderPasses);

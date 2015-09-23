@@ -35,8 +35,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Editor\BlockMeshSource\Editor\EditorBlockMeshEditor.cpp" />
-    <ClCompile Include="Source\Editor\BlockMeshSource\Editor\moc_EditorBlockMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\BlockMeshEditor\EditorBlockMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\BlockMeshEditor\moc_EditorBlockMeshEditor.cpp" />
     <ClCompile Include="Source\Editor\Defines.cpp" />
     <ClCompile Include="Source\Editor\Editor.cpp" />
     <ClCompile Include="Source\Editor\EditorCVars.cpp" />
@@ -68,29 +68,29 @@
     <ClCompile Include="Source\Editor\EditorVirtualFileSystemModel.cpp" />
     <ClCompile Include="Source\Editor\FlowLayout.cpp" />
     <ClCompile Include="Source\Editor\Main.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapEditMode.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorCreateTerrainDialog.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorEditMode.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorEntityEditMode.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorEntityIdWorldRenderer.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorGeometryEditMode.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMap.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapEntity.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapViewport.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapWindow.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorTerrainEditMode.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorWorldOutlinerWidget.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorCreateTerrainDialog.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorEditMode.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorEntityEditMode.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorGeometryEditMode.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorMapEditMode.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorMapViewport.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorMapWindow.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorTerrainEditMode.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorWorldOutlinerWidget.cpp" />
-    <ClCompile Include="Source\Editor\MaterialSource\Editor\EditorMaterialEditor.cpp" />
-    <ClCompile Include="Source\Editor\MaterialShaderSource\Editor\EditorMaterialShaderEditor.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorCreateTerrainDialog.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorEntityEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorEntityIdWorldRenderer.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorGeometryEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorMap.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorMapEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorMapEntity.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorMapViewport.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorMapWindow.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorTerrainEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\EditorWorldOutlinerWidget.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorCreateTerrainDialog.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorEntityEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorGeometryEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorMapEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorMapViewport.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorMapWindow.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorTerrainEditMode.cpp" />
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorWorldOutlinerWidget.cpp" />
+    <ClCompile Include="Source\Editor\MaterialEditor\EditorMaterialEditor.cpp" />
+    <ClCompile Include="Source\Editor\MaterialShaderEditor\EditorMaterialShaderEditor.cpp" />
     <ClCompile Include="Source\Editor\moc_Editor.cpp" />
     <ClCompile Include="Source\Editor\moc_EditorProgressDialog.cpp" />
     <ClCompile Include="Source\Editor\moc_EditorPropertyEditorDialog.cpp" />
@@ -131,17 +131,17 @@
     <ClCompile Include="Source\Editor\ResourceBrowser\moc_EditorResourceBrowserWidget.cpp" />
     <ClCompile Include="Source\Editor\ResourceBrowser\moc_EditorStaticMeshImportDialog.cpp" />
     <ClCompile Include="Source\Editor\SimpleTreeModel.cpp" />
-    <ClCompile Include="Source\Editor\SkeletalAnimationSource\Editor\EditorSkeletalAnimationEditor.cpp" />
-    <ClCompile Include="Source\Editor\SkeletalAnimationSource\Editor\moc_EditorSkeletalAnimationEditor.cpp" />
-    <ClCompile Include="Source\Editor\SkeletalMeshSource\Editor\EditorSkeletalMeshEditor.cpp" />
-    <ClCompile Include="Source\Editor\SkeletalMeshSource\Editor\moc_EditorSkeletalMeshEditor.cpp" />
-    <ClCompile Include="Source\Editor\StaticMeshSource\Editor\EditorStaticMeshEditor.cpp" />
-    <ClCompile Include="Source\Editor\StaticMeshSource\Editor\moc_EditorStaticMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\SkeletalAnimationEditor\EditorSkeletalAnimationEditor.cpp" />
+    <ClCompile Include="Source\Editor\SkeletalAnimationEditor\moc_EditorSkeletalAnimationEditor.cpp" />
+    <ClCompile Include="Source\Editor\SkeletalMeshEditor\EditorSkeletalMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\SkeletalMeshEditor\moc_EditorSkeletalMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\StaticMeshEditor\EditorStaticMeshEditor.cpp" />
+    <ClCompile Include="Source\Editor\StaticMeshEditor\moc_EditorStaticMeshEditor.cpp" />
     <ClCompile Include="Source\Editor\ToolMenuWidget.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Editor\BlockMeshSource\Editor\EditorBlockMeshEditor.h" />
-    <ClInclude Include="Source\Editor\BlockMeshSource\Editor\ui_EditorBlockMeshEditor.h" />
+    <ClInclude Include="Source\Editor\BlockMeshEditor\EditorBlockMeshEditor.h" />
+    <ClInclude Include="Source\Editor\BlockMeshEditor\ui_EditorBlockMeshEditor.h" />
     <ClInclude Include="Source\Editor\Common.h" />
     <ClInclude Include="Source\Editor\Defines.h" />
     <ClInclude Include="Source\Editor\Editor.h" />
@@ -171,45 +171,57 @@
     <ClInclude Include="Source\Editor\EditorViewController.h" />
     <ClInclude Include="Source\Editor\EditorVirtualFileSystemModel.h" />
     <ClInclude Include="Source\Editor\FlowLayout.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapEditMode.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorCreateTerrainDialog.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorEditMode.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorEntityEditMode.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorEntityIdWorldRenderer.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorGeometryEditMode.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMap.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapEntity.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapViewport.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapWindow.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorTerrainEditMode.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorWorldOutlinerWidget.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\ui_EditorCreateTerrainDialog.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\ui_EditorMapViewport.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\ui_EditorMapWindow.h" />
-    <ClInclude Include="Source\Editor\MaterialSource\Editor\EditorMaterialEditor.h" />
-    <ClInclude Include="Source\Editor\MaterialShaderSource\Editor\EditorMaterialShaderEditor.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorCreateTerrainDialog.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorEditMode.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorEntityEditMode.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorEntityIdWorldRenderer.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorGeometryEditMode.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorMap.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorMapEditMode.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorMapEntity.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorMapViewport.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorMapWindow.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorTerrainEditMode.h" />
+    <ClInclude Include="Source\Editor\MapEditor\EditorWorldOutlinerWidget.h" />
+    <ClInclude Include="Source\Editor\MapEditor\ui_EditorCreateTerrainDialog.h" />
+    <ClInclude Include="Source\Editor\MapEditor\ui_EditorMapViewport.h" />
+    <ClInclude Include="Source\Editor\MapEditor\ui_EditorMapWindow.h" />
+    <ClInclude Include="Source\Editor\MaterialEditor\EditorMaterialEditor.h" />
+    <ClInclude Include="Source\Editor\MaterialShaderEditor\EditorMaterialShaderEditor.h" />
     <ClInclude Include="Source\Editor\PrecompiledHeader.h" />
     <ClInclude Include="Source\Editor\ResourceBrowser\EditorResourceBrowserWidget.h" />
     <ClInclude Include="Source\Editor\ResourceBrowser\EditorStaticMeshImportDialog.h" />
     <ClInclude Include="Source\Editor\ResourceBrowser\ui_EditorStaticMeshImportDialog.h" />
     <ClInclude Include="Source\Editor\SignalBlocker.h" />
     <ClInclude Include="Source\Editor\SimpleTreeModel.h" />
-    <ClInclude Include="Source\Editor\SkeletalAnimationSource\Editor\EditorSkeletalAnimationEditor.h" />
-    <ClInclude Include="Source\Editor\SkeletalAnimationSource\Editor\ui_EditorSkeletalAnimationEditor.h" />
-    <ClInclude Include="Source\Editor\SkeletalMeshSource\Editor\EditorSkeletalMeshEditor.h" />
-    <ClInclude Include="Source\Editor\SkeletalMeshSource\Editor\ui_EditorSkeletalMeshEditor.h" />
-    <ClInclude Include="Source\Editor\StaticMeshSource\Editor\EditorStaticMeshEditor.h" />
-    <ClInclude Include="Source\Editor\StaticMeshSource\Editor\ui_EditorStaticMeshEditor.h" />
+    <ClInclude Include="Source\Editor\SkeletalAnimationEditor\EditorSkeletalAnimationEditor.h" />
+    <ClInclude Include="Source\Editor\SkeletalAnimationEditor\ui_EditorSkeletalAnimationEditor.h" />
+    <ClInclude Include="Source\Editor\SkeletalMeshEditor\EditorSkeletalMeshEditor.h" />
+    <ClInclude Include="Source\Editor\SkeletalMeshEditor\ui_EditorSkeletalMeshEditor.h" />
+    <ClInclude Include="Source\Editor\StaticMeshEditor\EditorStaticMeshEditor.h" />
+    <ClInclude Include="Source\Editor\StaticMeshEditor\ui_EditorStaticMeshEditor.h" />
     <ClInclude Include="Source\Editor\ToolMenuWidget.h" />
     <ClInclude Include="Source\Editor\ui_EditorProgressDialog.h" />
     <ClInclude Include="Source\Editor\ui_EditorResourcePreviewWidget.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="ContentConverter.vcxproj">
+    <ProjectReference Include="..\Engine\ContentConverter.vcxproj">
       <Project>{25aef9de-5353-4931-80e4-90e61b15b9a1}</Project>
     </ProjectReference>
-    <ProjectReference Include="Engine.vcxproj">
+    <ProjectReference Include="..\Engine\Engine.vcxproj">
       <Project>{ccdf1982-a135-4826-8db2-7ab5011ccd41}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Engine\MapCompiler.vcxproj">
+      <Project>{e8305549-a273-4d0e-9505-09862176e389}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Engine\Renderer.vcxproj">
+      <Project>{c5ef4be8-393a-4235-bb52-fa771c492ecb}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Engine\ResourceCompiler.vcxproj">
+      <Project>{6e5ac457-2ec0-4f50-99fe-7c3dbafe5e26}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Engine\ResourceCompilerInterface.vcxproj">
+      <Project>{46d10782-4194-4188-b196-c712f15f3b58}</Project>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -354,7 +366,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt32\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\YBaseLib\Include;$(SolutionDir)Engine\Source;$(SolutionDir)Engine\Dependancies\bullet\src;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Engine\Dependancies\imgui;$(SolutionDir)Dependancies\Windows\qt32\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
       <MinimalRebuild>false</MinimalRebuild>
@@ -375,7 +387,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_DEBUGFAST;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt32\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\YBaseLib\Include;$(SolutionDir)Engine\Source;$(SolutionDir)Engine\Dependancies\bullet\src;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Engine\Dependancies\imgui;$(SolutionDir)Dependancies\Windows\qt32\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
       <MinimalRebuild>false</MinimalRebuild>
@@ -399,7 +411,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\YBaseLib\Include;$(SolutionDir)Engine\Source;$(SolutionDir)Engine\Dependancies\bullet\src;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Engine\Dependancies\imgui;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
@@ -419,7 +431,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;_DEBUG;_DEBUGFAST;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\YBaseLib\Include;$(SolutionDir)Engine\Source;$(SolutionDir)Engine\Dependancies\bullet\src;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Engine\Dependancies\imgui;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
@@ -444,7 +456,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt32\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\YBaseLib\Include;$(SolutionDir)Engine\Source;$(SolutionDir)Engine\Dependancies\bullet\src;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Engine\Dependancies\imgui;$(SolutionDir)Dependancies\Windows\qt32\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
       <MinimalRebuild>false</MinimalRebuild>
@@ -472,7 +484,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_SHIPPING;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt32\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\YBaseLib\Include;$(SolutionDir)Engine\Source;$(SolutionDir)Engine\Dependancies\bullet\src;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Engine\Dependancies\imgui;$(SolutionDir)Dependancies\Windows\qt32\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
       <MinimalRebuild>false</MinimalRebuild>
@@ -498,7 +510,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\YBaseLib\Include;$(SolutionDir)Engine\Source;$(SolutionDir)Engine\Dependancies\bullet\src;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Engine\Dependancies\imgui;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>
@@ -525,7 +537,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>HAVE_MSVC_CONFIG_H;WIN32;NDEBUG;_SHIPPING;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir);$(SolutionDir)Dependancies\Windows\include;$(ProjectDir)..\Dependancies\YBaseLib\Include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir);$(ProjectDir)Source;$(SolutionDir)Dependancies\Windows\include;$(SolutionDir)Dependancies\Windows\include\SDL;$(SolutionDir)Engine\Dependancies\YBaseLib\Include;$(SolutionDir)Engine\Source;$(SolutionDir)Engine\Dependancies\bullet\src;$(SolutionDir)Engine\Dependancies\lua\src;$(SolutionDir)Engine\Dependancies\imgui;$(SolutionDir)Dependancies\Windows\qt64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <PrecompiledHeaderFile>Editor/PrecompiledHeader.h</PrecompiledHeaderFile>

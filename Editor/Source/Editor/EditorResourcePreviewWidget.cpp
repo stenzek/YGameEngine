@@ -83,7 +83,7 @@ void EditorResourcePreviewWidget::SetRenderMode(EDITOR_RENDER_MODE renderMode)
     m_ui->UpdateUIForRenderMode(renderMode);
 
     delete m_pWorldRenderer;
-    m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(renderMode, g_pRenderer->GetMainContext(), m_viewportFlags, m_viewParameters.Viewport.Width, m_viewParameters.Viewport.Height);
+    m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(renderMode, g_pRenderer->GetGPUContext(), m_viewportFlags, m_viewParameters.Viewport.Width, m_viewParameters.Viewport.Height);
 
     FlagForRedraw();
 }
@@ -128,7 +128,7 @@ bool EditorResourcePreviewWidget::CreateGPUResources()
 
     // create render context
     if (m_pWorldRenderer == NULL)
-        m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(m_renderMode, g_pRenderer->GetMainContext(), m_viewportFlags, m_viewParameters.Viewport.Width, m_viewParameters.Viewport.Height);
+        m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(m_renderMode, g_pRenderer->GetGPUContext(), m_viewportFlags, m_viewParameters.Viewport.Width, m_viewParameters.Viewport.Height);
 
     // update gui context, camera
     m_ArcBallCamera.SetPerspectiveAspect((float)m_renderTargetWidth, (float)m_renderTargetHeight);
@@ -154,7 +154,7 @@ void EditorResourcePreviewWidget::ReleaseGPUResources()
 
 void EditorResourcePreviewWidget::Draw()
 {
-    GPUContext *pGPUDevice = g_pRenderer->GetMainContext();
+    GPUContext *pGPUDevice = g_pRenderer->GetGPUContext();
     GPUContextConstants *pGPUConstants = pGPUDevice->GetConstants();
 
     // create hardware resources
@@ -187,7 +187,7 @@ void EditorResourcePreviewWidget::Draw()
     pGPUDevice->ClearState(true, true, true, true);
 
     // end draw calls, flip buffers
-    m_pSwapChain->SwapBuffers();
+    pGPUDevice->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE);
 
     // no draw pending now
     m_bRedrawPending = false;
@@ -449,7 +449,7 @@ void EditorResourcePreviewWidget::DrawPreview()
     case PREVIEW_TYPE_STATICBLOCKMESH:
         {
             // all of these use a world
-            m_pWorldRenderer->DrawWorld(m_pRenderWorld, &m_viewParameters, NULL, NULL, NULL);
+            m_pWorldRenderer->DrawWorld(m_pRenderWorld, &m_viewParameters, NULL, NULL);
         }
         break;
 

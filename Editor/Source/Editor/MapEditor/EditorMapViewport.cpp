@@ -95,7 +95,7 @@ void EditorMapViewport::SetRenderMode(EDITOR_RENDER_MODE renderMode)
     // update state
     m_renderMode = renderMode;
     delete m_pWorldRenderer;
-    m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(renderMode, g_pRenderer->GetMainContext(), m_viewportFlags, m_pSwapChain->GetWidth(), m_pSwapChain->GetHeight());
+    m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(renderMode, g_pRenderer->GetGPUContext(), m_viewportFlags, m_pSwapChain->GetWidth(), m_pSwapChain->GetHeight());
     FlagForRedraw();
 
     // update ui
@@ -126,7 +126,7 @@ void EditorMapViewport::ClearViewportFlag(uint32 flag)
 
 bool EditorMapViewport::CreateHardwareResources()
 {
-    GPUContext *pGPUContext = g_pRenderer->GetMainContext();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
 
     // create swap chain
     if (m_pSwapChain == NULL)
@@ -189,7 +189,7 @@ bool EditorMapViewport::CreateHardwareResources()
 
     // create render context
     if (m_pWorldRenderer == nullptr)
-        m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(m_renderMode, g_pRenderer->GetMainContext(), m_viewportFlags, swapChainWidth, swapChainHeight);
+        m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(m_renderMode, g_pRenderer->GetGPUContext(), m_viewportFlags, swapChainWidth, swapChainHeight);
 
     // create picking texture render context
     if (m_pPickingWorldRenderer == nullptr)
@@ -197,7 +197,7 @@ bool EditorMapViewport::CreateHardwareResources()
     
     // update gui context, camera
     m_guiContext.SetViewportDimensions(swapChainWidth, swapChainHeight);
-    m_guiContext.SetGPUContext(GPUContext::GetContextForCurrentThread());
+    m_guiContext.SetGPUContext(g_pRenderer->GetGPUContext());
     m_viewController.SetViewportDimensions(swapChainWidth, swapChainHeight);
 
 #ifdef Y_BUILD_CONFIG_DEBUG
@@ -313,18 +313,21 @@ bool EditorMapViewport::Draw(const float timeDiff)
     if (!m_redrawPending && !(m_viewportFlags & EDITOR_VIEWPORT_FLAG_REALTIME))
         return false;
     
-    GPUContext *pGPUContext = g_pRenderer->GetMainContext();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
 
     // create hardware resources
     if (!m_hardwareResourcesCreated && !CreateHardwareResources())
         return false;
+
+    // bind output buffer
+    pGPUContext->SetOutputBuffer(m_pSwapChain);
 
     // for debugging, we draw the view first, but for release and perf optimization, we draw the view last
     DrawView();
     DrawPickTexture();
 
     // swap swapchain buffers
-    m_pSwapChain->SwapBuffers();
+    pGPUContext->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE);
 
     // now read the picking texture back.
     DebugAssert(m_PickingTextureCopy.IsValidImage());
@@ -386,8 +389,8 @@ Ray EditorMapViewport::GetPickRay() const
 
 void EditorMapViewport::DrawView()
 {
-    GPUContext *pGPUContext = g_pRenderer->GetMainContext();
-    GPUContextConstants *pGPUConstants = g_pRenderer->GetMainContext()->GetConstants();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
+    GPUContextConstants *pGPUConstants = pGPUContext->GetConstants();
     SmallString tempStr;
 
     // set targets
@@ -411,7 +414,7 @@ void EditorMapViewport::DrawView()
     m_pMapWindow->GetActiveEditModePointer()->OnViewportDrawBeforeWorld(this);
     
     // draw world
-    m_pWorldRenderer->DrawWorld(m_pMap->GetRenderWorld(), m_viewController.GetViewParameters(), nullptr, nullptr, nullptr);
+    m_pWorldRenderer->DrawWorld(m_pMap->GetRenderWorld(), m_viewController.GetViewParameters(), nullptr, nullptr);
 
     // world renderer can reset the render targets, so set them back again
     pGPUContext->SetRenderTargets(0, nullptr, nullptr);
@@ -449,14 +452,14 @@ void EditorMapViewport::DrawAfterPost()
 void EditorMapViewport::DrawPickTexture()
 {
     // setup render targets and constants
-    GPUContext *pGPUContext = g_pRenderer->GetMainContext();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
     pGPUContext->GetConstants()->SetFromCamera(m_viewController.GetCamera(), true);
 
     // callbacks before world
     m_pMapWindow->GetActiveEditModePointer()->OnPickingTextureDrawBeforeWorld(this);
 
     // draw world
-    m_pPickingWorldRenderer->DrawWorld(m_pMap->GetRenderWorld(), m_viewController.GetViewParameters(), m_pPickingRenderTargetView, m_pPickingDepthStencilBufferView, nullptr);
+    m_pPickingWorldRenderer->DrawWorld(m_pMap->GetRenderWorld(), m_viewController.GetViewParameters(), m_pPickingRenderTargetView, m_pPickingDepthStencilBufferView);
 
     // world renderer can reset the render targets, so set them back again
     pGPUContext->SetRenderTargets(1, &m_pPickingRenderTargetView, m_pPickingDepthStencilBufferView);

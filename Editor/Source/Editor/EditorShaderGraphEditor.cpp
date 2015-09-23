@@ -552,14 +552,14 @@ void EditorShaderGraphEditor::Draw(bool forceDrawVisual /* = false */, bool forc
     if (!m_bRendererResourcesCreated && !CreateRendererResources())
         return;
 
-    GPUContext *pGPUDevice = g_pRenderer->GetMainContext();
+    GPUContext *pGPUDevice = g_pRenderer->GetGPUContext();
 
     if ((forceDrawVisual | m_bRedrawPending))
     {
         // clear RT
         pGPUDevice->SetRenderTargets(1, &m_pRenderTargetView, nullptr);
         pGPUDevice->ClearTargets(true, false, false, float4(0.875f, 0.875f, 0.875f, 1.0f));
-        pGPUDevice->SetDefaultViewport(m_pRenderTarget);
+        pGPUDevice->SetFullViewport();
 
         // enable batching of gui draws
         m_mGUICtx.PushManualFlush();
@@ -607,7 +607,7 @@ void EditorShaderGraphEditor::Draw(bool forceDrawVisual /* = false */, bool forc
     {
         pGPUDevice->SetRenderTargets(1, &m_pPickingTextureView, nullptr);
         pGPUDevice->ClearTargets(true, false, false);
-        pGPUDevice->SetDefaultViewport(m_pPickingTexture);
+        pGPUDevice->SetFullViewport();
         
         // enable batching of gui draws
         m_mGUICtx.PushManualFlush();

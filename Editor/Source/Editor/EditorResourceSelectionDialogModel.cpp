@@ -297,7 +297,7 @@ QVariant EditorResourceSelectionDialogModel::data(const QModelIndex &index, int 
 
                         // actually generate it
                         EditorResourcePreviewGenerator generator;
-                        generator.SetGPUContext(g_pRenderer->GetMainContext());
+                        generator.SetGPUContext(g_pRenderer->GetGPUContext());
                         if (generator.GenerateResourcePreview(&previewImage, pDirectoryNode->GetResourceTypeInfo(), pDirectoryNode->GetFullName()))
                         {
                             // return an icon from this

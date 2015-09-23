@@ -86,7 +86,7 @@ void EditorSkeletalAnimationEditor::SetRenderMode(EDITOR_RENDER_MODE renderMode)
     m_ui->UpdateUIForRenderMode(renderMode);
 
     delete m_pWorldRenderer;
-    m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(renderMode, g_pRenderer->GetMainContext(), m_viewportFlags, m_pSwapChain->GetWidth(), m_pSwapChain->GetHeight());
+    m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(renderMode, g_pRenderer->GetGPUContext(), m_viewportFlags, m_pSwapChain->GetWidth(), m_pSwapChain->GetHeight());
     FlagForRedraw();
 
     // update ui
@@ -325,12 +325,12 @@ bool EditorSkeletalAnimationEditor::CreateHardwareResources()
 
     // update gui context, camera
     m_guiContext.SetViewportDimensions(swapChainWidth, swapChainHeight);
-    m_guiContext.SetGPUContext(GPUContext::GetContextForCurrentThread());
+    m_guiContext.SetGPUContext(g_pRenderer->GetGPUContext());
     m_viewController.SetViewportDimensions(swapChainWidth, swapChainHeight);
 
     // create render context
     if (m_pWorldRenderer == NULL)
-        m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(m_renderMode, g_pRenderer->GetMainContext(), m_viewportFlags, m_pSwapChain->GetWidth(), m_pSwapChain->GetHeight());
+        m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(m_renderMode, g_pRenderer->GetGPUContext(), m_viewportFlags, m_pSwapChain->GetWidth(), m_pSwapChain->GetHeight());
 
     // cancel any pending draws until the windows are arranged and a paint is requested.
     m_bHardwareResourcesCreated = true;
@@ -484,7 +484,7 @@ void EditorSkeletalAnimationEditor::Draw()
     if (!m_bHardwareResourcesCreated && !CreateHardwareResources())
         return;
 
-    GPUContext *pGPUContext = g_pRenderer->GetMainContext();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
 
     // clear it
     pGPUContext->SetOutputBuffer(m_pSwapChain);
@@ -507,7 +507,7 @@ void EditorSkeletalAnimationEditor::Draw()
     pGPUContext->ClearState(true, true, true, true);
 
     // present
-    m_pSwapChain->SwapBuffers();
+    pGPUContext->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE);
 
     // clear pending flag
     m_bRedrawPending = false;
@@ -525,7 +525,7 @@ void EditorSkeletalAnimationEditor::DrawGrid()
 
 void EditorSkeletalAnimationEditor::DrawView()
 {
-    m_pWorldRenderer->DrawWorld(m_pRenderWorld, m_viewController.GetViewParameters(), NULL, NULL, NULL);
+    m_pWorldRenderer->DrawWorld(m_pRenderWorld, m_viewController.GetViewParameters(), NULL, NULL);
 }
 
 void EditorSkeletalAnimationEditor::DrawOverlays(GPUContext *pGPUContext, MiniGUIContext *pGUIContext)

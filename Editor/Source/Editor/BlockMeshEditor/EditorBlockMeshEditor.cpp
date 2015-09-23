@@ -100,7 +100,7 @@ void EditorBlockMeshEditor::SetRenderMode(EDITOR_RENDER_MODE renderMode)
     m_ui->UpdateUIForRenderMode(renderMode);
 
     delete m_pWorldRenderer;
-    m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(renderMode, g_pRenderer->GetMainContext(), m_viewportFlags, m_pSwapChain->GetWidth(), m_pSwapChain->GetHeight());
+    m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(renderMode, g_pRenderer->GetGPUContext(), m_viewportFlags, m_pSwapChain->GetWidth(), m_pSwapChain->GetHeight());
     FlagForRedraw();
 
     // update ui
@@ -518,7 +518,7 @@ bool EditorBlockMeshEditor::CreateHardwareResources()
 
     // create render context
     if (m_pWorldRenderer == NULL)
-        m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(m_renderMode, g_pRenderer->GetMainContext(), m_viewportFlags, m_pSwapChain->GetWidth(), m_pSwapChain->GetHeight());
+        m_pWorldRenderer = EditorHelpers::CreateWorldRendererForRenderMode(m_renderMode, g_pRenderer->GetGPUContext(), m_viewportFlags, m_pSwapChain->GetWidth(), m_pSwapChain->GetHeight());
     
     // cancel any pending draws until the windows are arranged and a paint is requested.
     m_bHardwareResourcesCreated = true;
@@ -557,7 +557,7 @@ void EditorBlockMeshEditor::Draw()
     if (!m_bHardwareResourcesCreated && !CreateHardwareResources())
         return;
 
-    GPUContext *pGPUContext = g_pRenderer->GetMainContext();
+    GPUContext *pGPUContext = g_pRenderer->GetGPUContext();
 
     // clear it
     pGPUContext->SetOutputBuffer(m_pSwapChain);
@@ -580,7 +580,7 @@ void EditorBlockMeshEditor::Draw()
     pGPUContext->ClearState(true, true, true, true);
 
     // present
-    m_pSwapChain->SwapBuffers();
+    pGPUContext->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE);
 
     // clear pending flag
     m_bRedrawPending = false;
@@ -599,7 +599,7 @@ void EditorBlockMeshEditor::DrawGrid()
 
 void EditorBlockMeshEditor::DrawView()
 {
-    m_pWorldRenderer->DrawWorld(m_pRenderWorld, m_viewController.GetViewParameters(), NULL, NULL, NULL);
+    m_pWorldRenderer->DrawWorld(m_pRenderWorld, m_viewController.GetViewParameters(), NULL, NULL);
 }
 
 void EditorBlockMeshEditor::Draw3DOverlays()
@@ -796,7 +796,7 @@ bool EditorBlockMeshEditor::GenerateAvailableBlockTypes(ProgressCallbacks *pProg
 
     // init preview generator
     EditorResourcePreviewGenerator previewGenerator;
-    previewGenerator.SetGPUContext(g_pRenderer->GetMainContext());
+    previewGenerator.SetGPUContext(g_pRenderer->GetGPUContext());
 
     // setup progress
     pProgressCallbacks->SetCancellable(false);

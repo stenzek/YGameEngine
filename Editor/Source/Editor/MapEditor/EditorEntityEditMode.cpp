@@ -1462,7 +1462,7 @@ void EditorEntityEditMode::DrawMoveGismo(EditorMapViewport *pViewport, const uin
     float anyAxisBoxExtents = 0.2f;
 
     // cache device pointers
-    GPUContext *pGPUDevice = g_pRenderer->GetMainContext();
+    GPUContext *pGPUDevice = g_pRenderer->GetGPUContext();
 
     // Build transforms.
     {
@@ -1606,7 +1606,7 @@ void EditorEntityEditMode::DrawRotationGismo(EditorMapViewport *pViewport, const
     float gismoRadius = 0.5f;
 
     // cache device pointers
-    GPUContext *pGPUDevice = g_pRenderer->GetMainContext();
+    GPUContext *pGPUDevice = g_pRenderer->GetGPUContext();
 
     // Setup renderer.
     pGPUDevice->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_NONE));
@@ -1724,7 +1724,7 @@ void EditorEntityEditMode::DrawScaleGismo(EditorMapViewport *pViewport, const ui
     static const float totalLength = lineLength + boxExtents;
 
     // cache device pointers
-    GPUContext *pGPUDevice = g_pRenderer->GetMainContext();
+    GPUContext *pGPUDevice = g_pRenderer->GetGPUContext();
 
     // Setup renderer.
     pGPUDevice->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_NONE));

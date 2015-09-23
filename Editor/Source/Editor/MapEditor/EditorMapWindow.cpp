@@ -456,7 +456,7 @@ bool EditorMapWindow::OnMapOpened(ProgressCallbacks *pProgressCallbacks /* = Pro
     return true;
 }
 
-void EditorMapWindow::LogCallback(void *UserParam, const char *ChannelName, LOGLEVEL Level, const char *Message)
+void EditorMapWindow::LogCallback(void *pUserParam, const char *channelName, const char *functionName, LOGLEVEL level, const char *message)
 {
     static bool reentrant = false;
     if (!reentrant)
@@ -464,11 +464,11 @@ void EditorMapWindow::LogCallback(void *UserParam, const char *ChannelName, LOGL
         reentrant = true;
 
         // hackfix to prevent the stupid thing from making the window massive
-        QString tempString(Message);
+        QString tempString(message);
         if (tempString.length() > 100)
             tempString.truncate(100);
 
-        reinterpret_cast<EditorMapWindow *>(UserParam)->m_ui->statusBarMainText->setText(tempString);
+        reinterpret_cast<EditorMapWindow *>(pUserParam)->m_ui->statusBarMainText->setText(tempString);
         reentrant = false;
     }
 }

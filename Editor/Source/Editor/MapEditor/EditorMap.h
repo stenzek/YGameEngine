@@ -8,7 +8,7 @@ class EntityTypeInfo;
 class ObjectTemplate;
 class EditorMapWindow;
 class EditorMapViewport;
-class RendererOutputBuffer;
+class GPUOutputBuffer;
 class MapSource;
 class RenderWorld;
 

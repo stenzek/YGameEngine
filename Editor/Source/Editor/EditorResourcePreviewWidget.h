@@ -103,7 +103,7 @@ private:
     bool m_bHardwareResourcesCreated;
 
     // renderer objects
-    RendererOutputBuffer *m_pSwapChain;
+    GPUOutputBuffer *m_pSwapChain;
     WorldRenderer *m_pWorldRenderer;
     WorldRenderer::ViewParameters m_viewParameters;
     MiniGUIContext m_guiContext;

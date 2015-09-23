@@ -2,39 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Source\Editor\PrecompiledHeader.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorGeometryEditMode.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMap.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapEntity.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapViewport.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapWindow.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorTerrainEditMode.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorCreateTerrainDialog.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorMapViewport.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorMapWindow.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorCreateTerrainDialog.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorEntityEditMode.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\Defines.cpp" />
     <ClCompile Include="Source\Editor\Editor.cpp" />
     <ClCompile Include="Source\Editor\EditorCVars.cpp" />
@@ -68,76 +35,19 @@
     <ClCompile Include="Source\Editor\moc_EditorResourceSelectionWidget.cpp" />
     <ClCompile Include="Source\Editor\moc_EditorVirtualFileSystemModel.cpp" />
     <ClCompile Include="Source\Editor\rcc_Editor.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorEditMode.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\BlockMeshSource\Editor\moc_EditorBlockMeshEditor.cpp">
-      <Filter>BlockMeshEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\BlockMeshSource\Editor\EditorBlockMeshEditor.cpp">
-      <Filter>BlockMeshEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MaterialSource\Editor\EditorMaterialEditor.cpp">
-      <Filter>MaterialEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MaterialShaderSource\Editor\EditorMaterialShaderEditor.cpp">
-      <Filter>MaterialShaderEditor</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\EditorBlockVolumeRenderProxy.cpp" />
     <ClCompile Include="Source\Editor\EditorLightSimulator.cpp" />
     <ClCompile Include="Source\Editor\EditorLightSimulatorControlWidget.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorEntityIdWorldRenderer.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\EditorPropertyEditorDialog.cpp" />
     <ClCompile Include="Source\Editor\moc_EditorPropertyEditorDialog.cpp" />
     <ClCompile Include="Source\Editor\EditorVectorEditWidget.cpp" />
     <ClCompile Include="Source\Editor\moc_EditorVectorEditWidget.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorWorldOutlinerWidget.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorWorldOutlinerWidget.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\SimpleTreeModel.cpp" />
     <ClCompile Include="Source\Editor\moc_SimpleTreeModel.cpp" />
     <ClCompile Include="Source\Editor\ToolMenuWidget.cpp" />
-    <ClCompile Include="Source\Editor\StaticMeshSource\Editor\EditorStaticMeshEditor.cpp">
-      <Filter>StaticMeshEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\StaticMeshSource\Editor\moc_EditorStaticMeshEditor.cpp">
-      <Filter>StaticMeshEditor</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\moc_ToolMenuWidget.cpp" />
-    <ClCompile Include="Source\Editor\SkeletalAnimationSource\Editor\EditorSkeletalAnimationEditor.cpp">
-      <Filter>SkeletalAnimationEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\SkeletalAnimationSource\Editor\moc_EditorSkeletalAnimationEditor.cpp">
-      <Filter>SkeletalAnimationEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\SkeletalMeshSource\Editor\moc_EditorSkeletalMeshEditor.cpp">
-      <Filter>SkeletalMeshEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\SkeletalMeshSource\Editor\EditorSkeletalMeshEditor.cpp">
-      <Filter>SkeletalMeshEditor</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\EditorVisualComponent.cpp" />
     <ClCompile Include="Source\Editor\EditorVisual.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorEditMode.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorEntityEditMode.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorGeometryEditMode.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorTerrainEditMode.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\MapSource\Editor\EditorMapEditMode.cpp">
-      <Filter>MapEditor</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\ResourceBrowser\moc_EditorStaticMeshImportDialog.cpp">
       <Filter>ResourceBrowser</Filter>
     </ClCompile>
@@ -153,8 +63,98 @@
     </ClCompile>
     <ClCompile Include="Source\Editor\EditorScriptEditor.cpp" />
     <ClCompile Include="Source\Editor\moc_EditorScriptEditor.cpp" />
-    <ClCompile Include="Source\Editor\MapSource\Editor\moc_EditorMapEditMode.cpp">
+    <ClCompile Include="Source\Editor\BlockMeshEditor\moc_EditorBlockMeshEditor.cpp">
+      <Filter>BlockMeshEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\BlockMeshEditor\EditorBlockMeshEditor.cpp">
+      <Filter>BlockMeshEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorEditMode.cpp">
       <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorEntityEditMode.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorEntityIdWorldRenderer.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorGeometryEditMode.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorMap.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorMapEditMode.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorMapEntity.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorMapViewport.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorMapWindow.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorTerrainEditMode.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorWorldOutlinerWidget.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorCreateTerrainDialog.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorEditMode.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorEntityEditMode.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorGeometryEditMode.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorMapEditMode.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorMapViewport.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorMapWindow.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorTerrainEditMode.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\moc_EditorWorldOutlinerWidget.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MapEditor\EditorCreateTerrainDialog.cpp">
+      <Filter>MapEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MaterialEditor\EditorMaterialEditor.cpp">
+      <Filter>MaterialEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\MaterialShaderEditor\EditorMaterialShaderEditor.cpp">
+      <Filter>MaterialShaderEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\SkeletalAnimationEditor\EditorSkeletalAnimationEditor.cpp">
+      <Filter>SkeletalAnimationEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\SkeletalAnimationEditor\moc_EditorSkeletalAnimationEditor.cpp">
+      <Filter>SkeletalAnimationEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\SkeletalMeshEditor\moc_EditorSkeletalMeshEditor.cpp">
+      <Filter>SkeletalMeshEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\SkeletalMeshEditor\EditorSkeletalMeshEditor.cpp">
+      <Filter>SkeletalMeshEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\StaticMeshEditor\moc_EditorStaticMeshEditor.cpp">
+      <Filter>StaticMeshEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\StaticMeshEditor\EditorStaticMeshEditor.cpp">
+      <Filter>StaticMeshEditor</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -185,39 +185,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\PrecompiledHeader.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorGeometryEditMode.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMap.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapEntity.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapViewport.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapWindow.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorTerrainEditMode.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MapSource\Editor\ui_EditorCreateTerrainDialog.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MapSource\Editor\ui_EditorMapViewport.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MapSource\Editor\ui_EditorMapWindow.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorCreateTerrainDialog.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorEntityEditMode.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\Defines.h" />
     <ClInclude Include="Source\Editor\Editor.h" />
     <ClInclude Include="Source\Editor\EditorCVars.h" />
@@ -240,58 +207,16 @@
     <ClInclude Include="Source\Editor\ui_EditorProgressDialog.h" />
     <ClInclude Include="Source\Editor\ui_EditorResourcePreviewWidget.h" />
     <ClInclude Include="Source\Editor\Common.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorEditMode.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\BlockMeshSource\Editor\EditorBlockMeshEditor.h">
-      <Filter>BlockMeshEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\BlockMeshSource\Editor\ui_EditorBlockMeshEditor.h">
-      <Filter>BlockMeshEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MaterialSource\Editor\EditorMaterialEditor.h">
-      <Filter>MaterialEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\MaterialShaderSource\Editor\EditorMaterialShaderEditor.h">
-      <Filter>MaterialShaderEditor</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\EditorBlockVolumeRenderProxy.h" />
     <ClInclude Include="Source\Editor\EditorLightSimulator.h" />
     <ClInclude Include="Source\Editor\EditorLightSimulatorControlWidget.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorEntityIdWorldRenderer.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\EditorPropertyEditorDialog.h" />
     <ClInclude Include="Source\Editor\EditorVectorEditWidget.h" />
     <ClInclude Include="Source\Editor\SignalBlocker.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorWorldOutlinerWidget.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\SimpleTreeModel.h" />
     <ClInclude Include="Source\Editor\ToolMenuWidget.h" />
-    <ClInclude Include="Source\Editor\StaticMeshSource\Editor\EditorStaticMeshEditor.h">
-      <Filter>StaticMeshEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\StaticMeshSource\Editor\ui_EditorStaticMeshEditor.h">
-      <Filter>StaticMeshEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\SkeletalAnimationSource\Editor\EditorSkeletalAnimationEditor.h">
-      <Filter>SkeletalAnimationEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\SkeletalAnimationSource\Editor\ui_EditorSkeletalAnimationEditor.h">
-      <Filter>SkeletalAnimationEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\SkeletalMeshSource\Editor\EditorSkeletalMeshEditor.h">
-      <Filter>SkeletalMeshEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\SkeletalMeshSource\Editor\ui_EditorSkeletalMeshEditor.h">
-      <Filter>SkeletalMeshEditor</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\EditorVisualComponent.h" />
     <ClInclude Include="Source\Editor\EditorVisual.h" />
-    <ClInclude Include="Source\Editor\MapSource\Editor\EditorMapEditMode.h">
-      <Filter>MapEditor</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\ResourceBrowser\EditorStaticMeshImportDialog.h">
       <Filter>ResourceBrowser</Filter>
     </ClInclude>
@@ -303,5 +228,80 @@
       <Filter>ResourceBrowser</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\EditorScriptEditor.h" />
+    <ClInclude Include="Source\Editor\BlockMeshEditor\EditorBlockMeshEditor.h">
+      <Filter>BlockMeshEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\BlockMeshEditor\ui_EditorBlockMeshEditor.h">
+      <Filter>BlockMeshEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorCreateTerrainDialog.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorEditMode.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorEntityEditMode.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorEntityIdWorldRenderer.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorGeometryEditMode.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorMap.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorMapEditMode.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorMapEntity.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorMapViewport.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorMapWindow.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorTerrainEditMode.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\EditorWorldOutlinerWidget.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\ui_EditorCreateTerrainDialog.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\ui_EditorMapViewport.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MapEditor\ui_EditorMapWindow.h">
+      <Filter>MapEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MaterialEditor\EditorMaterialEditor.h">
+      <Filter>MaterialEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\MaterialShaderEditor\EditorMaterialShaderEditor.h">
+      <Filter>MaterialShaderEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\SkeletalAnimationEditor\ui_EditorSkeletalAnimationEditor.h">
+      <Filter>SkeletalAnimationEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\SkeletalAnimationEditor\EditorSkeletalAnimationEditor.h">
+      <Filter>SkeletalAnimationEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\SkeletalMeshEditor\EditorSkeletalMeshEditor.h">
+      <Filter>SkeletalMeshEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\SkeletalMeshEditor\ui_EditorSkeletalMeshEditor.h">
+      <Filter>SkeletalMeshEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\StaticMeshEditor\EditorStaticMeshEditor.h">
+      <Filter>StaticMeshEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\StaticMeshEditor\ui_EditorStaticMeshEditor.h">
+      <Filter>StaticMeshEditor</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

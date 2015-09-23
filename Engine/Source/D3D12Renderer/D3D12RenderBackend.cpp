@@ -464,7 +464,7 @@ bool D3D12RenderBackend::CreateCPUDescriptorHeaps()
     m_pD3DDevice->CreateConstantBufferView(nullptr, m_nullCBVDescriptorHandle);
 
     // allocate null srv
-    D3D12_SHADER_RESOURCE_VIEW_DESC nullSrvDesc = { DXGI_FORMAT_UNKNOWN, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING };
+    D3D12_SHADER_RESOURCE_VIEW_DESC nullSrvDesc = { DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING };
     nullSrvDesc.Texture2D = { 0, 1, 0, 0.0f };
     m_pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->Allocate(&m_nullSRVDescriptorHandle);
     m_pD3DDevice->CreateShaderResourceView(nullptr, &nullSrvDesc, m_nullSRVDescriptorHandle);

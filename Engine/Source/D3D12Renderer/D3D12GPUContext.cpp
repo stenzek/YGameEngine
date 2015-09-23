@@ -1638,6 +1638,7 @@ void D3D12GPUContext::SynchronizeRenderTargetsAndUAVs()
 bool D3D12GPUContext::UpdatePipelineState(bool force)
 {
     // new pipeline state required?
+    force = force || m_pipelineChanged;
     if (m_pCurrentShaderProgram != nullptr)
     {
         if (m_pipelineChanged || force)
@@ -1854,6 +1855,8 @@ void D3D12GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 bas
 
     m_pCommandList->DrawIndexedInstanced(nIndices, 1, startIndex, baseVertex, 0);
     g_pRenderer->GetCounters()->IncrementDrawCallCounter();
+    FlushCommandList(true, false, false);
+    RestoreCommandListDependantState();
 }
 
 void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, uint32 baseVertex, uint32 nInstances)
@@ -1863,6 +1866,8 @@ void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, u
 
     m_pCommandList->DrawIndexedInstanced(nIndices, nInstances, startIndex, baseVertex, 0);
     g_pRenderer->GetCounters()->IncrementDrawCallCounter();
+    FlushCommandList(true, false, false);
+    RestoreCommandListDependantState();
 }
 
 void D3D12GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ)

@@ -133,6 +133,7 @@ bool EditorResourcePreviewWidget::CreateGPUResources()
     // update gui context, camera
     m_ArcBallCamera.SetPerspectiveAspect((float)m_renderTargetWidth, (float)m_renderTargetHeight);
     m_guiContext.SetViewportDimensions(m_renderTargetWidth, m_renderTargetHeight);
+    m_guiContext.SetGPUContext(g_pRenderer->GetGPUContext());
     m_viewParameters.Viewport.Set(0, 0, m_renderTargetWidth, m_renderTargetHeight, 0.0f, 1.0f);
 
     // done

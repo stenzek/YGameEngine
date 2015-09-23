@@ -423,6 +423,8 @@ void D3D12GraphicsCommandQueue::ScheduleDescriptorForDeletion(const D3D12Descrip
     m_pendingResourceLock.Unlock();
 }
 
+//thread_local D3D12_RESOURCE_DESC rsz;
+
 void D3D12GraphicsCommandQueue::DeletePendingResources(uint64 fenceValue)
 {
     m_pendingResourceLock.Lock();
@@ -436,6 +438,16 @@ void D3D12GraphicsCommandQueue::DeletePendingResources(uint64 fenceValue)
         }
 
         ID3D12Pageable *pResource = m_pendingDeletionResources[i].pResource;
+
+//         ID3D12Resource *pr;
+//         D3D12_RESOURCE_DESC desc;
+//         if (pResource->QueryInterface(IID_PPV_ARGS(&pr)) == S_OK)
+//         {
+//             desc = pr->GetDesc();
+//             rsz = desc;
+//             pr->Release();
+//         }
+
         SAFE_RELEASE_LAST(pResource);
         m_pendingDeletionResources.FastRemove(i);
     }

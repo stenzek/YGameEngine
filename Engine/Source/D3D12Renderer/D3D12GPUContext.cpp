@@ -1079,19 +1079,26 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
         uint32 newRenderTargetCount = 0;
         bool doUpdate = false;
 
+        // transition states - unbind old targets
+        // this is needed because if a target changes index it'll transition incorrectly otherwise.
+        for (slot = 0; slot < m_nCurrentRenderTargets; slot++)
+        {
+            DebugAssert(m_pCurrentRenderTargetViews[slot] != nullptr);
+            if (slot >= nRenderTargets || m_pCurrentRenderTargetViews[slot] != ppRenderTargets[slot])
+            {
+                D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentRenderTargetViews[slot]->GetTargetTexture());
+                if (defaultState != D3D12_RESOURCE_STATE_RENDER_TARGET)
+                    ResourceBarrier(m_pCurrentRenderTargetViews[slot]->GetD3DResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, defaultState);
+            }
+        }
+
         // set inclusive slots
         for (slot = 0; slot < nRenderTargets; slot++)
         {
             if (m_pCurrentRenderTargetViews[slot] != ppRenderTargets[slot])
             {
                 if (m_pCurrentRenderTargetViews[slot] != nullptr)
-                {
-                    D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentRenderTargetViews[slot]->GetTargetTexture());
-                    if (defaultState != D3D12_RESOURCE_STATE_RENDER_TARGET)
-                        ResourceBarrier(m_pCurrentRenderTargetViews[slot]->GetD3DResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, defaultState);
-
                     m_pCurrentRenderTargetViews[slot]->Release();
-                }
 
                 if ((m_pCurrentRenderTargetViews[slot] = static_cast<D3D12GPURenderTargetView *>(ppRenderTargets[slot])) != nullptr)
                 {
@@ -1114,10 +1121,6 @@ void D3D12GPUContext::SetRenderTargets(uint32 nRenderTargets, GPURenderTargetVie
         {
             if (m_pCurrentRenderTargetViews[slot] != nullptr)
             {
-                D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentRenderTargetViews[slot]->GetTargetTexture());
-                if (defaultState != D3D12_RESOURCE_STATE_RENDER_TARGET)
-                    ResourceBarrier(m_pCurrentRenderTargetViews[slot]->GetD3DResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, defaultState);
-
                 m_pCurrentRenderTargetViews[slot]->Release();
                 m_pCurrentRenderTargetViews[slot] = nullptr;
                 doUpdate = true;

@@ -987,25 +987,32 @@ void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
     // the barrier *to* present state has to be queued
     ResourceBarrier(m_pCurrentSwapChain->GetCurrentBackBufferResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
-    // ensure all commands have been queued, and get a new set of allocators
-    //FlushCommandList(true, false, true);
+    // ensure all commands have been queued. don't refresh allocators yet, because otherwise we could block here when trying to get
+    // the new allocators. Instead, push the delay to BeginFrame, which will have some time passed.
     FlushCommandList(true, false, false);
+    //FlushCommandList(true, false, true);
 
-#if 0
-    // test if we can present
-    DWORD waitResult = WaitForSingleObject(m_pCurrentSwapChain->GetDXGISwapChain()->GetFrameLatencyWaitableObject(), 0);
-    if (waitResult == WAIT_OBJECT_0)
+#if 1
+    // vsync off?
+    if (presentBehaviour == GPU_PRESENT_BEHAVIOUR_IMMEDIATE)
     {
-        // present the image
-        m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
+        // test if we can present
+        DWORD waitResult = WaitForSingleObject(m_pCurrentSwapChain->GetDXGISwapChain()->GetFrameLatencyWaitableObject(), 0);
+        if (waitResult == WAIT_OBJECT_0)
+            m_pCurrentSwapChain->GetDXGISwapChain()->Present(0, DXGI_PRESENT_RESTART);
+        else
+            g_pRenderer->GetCounters()->IncrementFramesDroppedCounter();
     }
     else
     {
-        // skip the frame
-        g_pRenderer->GetCounters()->IncrementFramesDroppedCounter();
+        // vsync on
+        m_pCurrentSwapChain->GetDXGISwapChain()->Present(1, 0);
     }
 #else
-    m_pCurrentSwapChain->GetDXGISwapChain()->Present((presentBehaviour == GPU_PRESENT_BEHAVIOUR_WAIT_FOR_VBLANK) ? 1 : 0, 0);
+    if (presentBehaviour == GPU_PRESENT_BEHAVIOUR_IMMEDIATE)
+        m_pCurrentSwapChain->GetDXGISwapChain()->Present(0, DXGI_PRESENT_RESTART);
+    else
+        m_pCurrentSwapChain->GetDXGISwapChain()->Present(1, 0);
 #endif
 
     // restore state (since new command list)

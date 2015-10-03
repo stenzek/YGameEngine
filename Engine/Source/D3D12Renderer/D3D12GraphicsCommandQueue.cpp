@@ -99,7 +99,10 @@ uint64 D3D12GraphicsCommandQueue::CreateSynchronizationPoint()
     DebugAssert(Renderer::IsOnRenderThread());
 
     uint64 returnValue = m_nextFenceValue++;
-    m_pD3DCommandQueue->Signal(m_pD3DFence, returnValue);
+    HRESULT hResult = m_pD3DCommandQueue->Signal(m_pD3DFence, returnValue);
+    if (FAILED(hResult))
+        Log_WarningPrintf("ID3D12CommandQueue::Signal failed with hResult %08X", hResult);
+
     return returnValue;
 }
 
@@ -285,7 +288,7 @@ D3D12LinearDescriptorHeap *D3D12GraphicsCommandQueue::RequestLinearViewHeap()
     // can we allocate a new one?
     if ((m_outstandingLinearViewHeaps + m_linearViewHeapPool.GetSize()) < m_maxLinearViewHeapPoolSize)
     {
-        Log_PerfPrintf("Allocating new linear sampler heap.");
+        Log_PerfPrintf("Allocating new linear view heap.");
         pReturnHeap = D3D12LinearDescriptorHeap::Create(m_pD3DDevice, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_linearViewHeapSize);
         if (pReturnHeap != nullptr)
         {
@@ -392,8 +395,7 @@ void D3D12GraphicsCommandQueue::UpdateLastCompletedFenceValue()
 
 void D3D12GraphicsCommandQueue::ScheduleResourceForDeletion(ID3D12Pageable *pResource)
 {
-    // @TODO investigate why this is playing up..
-    ScheduleResourceForDeletion(pResource, m_nextFenceValue + 1);
+    ScheduleResourceForDeletion(pResource, m_nextFenceValue);
 }
 
 void D3D12GraphicsCommandQueue::ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)

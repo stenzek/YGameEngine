@@ -469,22 +469,13 @@ bool D3D12GPUContext::AllocateScratchBufferMemory(uint32 size, uint32 alignment,
     uint32 offset;
     if (!m_pCurrentScratchBuffer->AllocateAligned(size, alignment, &offset))
     {
-        // get a new buffer (well, try to)
-        // this could possibly be improved by caching the fence value from the last command list, though then it won't be re-used as soon as possible.
-        uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
+        // get a new buffer. we can't release the buffer with a new fence, since the command line hasn't been executed yet.
         D3D12LinearBufferHeap *pNewBuffer = m_pGraphicsCommandQueue->RequestLinearBufferHeap();
-        if (pNewBuffer != nullptr)
-        {
-            // release the old buffer
-            m_pGraphicsCommandQueue->ReleaseLinearBufferHeap(m_pCurrentScratchBuffer, fenceValue);
-            m_pCurrentScratchBuffer = pNewBuffer;
-        }
-        else
-        {
-            // wait for this one to finish
-            m_pGraphicsCommandQueue->WaitForFence(fenceValue);
-            m_pCurrentScratchBuffer->Reset(true);
-        }
+        DebugAssert(pNewBuffer != nullptr);
+        
+        // release the old buffer
+        m_pGraphicsCommandQueue->ReleaseLinearBufferHeap(m_pCurrentScratchBuffer);
+        m_pCurrentScratchBuffer = pNewBuffer;
 
         // retry allocation on new buffer
         if (!m_pCurrentScratchBuffer->AllocateAligned(size, alignment, &offset))
@@ -514,23 +505,14 @@ bool D3D12GPUContext::AllocateScratchView(uint32 count, D3D12_CPU_DESCRIPTOR_HAN
 
     if (!m_pCurrentScratchViewHeap->Allocate(count, pOutCPUHandle, pOutGPUHandle))
     {
-        // get a new buffer (well, try to)
-        // this could possibly be improved by caching the fence value from the last command list, though then it won't be re-used as soon as possible.
-        uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
+        // get a new buffer
         D3D12LinearDescriptorHeap *pNewHeap = m_pGraphicsCommandQueue->RequestLinearViewHeap();
-        if (pNewHeap != nullptr)
-        {
-            // release the old buffer
-            m_pGraphicsCommandQueue->ReleaseLinearViewHeap(m_pCurrentScratchViewHeap, fenceValue);
-            m_pCurrentScratchViewHeap = pNewHeap;
-            UpdateShaderDescriptorHeaps();
-        }
-        else
-        {
-            // wait for this one to finish
-            m_pGraphicsCommandQueue->WaitForFence(fenceValue);
-            m_pCurrentScratchViewHeap->Reset();
-        }
+        DebugAssert(pNewHeap != nullptr);
+
+        // release the old buffer
+        m_pGraphicsCommandQueue->ReleaseLinearViewHeap(m_pCurrentScratchViewHeap);
+        m_pCurrentScratchViewHeap = pNewHeap;
+        UpdateShaderDescriptorHeaps();
 
         // retry allocation on new buffer
         if (!m_pCurrentScratchViewHeap->Allocate(count, pOutCPUHandle, pOutGPUHandle))
@@ -551,23 +533,14 @@ bool D3D12GPUContext::AllocateScratchSamplers(uint32 count, D3D12_CPU_DESCRIPTOR
 
     if (!m_pCurrentScratchSamplerHeap->Allocate(count, pOutCPUHandle, pOutGPUHandle))
     {
-        // get a new buffer (well, try to)
-        // this could possibly be improved by caching the fence value from the last command list, though then it won't be re-used as soon as possible.
-        uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
+        // get a new buffer
         D3D12LinearDescriptorHeap *pNewHeap = m_pGraphicsCommandQueue->RequestLinearSamplerHeap();
-        if (pNewHeap != nullptr)
-        {
-            // release the old buffer
-            m_pGraphicsCommandQueue->ReleaseLinearSamplerHeap(m_pCurrentScratchSamplerHeap, fenceValue);
-            m_pCurrentScratchSamplerHeap = pNewHeap;
-            UpdateShaderDescriptorHeaps();
-        }
-        else
-        {
-            // wait for this one to finish
-            m_pGraphicsCommandQueue->WaitForFence(fenceValue);
-            m_pCurrentScratchSamplerHeap->Reset();
-        }
+        DebugAssert(pNewHeap != nullptr);
+
+        // release the old buffer
+        m_pGraphicsCommandQueue->ReleaseLinearSamplerHeap(m_pCurrentScratchSamplerHeap);
+        m_pCurrentScratchSamplerHeap = pNewHeap;
+        UpdateShaderDescriptorHeaps();
 
         // retry allocation on new buffer
         if (!m_pCurrentScratchSamplerHeap->Allocate(count, pOutCPUHandle, pOutGPUHandle))
@@ -1855,8 +1828,6 @@ void D3D12GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 bas
 
     m_pCommandList->DrawIndexedInstanced(nIndices, 1, startIndex, baseVertex, 0);
     g_pRenderer->GetCounters()->IncrementDrawCallCounter();
-    FlushCommandList(true, false, false);
-    RestoreCommandListDependantState();
 }
 
 void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, uint32 baseVertex, uint32 nInstances)
@@ -1866,8 +1837,6 @@ void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, u
 
     m_pCommandList->DrawIndexedInstanced(nIndices, nInstances, startIndex, baseVertex, 0);
     g_pRenderer->GetCounters()->IncrementDrawCallCounter();
-    FlushCommandList(true, false, false);
-    RestoreCommandListDependantState();
 }
 
 void D3D12GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ)

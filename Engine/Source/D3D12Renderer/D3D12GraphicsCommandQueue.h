@@ -13,6 +13,8 @@ public:
     const uint32 GetLinearBufferHeapSize() const { return m_linearBufferHeapSize; }
     const uint32 GetLinearViewHeapSize() const { return m_linearViewHeapSize; }
     const uint32 GetLinearSamplerHeapSize() const { return m_linearSamplerHeapSize; }
+    const uint64 GetNextFenceValue() const { return m_nextFenceValue; }
+    const uint64 GetLastCompletedFenceValue() const { return m_lastCompletedFenceValue; }
     ID3D12CommandQueue *GetD3DCommandQueue() const { return m_pD3DCommandQueue; }
 
     // initialization
@@ -30,18 +32,22 @@ public:
     // command allocator request, release
     ID3D12CommandAllocator *RequestCommandAllocator();
     void ReleaseCommandAllocator(ID3D12CommandAllocator *pAllocator, uint64 availableFenceValue);
+    void ReleaseCommandAllocator(ID3D12CommandAllocator *pAllocator) { ReleaseCommandAllocator(pAllocator, GetNextFenceValue()); }
 
     // linear buffer request, release
     D3D12LinearBufferHeap *RequestLinearBufferHeap();
     void ReleaseLinearBufferHeap(D3D12LinearBufferHeap *pHeap, uint64 availableFenceValue);
+    void ReleaseLinearBufferHeap(D3D12LinearBufferHeap *pHeap) { ReleaseLinearBufferHeap(pHeap, GetNextFenceValue()); }
 
     // linear resource descriptor heap request, release
     D3D12LinearDescriptorHeap *RequestLinearViewHeap();
     void ReleaseLinearViewHeap(D3D12LinearDescriptorHeap *pHeap, uint64 availableFenceValue);
+    void ReleaseLinearViewHeap(D3D12LinearDescriptorHeap *pHeap) { ReleaseLinearViewHeap(pHeap, GetNextFenceValue()); }
 
     // linear sampler descriptor heap request, release
     D3D12LinearDescriptorHeap *RequestLinearSamplerHeap();
     void ReleaseLinearSamplerHeap(D3D12LinearDescriptorHeap *pHeap, uint64 availableFenceValue);
+    void ReleaseLinearSamplerHeap(D3D12LinearDescriptorHeap *pHeap) { ReleaseLinearSamplerHeap(pHeap, GetNextFenceValue()); }
 
     // waits until the specified fence value is completed
     void WaitForFence(uint64 fence);

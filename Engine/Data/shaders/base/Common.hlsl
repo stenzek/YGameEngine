@@ -40,8 +40,8 @@ BEGIN_CONSTANT_BUFFER(ViewConstantsBuffer, ViewConstants, b2)
     float4x4 ScreenProjectionMatrix;
     float3 EyePosition;
     float WorldTime;
-    float ZRatioNumerator;
-    float ZRatioDenominator;
+    float LogrithmicToLinearZDenominator;
+    float LogrithmicToLinearZNumerator;
     float ZNear;
     float ZFar;
     float PerspectiveAspectRatio;
@@ -117,9 +117,8 @@ float CalculateBlinnPhongSpecular(float3 surfaceNormal, float specularExponent, 
 // linearize a depth buffer value
 float LinearizeDepth(float depthBufferValue)
 {
-    //return 1.0f / (ViewConstants.ZRatio.x * depthBufferValue + ViewConstants.ZRatio.y);
-    //return ViewConstants.ZRatio.y / (depthBufferValue - ViewConstants.ZRatio.x);
-    return ViewConstants.ZRatioDenominator / (depthBufferValue - ViewConstants.ZRatioNumerator);
+    // https://mynameismjp.wordpress.com/2010/09/05/position-from-depth-3/ with negated far plane distance
+    return ViewConstants.LogrithmicToLinearZNumerator / (depthBufferValue - ViewConstants.LogrithmicToLinearZDenominator);
 }
 
 // reconstruct view-space position from a depth buffer sample, expects texture coordinates in [0..1]

@@ -516,7 +516,7 @@ void Renderer::CorrectProjectionMatrix(float4x4 &projectionMatrix)
     {
     case RENDERER_PLATFORM_D3D11:
     case RENDERER_PLATFORM_D3D12:
-        projectionMatrix.SetRow(2, ((projectionMatrix.GetRow(2)) + (projectionMatrix.GetRow(3))) * 0.5f);
+        // Projection matrix already in D3D format.
         break;
 
     case RENDERER_PLATFORM_OPENGL:
@@ -2263,8 +2263,8 @@ BEGIN_SHADER_CONSTANT_BUFFER(cbViewConstants, "ViewConstantsBuffer", "ViewConsta
     SHADER_CONSTANT_BUFFER_FIELD("ScreenProjectionMatrix", SHADER_PARAMETER_TYPE_FLOAT4X4, 1)
     SHADER_CONSTANT_BUFFER_FIELD("EyePosition", SHADER_PARAMETER_TYPE_FLOAT3, 1)
     SHADER_CONSTANT_BUFFER_FIELD("WorldTime", SHADER_PARAMETER_TYPE_FLOAT, 1)
-    SHADER_CONSTANT_BUFFER_FIELD("ZRatioNumerator", SHADER_PARAMETER_TYPE_FLOAT, 1)
-    SHADER_CONSTANT_BUFFER_FIELD("ZRatioDenominator", SHADER_PARAMETER_TYPE_FLOAT, 1)
+    SHADER_CONSTANT_BUFFER_FIELD("LogrithmicToLinearZDenominator", SHADER_PARAMETER_TYPE_FLOAT, 1)
+    SHADER_CONSTANT_BUFFER_FIELD("LogrithmicToLinearZNumerator", SHADER_PARAMETER_TYPE_FLOAT, 1)
     SHADER_CONSTANT_BUFFER_FIELD("ZNear", SHADER_PARAMETER_TYPE_FLOAT, 1)
     SHADER_CONSTANT_BUFFER_FIELD("ZFar", SHADER_PARAMETER_TYPE_FLOAT, 1)
     SHADER_CONSTANT_BUFFER_FIELD("PerspectiveAspectRatio", SHADER_PARAMETER_TYPE_FLOAT, 1)
@@ -2376,14 +2376,13 @@ void GPUContextConstants::SetFromCamera(const Camera &camera, bool commit /*= tr
     SetCameraEyePosition(camera.GetPosition(), false);
 
     // calc z ratio uniform
-    // http://www.humus.name/temp/Linearize%20depth.txt
     // https://mynameismjp.wordpress.com/2010/09/05/position-from-depth-3/ with negated far plane distance
-    //float2 zRatioValue((camera.GetFarPlaneDistance() / camera.GetNearPlaneDistance()), 1.0f - (camera.GetFarPlaneDistance() / camera.GetNearPlaneDistance()));
-    float2 zRatioValue(camera.GetFarPlaneDistance() / (camera.GetFarPlaneDistance() - camera.GetNearPlaneDistance()), (camera.GetFarPlaneDistance() * camera.GetNearPlaneDistance()) / (camera.GetFarPlaneDistance() - camera.GetNearPlaneDistance()));
+    float logrithmicToLinearZDenominator = camera.GetFarPlaneDistance() / (camera.GetFarPlaneDistance() - camera.GetNearPlaneDistance());
+    float logrithmicToLinearZNumerator = (camera.GetFarPlaneDistance() * camera.GetNearPlaneDistance()) / (camera.GetFarPlaneDistance() - camera.GetNearPlaneDistance());
+    cbViewConstants.SetFieldFloat(m_pContext, 9, logrithmicToLinearZDenominator, false);
+    cbViewConstants.SetFieldFloat(m_pContext, 10, logrithmicToLinearZNumerator, false);
 
     // set the remaining fields directly to the constant buffer
-    cbViewConstants.SetFieldFloat(m_pContext, 9, zRatioValue.x, false);
-    cbViewConstants.SetFieldFloat(m_pContext, 10, zRatioValue.y, false);
     cbViewConstants.SetFieldFloat(m_pContext, 11, camera.GetNearPlaneDistance(), false);
     cbViewConstants.SetFieldFloat(m_pContext, 12, camera.GetFarPlaneDistance(), false);
     cbViewConstants.SetFieldFloat(m_pContext, 13, camera.GetPerspectiveAspect(), false);
@@ -2448,7 +2447,7 @@ void GPUContextConstants::CommitChanges()
 
         // calculate inverse matrices
         float4x4 inverseViewMatrix(m_cameraViewMatrix.Inverse());
-        float4x4 inverseProjectionMatrix(m_cameraProjectionMatrix.Inverse());
+        float4x4 inverseProjectionMatrix(adjustedProjectionMatrix.Inverse());
 
         // calculate view/projection matrix and inverses
         float4x4 viewProjectionMatrix(adjustedProjectionMatrix * m_cameraViewMatrix);

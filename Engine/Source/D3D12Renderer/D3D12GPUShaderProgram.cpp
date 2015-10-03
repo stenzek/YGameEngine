@@ -527,10 +527,11 @@ void D3D12GPUShaderProgram::InternalSetParameterResource(D3D12GPUContext *pConte
         const ShaderParameter *samplerParameterInfo = &m_parameters[parameterInfo->LinkedSamplerIndex];
         DebugAssert(samplerParameterInfo->Type == SHADER_PARAMETER_TYPE_SAMPLER_STATE && samplerParameterInfo->BindTarget == D3D_SHADER_BIND_TARGET_SAMPLER);
 
-        // write to stages
+        // get handle - might look nasty, but handle is nulled in the constructor.
         D3D12DescriptorHandle handle;
-        D3D12Helpers::GetResourceSamplerHandle(pResource, &handle);
+        D3D12Helpers::GetResourceSamplerHandle((pLinkedSamplerState != nullptr) ? static_cast<GPUResource *>(pLinkedSamplerState) : pResource, &handle);
 
+        // write to stages
         for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
         {
             int32 bindPoint = samplerParameterInfo->BindPoint[stageIndex];

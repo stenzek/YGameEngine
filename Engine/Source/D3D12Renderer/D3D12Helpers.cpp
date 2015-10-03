@@ -424,6 +424,10 @@ bool D3D12Helpers::GetResourceSamplerHandle(GPUResource *pResource, D3D12Descrip
         *pHandle = static_cast<D3D12GPUTextureCubeArray *>(pResource)->GetSamplerHandle();
         return (!pHandle->IsNull());
 #endif
+
+    case GPU_RESOURCE_TYPE_SAMPLER_STATE:
+        *pHandle = static_cast<D3D12GPUSamplerState *>(pResource)->GetSamplerHandle();
+        return (!pHandle->IsNull());
     }
 
     return false;

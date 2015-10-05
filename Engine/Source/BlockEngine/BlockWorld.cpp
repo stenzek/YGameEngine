@@ -67,12 +67,19 @@ BlockWorld::~BlockWorld()
     delete m_pGenerator;
     SAFE_RELEASE(m_pBlockDrawTemplate);
 
-    // TODO delete entities
+    // unload sections
     UnloadAllSections();
-
     for (int32 i = 0; i < m_sectionCount; i++)
         delete m_ppSections[i];
     delete[] m_ppSections;
+
+    // clean out entities
+    while (m_globalEntityReferences.GetSize() > 0)
+    {
+        BlockWorldEntityReference &ref = m_globalEntityReferences[m_globalEntityReferences.GetSize() - 1];
+        RemoveEntity(ref.pEntity);
+    }
+    DebugAssert(m_entityHashTable.GetMemberCount() == 0);
 
     if (m_pPalette != nullptr)
         m_pPalette->Release();

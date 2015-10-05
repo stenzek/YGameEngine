@@ -70,7 +70,10 @@ D3D11GPUContext::D3D11GPUContext(D3D11GPUDevice *pDevice, ID3D11Device *pD3DDevi
 D3D11GPUContext::~D3D11GPUContext()
 {
     // clear any state
-    ClearState(true, true, true, true);
+    ClearState(true, true, false, true);
+    m_pD3DContext->RSSetState(nullptr);
+    m_pD3DContext->OMSetDepthStencilState(nullptr, 0);
+    m_pD3DContext->OMSetBlendState(nullptr, nullptr, 0);
     m_pD3DContext->OMSetRenderTargets(0, nullptr, nullptr);
     m_pD3DContext->ClearState();
     m_pD3DContext->Flush();

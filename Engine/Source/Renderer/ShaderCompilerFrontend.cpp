@@ -361,7 +361,7 @@ static void CalculateShaderStoreHash()
             BinaryBlob *pBlob = g_pVirtualFileSystem->GetFileContents(fileList[i].FileName);
             if (pBlob != nullptr)
             {
-                crc.Update(pBlob->GetDataPointer(), pBlob->GetDataSize());
+                crc.HashBytes(pBlob->GetDataPointer(), pBlob->GetDataSize());
                 pBlob->Release();
             }
         }
@@ -401,8 +401,8 @@ void ShaderCompilerFrontend::InitializeShaderCompilerSupport()
         for (uint32 i = 0; i < pShaderComponentTypeInfo->GetParameterBindingCount(); i++)
         {
             uint32 typeAsInt = (uint32)pBindings[i].ExpectedType;
-            crc.Update(pBindings[i].ParameterName, Y_strlen(pBindings[i].ParameterName));
-            crc.Update(&typeAsInt, sizeof(typeAsInt));
+            crc.HashBytes(pBindings[i].ParameterName, Y_strlen(pBindings[i].ParameterName));
+            crc.HashBytes(&typeAsInt, sizeof(typeAsInt));
         }
         pShaderComponentTypeInfo->SetParameterCRC(crc.GetCRC());
         nShaderComponentTypes++;

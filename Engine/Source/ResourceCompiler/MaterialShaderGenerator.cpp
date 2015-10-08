@@ -803,7 +803,7 @@ BinaryBlob *ResourceCompiler::CompileMaterialShader(ResourceCompilerCallbacks *p
 
     // calculate CRC32 of source before we nuke it
     CRC32 sourceCRC;
-    sourceCRC.Update(pSourceData->GetDataPointer(), pSourceData->GetDataSize());
+    sourceCRC.HashBytes(pSourceData->GetDataPointer(), pSourceData->GetDataSize());
 
     // release memory
     pStream->Release();

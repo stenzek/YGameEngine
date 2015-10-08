@@ -4,20 +4,11 @@
 #include "D3D12Renderer/D3D12DescriptorHeap.h"
 #include "D3D12Renderer/D3D12LinearHeaps.h"
 
-class D3D12GPUContext : public GPUContext
+class D3D12GPUCommandList : public GPUCommandList
 {
 public:
-    D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice);
-    ~D3D12GPUContext();
-
-    // Start of frame
-    virtual void BeginFrame() override final;
-
-    // Ensure all queued commands are sent to the GPU.
-    virtual void Flush() override final;
-
-    // Ensure all commands have been completed by the GPU.
-    virtual void Finish() override final;
+    D3D12GPUCommandList(D3D12RenderBackend *pBackend, ID3D12Device *pD3DDevice);
+    ~D3D12GPUCommandList();
 
     // State clearing
     virtual void ClearState(bool clearShaders = true, bool clearBuffers = true, bool clearStates = true, bool clearRenderTargets = true) override final;
@@ -44,30 +35,6 @@ public:
     virtual const RENDERER_SCISSOR_RECT *GetScissorRect() override final;
     virtual void SetScissorRect(const RENDERER_SCISSOR_RECT *pScissorRect) override final;
 
-    // Buffer mapping/reading/writing
-    virtual bool ReadBuffer(GPUBuffer *pBuffer, void *pDestination, uint32 start, uint32 count) override final;
-    virtual bool WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint32 start, uint32 count) override final;
-    virtual bool MapBuffer(GPUBuffer *pBuffer, GPU_MAP_TYPE mapType, void **ppPointer) override final;
-    virtual void Unmapbuffer(GPUBuffer *pBuffer, void *pPointer) override final;
-
-    // Texture reading/writing
-    virtual bool ReadTexture(GPUTexture1D *pTexture, void *pDestination, uint32 cbDestination, uint32 mipIndex, uint32 start, uint32 count) override final;
-    virtual bool ReadTexture(GPUTexture1DArray *pTexture, void *pDestination, uint32 cbDestination, uint32 arrayIndex, uint32 mipIndex, uint32 start, uint32 count) override final;
-    virtual bool ReadTexture(GPUTexture2D *pTexture, void *pDestination, uint32 destinationRowPitch, uint32 cbDestination, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY) override final;
-    virtual bool ReadTexture(GPUTexture2DArray *pTexture, void *pDestination, uint32 destinationRowPitch, uint32 cbDestination, uint32 arrayIndex, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY) override final;
-    virtual bool ReadTexture(GPUTexture3D *pTexture, void *pDestination, uint32 destinationRowPitch, uint32 destinationSlicePitch, uint32 cbDestination, uint32 mipIndex, uint32 startX, uint32 startY, uint32 startZ, uint32 countX, uint32 countY, uint32 countZ) override final;
-    virtual bool ReadTexture(GPUTextureCube *pTexture, void *pDestination, uint32 destinationRowPitch, uint32 cbDestination, CUBEMAP_FACE face, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY) override final;
-    virtual bool ReadTexture(GPUTextureCubeArray *pTexture, void *pDestination, uint32 destinationRowPitch, uint32 cbDestination, uint32 arrayIndex, CUBEMAP_FACE face, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY) override final;
-    virtual bool ReadTexture(GPUDepthTexture *pTexture, void *pDestination, uint32 destinationRowPitch, uint32 cbDestination, uint32 startX, uint32 startY, uint32 countX, uint32 countY) override final;
-    virtual bool WriteTexture(GPUTexture1D *pTexture, const void *pSource, uint32 cbSource, uint32 mipIndex, uint32 start, uint32 count) override final;
-    virtual bool WriteTexture(GPUTexture1DArray *pTexture, const void *pSource, uint32 cbSource, uint32 arrayIndex, uint32 mipIndex, uint32 start, uint32 count) override final;
-    virtual bool WriteTexture(GPUTexture2D *pTexture, const void *pSource, uint32 sourceRowPitch, uint32 cbSource, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY) override final;
-    virtual bool WriteTexture(GPUTexture2DArray *pTexture, const void *pSource, uint32 sourceRowPitch, uint32 cbSource, uint32 arrayIndex, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY) override final;
-    virtual bool WriteTexture(GPUTexture3D *pTexture, const void *pSource, uint32 sourceRowPitch, uint32 sourceSlicePitch, uint32 cbSource, uint32 mipIndex, uint32 startX, uint32 startY, uint32 startZ, uint32 countX, uint32 countY, uint32 countZ) override final;
-    virtual bool WriteTexture(GPUTextureCube *pTexture, const void *pSource, uint32 sourceRowPitch, uint32 cbSource, CUBEMAP_FACE face, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY) override final;
-    virtual bool WriteTexture(GPUTextureCubeArray *pTexture, const void *pSource, uint32 sourceRowPitch, uint32 cbSource, uint32 arrayIndex, CUBEMAP_FACE face, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY) override final;
-    virtual bool WriteTexture(GPUDepthTexture *pTexture, const void *pSource, uint32 sourceRowPitch, uint32 cbSource, uint32 startX, uint32 startY, uint32 countX, uint32 countY) override final;
-
     // Texture copying
     virtual bool CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pDestinationTexture) override final;
     virtual bool CopyTextureRegion(GPUTexture2D *pSourceTexture, uint32 sourceX, uint32 sourceY, uint32 width, uint32 height, uint32 sourceMipLevel, GPUTexture2D *pDestinationTexture, uint32 destX, uint32 destY, uint32 destMipLevel) override final;
@@ -81,7 +48,6 @@ public:
     // Query accessing
     virtual bool BeginQuery(GPUQuery *pQuery) override final;
     virtual bool EndQuery(GPUQuery *pQuery) override final;
-    virtual GPU_QUERY_GETDATA_RESULT GetQueryData(GPUQuery *pQuery, void *pData, uint32 cbData, uint32 flags) override final;
 
     // Predicated drawing
     virtual void SetPredication(GPUQuery *pQuery) override final;
@@ -93,10 +59,6 @@ public:
     // Swap chain
     virtual GPUOutputBuffer *GetOutputBuffer() override final;
     virtual void SetOutputBuffer(GPUOutputBuffer *pSwapChain) override final;
-    virtual bool GetExclusiveFullScreen() override final;
-    virtual bool SetExclusiveFullScreen(bool enabled, uint32 width, uint32 height, uint32 refreshRate) override final;
-    virtual bool ResizeOutputBuffer(uint32 width = 0, uint32 height = 0) override final;
-    virtual void PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour) override final;
 
     // RT Changing
     virtual uint32 GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView) override final;
@@ -133,21 +95,23 @@ public:
     // Compute shaders
     virtual void Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ) override final;
 
-    // Command list execution
-    virtual GPUCommandList *CreateCommandList() override final;
-    virtual bool OpenCommandList(GPUCommandList *pCommandList) override final;
-    virtual bool CloseCommandList(GPUCommandList *pCommandList) override final;
-    virtual void ExecuteCommandList(GPUCommandList *pCommandList) override final;
-
     // --- our methods ---
 
     // accessors
+    bool IsOpen() const { return m_open; }
     ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
-    ID3D12GraphicsCommandList *GetCurrentCommandList() const { return m_pCommandList; }
+    ID3D12GraphicsCommandList *GetD3DCommandList() const { return m_pCommandList; }
     D3D12GPUShaderProgram *GetD3D12ShaderProgram() const { return m_pCurrentShaderProgram; }
 
     // create device
     bool Create();
+
+    // context interface
+    bool Open(D3D12GraphicsCommandQueue *pCommandQueue, D3D12GPUOutputBuffer *pOutputBuffer);
+    bool Close();
+
+    // release allocators back to command queue
+    void ReleaseAllocators(uint64 fenceValue);
 
     // access the gpu virtual address for a constant buffer
     bool GetPerDrawConstantBufferGPUAddress(uint32 index, D3D12_GPU_VIRTUAL_ADDRESS *pAddress);
@@ -178,11 +142,7 @@ public:
 private:
     // preallocate constant buffers
     void CreateConstantBuffers();
-    bool CreateInternalCommandList();
-    void FlushCommandList(bool reopen, bool wait, bool refreshAllocators);
-    void GetNewAllocators(uint64 fenceValue);
     void UpdateShaderDescriptorHeaps();
-    void ClearCommandListDependantState();
     void RestoreCommandListDependantState();
     bool UpdatePipelineState(bool force);
     void GetCurrentRenderTargetDimensions(uint32 *width, uint32 *height);
@@ -194,7 +154,6 @@ private:
 
     D3D12RenderBackend *m_pBackend;
     D3D12GraphicsCommandQueue *m_pGraphicsCommandQueue;
-    D3D12GPUDevice *m_pDevice;
     ID3D12Device *m_pD3DDevice;
 
     GPUContextConstants *m_pConstants;
@@ -208,7 +167,14 @@ private:
     D3D12LinearDescriptorHeap *m_pCurrentScratchViewHeap;
     D3D12LinearDescriptorHeap *m_pCurrentScratchSamplerHeap;
 
+    // Unfortunately, as a command list, we can't release the allocators etc back to the command queue, since it may flush 
+    // on the main thread, completing a fence, whilst our list is still using it. So we maintain a release list.
+    PODArray<D3D12LinearBufferHeap *> m_scratchBufferReleaseList;
+    PODArray<D3D12LinearDescriptorHeap *> m_scratchViewHeapReleaseList;
+    PODArray<D3D12LinearDescriptorHeap *> m_scratchSamplerReleaseList;
+
     // state
+    bool m_open;
     RENDERER_VIEWPORT m_currentViewport;
     RENDERER_SCISSOR_RECT m_scissorRect;
     DRAW_TOPOLOGY m_currentTopology;

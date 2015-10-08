@@ -2392,3 +2392,23 @@ void OpenGLGPUContext::GenerateMips(GPUTexture *pTexture)
 
     RestoreMutatorTextureUnit();
 }
+
+GPUCommandList *OpenGLGPUContext::CreateCommandList()
+{
+    return nullptr;
+}
+
+bool OpenGLGPUContext::OpenCommandList(GPUCommandList *pCommandList)
+{
+    return false;
+}
+
+bool OpenGLGPUContext::CloseCommandList(GPUCommandList *pCommandList)
+{
+    return false;
+}
+
+void OpenGLGPUContext::ExecuteCommandList(GPUCommandList *pCommandList)
+{
+    Panic("Not available.");
+}

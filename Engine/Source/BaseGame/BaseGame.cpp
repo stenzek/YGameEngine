@@ -986,6 +986,8 @@ void BaseGame::RenderThreadDrawOverlays(float deltaTime)
 #ifdef WITH_IMGUI
     if (m_imGuiEnabled)
     {
+        MICROPROFILE_SCOPEI("ImGui", "Draw", MAKE_COLOR_R8G8B8_UNORM(128, 50, 75));
+
         // draw imgui
         RenderThreadDrawImGuiOverlays();
         ImGui::Render();

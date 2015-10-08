@@ -15,6 +15,7 @@
     <ClCompile Include="Source\D3D12Renderer\D3D12Helpers.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12GraphicsCommandQueue.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12LinearHeaps.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12GPUCommandList.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\D3D12Renderer\PrecompiledHeader.h" />
@@ -33,5 +34,6 @@
     <ClInclude Include="Source\D3D12Renderer\D3D12Defines.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12GraphicsCommandQueue.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12LinearHeaps.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12GPUCommandList.h" />
   </ItemGroup>
 </Project>

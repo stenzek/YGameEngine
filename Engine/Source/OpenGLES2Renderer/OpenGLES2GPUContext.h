@@ -157,6 +157,12 @@ public:
     // Compute shaders
     virtual void Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ) override final;
 
+    // Command list execution
+    virtual GPUCommandList *CreateCommandList() override final;
+    virtual bool OpenCommandList(GPUCommandList *pCommandList) override final;
+    virtual bool CloseCommandList(GPUCommandList *pCommandList) override final;
+    virtual void ExecuteCommandList(GPUCommandList *pCommandList) override final;
+
     // --- gl methods ---
     bool Create();
     SDL_GLContext GetSDLGLContext() const { return m_pSDLGLContext; }

@@ -1584,3 +1584,24 @@ void OpenGLES2GPUContext::BlitFrameBuffer(GPUTexture2D *pTexture, uint32 sourceX
 {
     Log_ErrorPrint("OpenGLES2GPUContext::BlitFrameBuffer: Unsupported on GLES2");
 }
+
+GPUCommandList *OpenGLES2GPUContext::CreateCommandList()
+{
+    return nullptr;
+}
+
+bool OpenGLES2GPUContext::OpenCommandList(GPUCommandList *pCommandList)
+{
+    return false;
+}
+
+bool OpenGLES2GPUContext::CloseCommandList(GPUCommandList *pCommandList)
+{
+    return false;
+}
+
+void OpenGLES2GPUContext::ExecuteCommandList(GPUCommandList *pCommandList)
+{
+    Panic("Not available.");
+}
+

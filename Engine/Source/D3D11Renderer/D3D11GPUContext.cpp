@@ -1036,6 +1036,8 @@ void D3D11GPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)
             m_pCurrentShaderProgram->AddRef();
         }
     }
+
+    g_pRenderer->GetCounters()->IncrementShaderChangeCounter();
 }
 
 bool D3D11GPUContext::CreateConstantBuffers()
@@ -1496,7 +1498,7 @@ void D3D11GPUContext::Draw(uint32 firstVertex, uint32 nVertices)
     SynchronizeShaderStates();
 
     m_pD3DContext->Draw(nVertices, firstVertex);
-    //m_drawCallCounter++;
+    g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
 void D3D11GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32 nInstances)
@@ -1508,7 +1510,7 @@ void D3D11GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32
     SynchronizeShaderStates();
 
     m_pD3DContext->DrawInstanced(nVertices, nInstances, firstVertex, 0);
-    //m_drawCallCounter++;
+    g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
 void D3D11GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 baseVertex)
@@ -1520,7 +1522,7 @@ void D3D11GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 bas
     SynchronizeShaderStates();
 
     m_pD3DContext->DrawIndexed(nIndices, startIndex, baseVertex);
-    //m_drawCallCounter++;
+    g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
 void D3D11GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, uint32 baseVertex, uint32 nInstances)
@@ -1532,7 +1534,7 @@ void D3D11GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, u
     SynchronizeShaderStates();
 
     m_pD3DContext->DrawIndexedInstanced(nIndices, nInstances, startIndex, baseVertex, 0);
-    //m_drawCallCounter++;
+    g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
 void D3D11GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ)
@@ -1541,7 +1543,7 @@ void D3D11GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCount
     SynchronizeShaderStates();
 
     m_pD3DContext->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
-    //m_drawCallCounter++;
+    g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
 void D3D11GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, uint32 nVertices)
@@ -1766,3 +1768,24 @@ void D3D11GPUContext::GenerateMips(GPUTexture *pTexture)
 
     m_pD3DContext->GenerateMips(pSRV);
 }
+
+GPUCommandList *D3D11GPUContext::CreateCommandList()
+{
+    return nullptr;
+}
+
+bool D3D11GPUContext::OpenCommandList(GPUCommandList *pCommandList)
+{
+    return false;
+}
+
+bool D3D11GPUContext::CloseCommandList(GPUCommandList *pCommandList)
+{
+    return false;
+}
+
+void D3D11GPUContext::ExecuteCommandList(GPUCommandList *pCommandList)
+{
+    Panic("Not available.");
+}
+

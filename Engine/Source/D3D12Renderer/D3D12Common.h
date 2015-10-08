@@ -14,6 +14,7 @@
 class D3D12GPUBuffer;
 class D3D12GPUDevice;
 class D3D12GPUContext;
+class D3D12GPUCommandList;
 class D3D12GPUQuery;
 class D3D12GPUShaderProgram;
 class D3D12GPUOutputBuffer;

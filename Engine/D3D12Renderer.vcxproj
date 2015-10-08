@@ -36,6 +36,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\D3D12Renderer\D3D12CVars.cpp" />
+    <ClCompile Include="Source\D3D12Renderer\D3D12GPUCommandList.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12GraphicsCommandQueue.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12Helpers.cpp" />
     <ClCompile Include="Source\D3D12Renderer\D3D12DescriptorHeap.cpp" />
@@ -56,6 +57,7 @@
     <ClInclude Include="Source\D3D12Renderer\D3D12Common.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12CVars.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12Defines.h" />
+    <ClInclude Include="Source\D3D12Renderer\D3D12GPUCommandList.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12GraphicsCommandQueue.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12Helpers.h" />
     <ClInclude Include="Source\D3D12Renderer\D3D12DescriptorHeap.h" />

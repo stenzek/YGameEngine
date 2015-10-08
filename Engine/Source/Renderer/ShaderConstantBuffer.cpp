@@ -143,7 +143,7 @@ void ShaderConstantBuffer::CalculateBufferSize()
 //     m_index = index;
 // }
 
-void ShaderConstantBuffer::SetField(GPUContext *pContext, uint32 field, SHADER_PARAMETER_TYPE type, const void *pValue, bool commitChanges /* = false */) const
+void ShaderConstantBuffer::SetField(GPUCommandList *pCommandList, uint32 field, SHADER_PARAMETER_TYPE type, const void *pValue, bool commitChanges /* = false */) const
 {
     DebugAssert(field < m_nFields);
     
@@ -151,10 +151,10 @@ void ShaderConstantBuffer::SetField(GPUContext *pContext, uint32 field, SHADER_P
     DebugAssert(fieldDeclaration->FieldType == type);
 
     uint32 valueSize = ShaderParameterValueTypeSize(fieldDeclaration->FieldType);
-    pContext->WriteConstantBuffer(m_index, field, fieldDeclaration->BufferOffset, valueSize, pValue, commitChanges);
+    pCommandList->WriteConstantBuffer(m_index, field, fieldDeclaration->BufferOffset, valueSize, pValue, commitChanges);
 }
 
-void ShaderConstantBuffer::SetFieldArray(GPUContext *pContext, uint32 field, SHADER_PARAMETER_TYPE type, uint32 firstElement, uint32 numElements, const void *pValues, bool commitChanges /* = false */) const
+void ShaderConstantBuffer::SetFieldArray(GPUCommandList *pCommandList, uint32 field, SHADER_PARAMETER_TYPE type, uint32 firstElement, uint32 numElements, const void *pValues, bool commitChanges /* = false */) const
 {
     DebugAssert(field < m_nFields);
 
@@ -166,12 +166,12 @@ void ShaderConstantBuffer::SetFieldArray(GPUContext *pContext, uint32 field, SHA
     
     // do strided write?
     if (valueSize != fieldDeclaration->BufferArrayStride)
-        pContext->WriteConstantBufferStrided(m_index, field, fieldDeclaration->BufferOffset + (firstElement * fieldDeclaration->BufferArrayStride), fieldDeclaration->BufferArrayStride, valueSize, numElements, pValues, commitChanges);
+        pCommandList->WriteConstantBufferStrided(m_index, field, fieldDeclaration->BufferOffset + (firstElement * fieldDeclaration->BufferArrayStride), fieldDeclaration->BufferArrayStride, valueSize, numElements, pValues, commitChanges);
     else
-        pContext->WriteConstantBuffer(m_index, field, fieldDeclaration->BufferOffset + (firstElement * valueSize), valueSize * numElements, pValues, commitChanges);
+        pCommandList->WriteConstantBuffer(m_index, field, fieldDeclaration->BufferOffset + (firstElement * valueSize), valueSize * numElements, pValues, commitChanges);
 }
 
-void ShaderConstantBuffer::SetFieldStruct(GPUContext *pContext, uint32 field, const void *pValue, uint32 valueSize, bool commitChanges) const
+void ShaderConstantBuffer::SetFieldStruct(GPUCommandList *pCommandList, uint32 field, const void *pValue, uint32 valueSize, bool commitChanges) const
 {
     DebugAssert(field < m_nFields);
 
@@ -179,10 +179,10 @@ void ShaderConstantBuffer::SetFieldStruct(GPUContext *pContext, uint32 field, co
     DebugAssert(fieldDeclaration->FieldType == SHADER_PARAMETER_TYPE_STRUCT);
     DebugAssert(valueSize <= fieldDeclaration->BufferArrayStride);
 
-    pContext->WriteConstantBuffer(m_index, 0xFFFFFFFF, fieldDeclaration->BufferOffset, valueSize, pValue, commitChanges);
+    pCommandList->WriteConstantBuffer(m_index, 0xFFFFFFFF, fieldDeclaration->BufferOffset, valueSize, pValue, commitChanges);
 }
 
-void ShaderConstantBuffer::SetFieldStructArray(GPUContext *pContext, uint32 field, const void *pValues, uint32 valueSize, uint32 firstElement, uint32 numElements, bool commitChanges) const
+void ShaderConstantBuffer::SetFieldStructArray(GPUCommandList *pCommandList, uint32 field, const void *pValues, uint32 valueSize, uint32 firstElement, uint32 numElements, bool commitChanges) const
 {
     DebugAssert(field < m_nFields);
 
@@ -192,21 +192,21 @@ void ShaderConstantBuffer::SetFieldStructArray(GPUContext *pContext, uint32 fiel
 
     // do strided write?
     if (valueSize != fieldDeclaration->BufferArrayStride)
-        pContext->WriteConstantBufferStrided(m_index, 0xFFFFFFFF, fieldDeclaration->BufferOffset + (firstElement * fieldDeclaration->BufferArrayStride), fieldDeclaration->BufferArrayStride, valueSize, numElements, pValues, commitChanges);
+        pCommandList->WriteConstantBufferStrided(m_index, 0xFFFFFFFF, fieldDeclaration->BufferOffset + (firstElement * fieldDeclaration->BufferArrayStride), fieldDeclaration->BufferArrayStride, valueSize, numElements, pValues, commitChanges);
     else
-        pContext->WriteConstantBuffer(m_index, 0xFFFFFFFF, fieldDeclaration->BufferOffset + (firstElement * valueSize), valueSize * numElements, pValues, commitChanges);
+        pCommandList->WriteConstantBuffer(m_index, 0xFFFFFFFF, fieldDeclaration->BufferOffset + (firstElement * valueSize), valueSize * numElements, pValues, commitChanges);
 }
 
-void ShaderConstantBuffer::SetRawData(GPUContext *pContext, uint32 offset, uint32 size, const void *data, bool commitChanges /* = false */)
+void ShaderConstantBuffer::SetRawData(GPUCommandList *pCommandList, uint32 offset, uint32 size, const void *data, bool commitChanges /* = false */)
 {
     DebugAssert((offset + size) <= m_bufferSize);
-    pContext->WriteConstantBuffer(m_index, 0xFFFFFFFF, offset, size, data, commitChanges);
+    pCommandList->WriteConstantBuffer(m_index, 0xFFFFFFFF, offset, size, data, commitChanges);
 }
 
-void ShaderConstantBuffer::CommitChanges(GPUContext *pContext)
+void ShaderConstantBuffer::CommitChanges(GPUCommandList *pCommandList)
 {
     // just forward through
-    pContext->CommitConstantBuffer(m_index);
+    pCommandList->CommitConstantBuffer(m_index);
 }
 
 const ShaderConstantBuffer *ShaderConstantBuffer::GetShaderConstantBufferByName(const char *name, RENDERER_PLATFORM platform /*= RENDERER_PLATFORM_COUNT*/, RENDERER_FEATURE_LEVEL featureLevel /*= RENDERER_FEATURE_LEVEL_COUNT*/)

@@ -27,6 +27,8 @@ class GPUOutputBuffer;
 class RendererOutputWindow;
 class GPUContextConstants;
 class GPUContext;
+class GPUDevice;
+class GPUCommandList;
 class Renderer;
 
 // Platform i.e. API

@@ -2277,8 +2277,8 @@ END_SHADER_CONSTANT_BUFFER(cbViewConstants)
 DECLARE_RAW_SHADER_CONSTANT_BUFFER(cbGlobalConstants);
 DEFINE_RAW_SHADER_CONSTANT_BUFFER(cbGlobalConstants, "$Globals", "", 65536, RENDERER_PLATFORM_COUNT, RENDERER_FEATURE_LEVEL_SM4, SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY_PER_PROGRAM);
 
-GPUContextConstants::GPUContextConstants(GPUContext *pContext)
-    : m_pContext(pContext),
+GPUContextConstants::GPUContextConstants(GPUCommandList *pCommandList)
+    : m_pCommandList(pCommandList),
       m_recalculateCombinedMatrices(false),
       m_recalculateViewportFractions(false)
 {
@@ -2309,8 +2309,8 @@ void GPUContextConstants::SetLocalToWorldMatrix(const float4x4 &rMatrix, bool Co
     float4x4 worldToLocalMatrix(m_localToWorldMatrix.Inverse());
 
     // write constant buffers
-    cbObjectConstants.SetFieldFloat4x4(m_pContext, 0, m_localToWorldMatrix, false);
-    cbObjectConstants.SetFieldFloat4x4(m_pContext, 1, worldToLocalMatrix, false);
+    cbObjectConstants.SetFieldFloat4x4(m_pCommandList, 0, m_localToWorldMatrix, false);
+    cbObjectConstants.SetFieldFloat4x4(m_pCommandList, 1, worldToLocalMatrix, false);
 
     // commit away
     if (Commit)
@@ -2325,7 +2325,7 @@ void GPUContextConstants::SetMaterialTintColor(const float4 &tintColor, bool Com
     m_materialTintColor = tintColor;
 
     // write constant buffers
-    cbObjectConstants.SetFieldFloat4(m_pContext, 2, m_materialTintColor, false);
+    cbObjectConstants.SetFieldFloat4(m_pCommandList, 2, m_materialTintColor, false);
 
     // commit away
     if (Commit)
@@ -2362,7 +2362,7 @@ void GPUContextConstants::SetCameraEyePosition(const float3 &Position, bool Comm
         return;
 
     m_cameraEyePosition = Position;
-    cbViewConstants.SetFieldFloat3(m_pContext, 7, Position, false);
+    cbViewConstants.SetFieldFloat3(m_pCommandList, 7, Position, false);
 
     if (Commit)
         CommitChanges();
@@ -2379,14 +2379,14 @@ void GPUContextConstants::SetFromCamera(const Camera &camera, bool commit /*= tr
     // https://mynameismjp.wordpress.com/2010/09/05/position-from-depth-3/ with negated far plane distance
     float logrithmicToLinearZDenominator = camera.GetFarPlaneDistance() / (camera.GetFarPlaneDistance() - camera.GetNearPlaneDistance());
     float logrithmicToLinearZNumerator = (camera.GetFarPlaneDistance() * camera.GetNearPlaneDistance()) / (camera.GetFarPlaneDistance() - camera.GetNearPlaneDistance());
-    cbViewConstants.SetFieldFloat(m_pContext, 9, logrithmicToLinearZDenominator, false);
-    cbViewConstants.SetFieldFloat(m_pContext, 10, logrithmicToLinearZNumerator, false);
+    cbViewConstants.SetFieldFloat(m_pCommandList, 9, logrithmicToLinearZDenominator, false);
+    cbViewConstants.SetFieldFloat(m_pCommandList, 10, logrithmicToLinearZNumerator, false);
 
     // set the remaining fields directly to the constant buffer
-    cbViewConstants.SetFieldFloat(m_pContext, 11, camera.GetNearPlaneDistance(), false);
-    cbViewConstants.SetFieldFloat(m_pContext, 12, camera.GetFarPlaneDistance(), false);
-    cbViewConstants.SetFieldFloat(m_pContext, 13, camera.GetPerspectiveAspect(), false);
-    cbViewConstants.SetFieldFloat(m_pContext, 14, Math::DegreesToRadians(camera.GetPerspectiveFieldOfView()), false);
+    cbViewConstants.SetFieldFloat(m_pCommandList, 11, camera.GetNearPlaneDistance(), false);
+    cbViewConstants.SetFieldFloat(m_pCommandList, 12, camera.GetFarPlaneDistance(), false);
+    cbViewConstants.SetFieldFloat(m_pCommandList, 13, camera.GetPerspectiveAspect(), false);
+    cbViewConstants.SetFieldFloat(m_pCommandList, 14, Math::DegreesToRadians(camera.GetPerspectiveFieldOfView()), false);
 
     // commit
     if (commit)
@@ -2400,7 +2400,7 @@ void GPUContextConstants::SetViewportOffset(float offsetX, float offsetY, bool c
         return;
 
     m_viewportOffset = viewportOffset;
-    cbViewConstants.SetFieldFloat2(m_pContext, 15, viewportOffset, false);
+    cbViewConstants.SetFieldFloat2(m_pCommandList, 15, viewportOffset, false);
     m_recalculateViewportFractions = true;
 
     if (commit)
@@ -2414,7 +2414,7 @@ void GPUContextConstants::SetViewportSize(float width, float height, bool commit
         return;
 
     m_viewportSize = viewportSize;
-    cbViewConstants.SetFieldFloat2(m_pContext, 16, viewportSize, false);
+    cbViewConstants.SetFieldFloat2(m_pCommandList, 16, viewportSize, false);
     m_recalculateViewportFractions = true;
 
     if (commit)
@@ -2427,7 +2427,7 @@ void GPUContextConstants::SetWorldTime(float worldTime, bool commit /*= true*/)
         return;
 
     m_worldTime = worldTime;
-    cbViewConstants.SetFieldFloat(m_pContext, 8, worldTime, false);
+    cbViewConstants.SetFieldFloat(m_pCommandList, 8, worldTime, false);
 
     if (commit)
         CommitChanges();
@@ -2436,7 +2436,7 @@ void GPUContextConstants::SetWorldTime(float worldTime, bool commit /*= true*/)
 void GPUContextConstants::CommitChanges()
 {
     // commit object buffer
-    cbObjectConstants.CommitChanges(m_pContext);
+    cbObjectConstants.CommitChanges(m_pCommandList);
 
     // rebuild view constants
     if (m_recalculateCombinedMatrices)
@@ -2454,12 +2454,12 @@ void GPUContextConstants::CommitChanges()
         float4x4 inverseViewProjectionMatrix(viewProjectionMatrix.Inverse());// replace with view * proj?
 
         // set in constant buffers
-        cbViewConstants.SetFieldFloat4x4(m_pContext, 0, m_cameraViewMatrix, false);
-        cbViewConstants.SetFieldFloat4x4(m_pContext, 1, inverseViewMatrix, false);
-        cbViewConstants.SetFieldFloat4x4(m_pContext, 2, adjustedProjectionMatrix, false);
-        cbViewConstants.SetFieldFloat4x4(m_pContext, 3, inverseProjectionMatrix, false);
-        cbViewConstants.SetFieldFloat4x4(m_pContext, 4, viewProjectionMatrix, false);
-        cbViewConstants.SetFieldFloat4x4(m_pContext, 5, inverseViewProjectionMatrix, false);
+        cbViewConstants.SetFieldFloat4x4(m_pCommandList, 0, m_cameraViewMatrix, false);
+        cbViewConstants.SetFieldFloat4x4(m_pCommandList, 1, inverseViewMatrix, false);
+        cbViewConstants.SetFieldFloat4x4(m_pCommandList, 2, adjustedProjectionMatrix, false);
+        cbViewConstants.SetFieldFloat4x4(m_pCommandList, 3, inverseProjectionMatrix, false);
+        cbViewConstants.SetFieldFloat4x4(m_pCommandList, 4, viewProjectionMatrix, false);
+        cbViewConstants.SetFieldFloat4x4(m_pCommandList, 5, inverseViewProjectionMatrix, false);
         m_recalculateCombinedMatrices = false;
     }
 
@@ -2469,8 +2469,8 @@ void GPUContextConstants::CommitChanges()
         float2 vpSizeF((float)m_viewportSize.x, (float)m_viewportSize.y);
         float2 invVPSizeF(vpSizeF.Reciprocal());
         float2 offsetFraction(float2((float)m_viewportOffset.x, (float)m_viewportOffset.y) * invVPSizeF);
-        cbViewConstants.SetFieldFloat2(m_pContext, 17, offsetFraction, false);
-        cbViewConstants.SetFieldFloat2(m_pContext, 18, invVPSizeF, false);
+        cbViewConstants.SetFieldFloat2(m_pCommandList, 17, offsetFraction, false);
+        cbViewConstants.SetFieldFloat2(m_pCommandList, 18, invVPSizeF, false);
 
         // create ortho projection matrix
         float texelOffset = g_pRenderer->GetTexelOffset();
@@ -2478,15 +2478,15 @@ void GPUContextConstants::CommitChanges()
                                         float4x4::MakeTranslationMatrix(texelOffset, texelOffset, 0.0f));
 
         g_pRenderer->CorrectProjectionMatrix(screenProjectionMatrix);
-        cbViewConstants.SetFieldFloat4x4(m_pContext, 6, screenProjectionMatrix, false);
+        cbViewConstants.SetFieldFloat4x4(m_pCommandList, 6, screenProjectionMatrix, false);
         m_recalculateViewportFractions = false;
     }
 
     // commit view buffer
-    cbViewConstants.CommitChanges(m_pContext);
+    cbViewConstants.CommitChanges(m_pCommandList);
 }
 
 void GPUContextConstants::CommitGlobalConstantBufferChanges()
 {
-    cbGlobalConstants.CommitChanges(m_pContext);
+    cbGlobalConstants.CommitChanges(m_pCommandList);
 }

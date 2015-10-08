@@ -231,6 +231,16 @@ bool D3D12GPUCommandList::Open(D3D12GraphicsCommandQueue *pCommandQueue, D3D12GP
     SetFullViewport();
     RestoreCommandListDependantState();
 
+    // flag all constant buffers as dirty, since their state is unknown at execution time.
+    for (ConstantBuffer &constantBuffer : m_constantBuffers)
+    {
+        if (constantBuffer.pLocalMemory != nullptr)
+        {
+            constantBuffer.DirtyLowerBounds = 0;
+            constantBuffer.DirtyUpperBounds = constantBuffer.Size - 1;
+        }
+    }
+
     // flag as open
     m_open = true;
     return true;

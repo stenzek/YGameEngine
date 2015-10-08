@@ -1372,6 +1372,42 @@ void D3D12GPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)
     m_pipelineChanged = true;
 }
 
+void D3D12GPUContext::SetShaderParameterValue(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterValue(this, index, valueType, pValue);
+}
+
+void D3D12GPUContext::SetShaderParameterValueArray(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterValueArray(this, index, valueType, pValue, firstElement, numElements);
+}
+
+void D3D12GPUContext::SetShaderParameterStruct(uint32 index, const void *pValue, uint32 valueSize)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterStruct(this, index, pValue, valueSize);
+}
+
+void D3D12GPUContext::SetShaderParameterStructArray(uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterStructArray(this, index, pValue, valueSize, firstElement, numElements);
+}
+
+void D3D12GPUContext::SetShaderParameterResource(uint32 index, GPUResource *pResource)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterResource(this, index, pResource, nullptr);
+}
+
+void D3D12GPUContext::SetShaderParameterTexture(uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterResource(this, index, pTexture, pSamplerState);
+}
+
 void D3D12GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex, uint32 offset, uint32 count, const void *pData, bool commit /* = false */)
 {
     ConstantBuffer *cbInfo = &m_constantBuffers[bufferIndex];

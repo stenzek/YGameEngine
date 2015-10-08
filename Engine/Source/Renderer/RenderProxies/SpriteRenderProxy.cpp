@@ -264,7 +264,7 @@ void SpriteRenderProxy::QueueForRender(const Camera *pCamera, RenderQueue *pRend
     }
 }
 
-void SpriteRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void SpriteRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
     if (!m_bGPUResourcesCreated && !CreateDeviceResources())
         return;
@@ -293,7 +293,7 @@ void SpriteRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE
     for (i = 0; i < 4; i++)
         vertices[i].Position = tempMatrix.TransformPoint(vertices[i].Position);
 
-    pGPUContext->GetConstants()->SetLocalToWorldMatrix(float4x4::Identity, true);
+    pCommandList->GetConstants()->SetLocalToWorldMatrix(float4x4::Identity, true);
     
 
     //const float4x4 &viewMatrix = pGPUDevice->GetGPUConstants()->GetCameraViewMatrix();
@@ -316,8 +316,8 @@ void SpriteRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE
 
     pGPUDevice->GetGPUConstants()->SetLocalToWorldMatrix(Matrix4::Identity, true);
     */
-    pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_STRIP);
-    pGPUContext->DrawUserPointer(vertices, sizeof(vertices[0]), countof(vertices));
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_STRIP);
+    pCommandList->DrawUserPointer(vertices, sizeof(vertices[0]), countof(vertices));
 }
 
 bool SpriteRenderProxy::CreateDeviceResources() const

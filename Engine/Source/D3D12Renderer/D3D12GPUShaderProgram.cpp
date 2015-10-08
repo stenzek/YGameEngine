@@ -483,6 +483,20 @@ void D3D12GPUShaderProgram::InternalSetParameterValue(D3D12GPUContext *pContext,
     pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
 }
 
+void D3D12GPUShaderProgram::InternalSetParameterValue(D3D12GPUCommandList *pCommandList, uint32 parameterIndex, SHADER_PARAMETER_TYPE valueType, const void *pValue)
+{
+    const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
+    uint32 valueSize = ShaderParameterValueTypeSize(parameterInfo->Type);
+    DebugAssert(parameterInfo->Type == valueType && valueSize > 0);
+
+    // get constant buffer
+    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
+    const ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
+
+    // write to the constant buffer
+    pCommandList->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
+}
+
 void D3D12GPUShaderProgram::InternalSetParameterValueArray(D3D12GPUContext *pContext, uint32 parameterIndex, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
 {
     const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
@@ -502,7 +516,26 @@ void D3D12GPUShaderProgram::InternalSetParameterValueArray(D3D12GPUContext *pCon
         pContext->WriteConstantBufferStrided(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
 }
 
-void D3D12GPUShaderProgram::InternalSetParameterStruct(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize)
+void D3D12GPUShaderProgram::InternalSetParameterValueArray(D3D12GPUCommandList *pCommandList, uint32 parameterIndex, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
+{
+    const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
+    uint32 valueSize = ShaderParameterValueTypeSize(parameterInfo->Type);
+    DebugAssert(parameterInfo->Type == valueType && valueSize > 0);
+    DebugAssert(numElements > 0 && (firstElement + numElements) <= parameterInfo->ArraySize);
+
+    // get constant buffer
+    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
+    const ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
+
+    // if there is no padding, this can be done in a single operation
+    uint32 bufferOffset = parameterInfo->ConstantBufferOffset + (firstElement * parameterInfo->ArrayStride);
+    if (valueSize == parameterInfo->ArrayStride)
+        pCommandList->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, valueSize * numElements, pValue);
+    else
+        pCommandList->WriteConstantBufferStrided(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
+}
+
+void D3D12GPUShaderProgram::InternalSetParameterStruct(D3D12GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize)
 {
     const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
     DebugAssert(parameterInfo->Type == SHADER_PARAMETER_TYPE_STRUCT && valueSize <= parameterInfo->ArrayStride);
@@ -515,7 +548,20 @@ void D3D12GPUShaderProgram::InternalSetParameterStruct(GPUContext *pContext, uin
     pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
 }
 
-void D3D12GPUShaderProgram::InternalSetParameterStructArray(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
+void D3D12GPUShaderProgram::InternalSetParameterStruct(D3D12GPUCommandList *pCommandList, uint32 parameterIndex, const void *pValue, uint32 valueSize)
+{
+    const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
+    DebugAssert(parameterInfo->Type == SHADER_PARAMETER_TYPE_STRUCT && valueSize <= parameterInfo->ArrayStride);
+
+    // get constant buffer
+    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
+    const ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
+
+    // write to the constant buffer
+    pCommandList->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
+}
+
+void D3D12GPUShaderProgram::InternalSetParameterStructArray(D3D12GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
 {
     const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
     DebugAssert(parameterInfo->Type == SHADER_PARAMETER_TYPE_STRUCT && valueSize <= parameterInfo->ArrayStride);
@@ -531,6 +577,24 @@ void D3D12GPUShaderProgram::InternalSetParameterStructArray(GPUContext *pContext
         pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, valueSize * numElements, pValue);
     else
         pContext->WriteConstantBufferStrided(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
+}
+
+void D3D12GPUShaderProgram::InternalSetParameterStructArray(D3D12GPUCommandList *pCommandList, uint32 parameterIndex, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
+{
+    const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
+    DebugAssert(parameterInfo->Type == SHADER_PARAMETER_TYPE_STRUCT && valueSize <= parameterInfo->ArrayStride);
+    DebugAssert(numElements > 0 && (firstElement + numElements) <= parameterInfo->ArraySize);
+
+    // get constant buffer
+    DebugAssert(parameterInfo->ConstantBufferIndex >= 0);
+    const ConstantBuffer *constantBuffer = &m_constantBuffers[parameterInfo->ConstantBufferIndex];
+
+    // if there is no padding, this can be done in a single operation
+    uint32 bufferOffset = parameterInfo->ConstantBufferOffset + (firstElement * parameterInfo->ArrayStride);
+    if (valueSize == parameterInfo->ArrayStride)
+        pCommandList->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, valueSize * numElements, pValue);
+    else
+        pCommandList->WriteConstantBufferStrided(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
 }
 
 void D3D12GPUShaderProgram::InternalSetParameterResource(D3D12GPUContext *pContext, uint32 parameterIndex, GPUResource *pResource, GPUSamplerState *pLinkedSamplerState)
@@ -601,6 +665,74 @@ void D3D12GPUShaderProgram::InternalSetParameterResource(D3D12GPUContext *pConte
     }
 }
 
+void D3D12GPUShaderProgram::InternalSetParameterResource(D3D12GPUCommandList *pCommandList, uint32 parameterIndex, GPUResource *pResource, GPUSamplerState *pLinkedSamplerState)
+{
+    const ShaderParameter *parameterInfo = &m_parameters[parameterIndex];
+
+    // branch out according to target
+    switch (parameterInfo->BindTarget)
+    {
+    case D3D_SHADER_BIND_TARGET_RESOURCE:
+        {
+            D3D12DescriptorHandle handle;
+            D3D12Helpers::GetResourceSRVHandle(pResource, &handle);
+
+            for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
+            {
+                int32 bindPoint = parameterInfo->BindPoint[stageIndex];
+                if (bindPoint >= 0)
+                    pCommandList->SetShaderResources((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, handle);
+            }
+        }
+        break;
+
+    case D3D_SHADER_BIND_TARGET_SAMPLER:
+        {
+            D3D12DescriptorHandle handle;
+            D3D12Helpers::GetResourceSamplerHandle(pResource, &handle);
+
+            for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
+            {
+                int32 bindPoint = parameterInfo->BindPoint[stageIndex];
+                if (bindPoint >= 0)
+                    pCommandList->SetShaderSamplers((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, handle);
+            }
+        }
+        break;
+
+    case D3D_SHADER_BIND_TARGET_UNORDERED_ACCESS_VIEW:
+        {
+//             ID3D12UnorderedAccessView *pD3DUAV = (pResource != nullptr && pResource->GetResourceType() == GPU_RESOURCE_TYPE_COMPUTE_VIEW) ? static_cast<D3D12GPUComputeView *>(pResource)->GetD3DUAV() : nullptr;
+//             for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
+//             {
+//                 int32 bindPoint = parameterInfo->BindPoint[stageIndex];
+//                 if (bindPoint >= 0)
+//                     pContext->SetShaderUAVs((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, pD3DUAV);
+//             }
+        }
+        break;
+    }
+
+    // for texture types with a linked sampler state, update it
+    if (parameterInfo->LinkedSamplerIndex >= 0)
+    {
+        const ShaderParameter *samplerParameterInfo = &m_parameters[parameterInfo->LinkedSamplerIndex];
+        DebugAssert(samplerParameterInfo->Type == SHADER_PARAMETER_TYPE_SAMPLER_STATE && samplerParameterInfo->BindTarget == D3D_SHADER_BIND_TARGET_SAMPLER);
+
+        // get handle - might look nasty, but handle is nulled in the constructor.
+        D3D12DescriptorHandle handle;
+        D3D12Helpers::GetResourceSamplerHandle((pLinkedSamplerState != nullptr) ? static_cast<GPUResource *>(pLinkedSamplerState) : pResource, &handle);
+
+        // write to stages
+        for (uint32 stageIndex = 0; stageIndex < SHADER_PROGRAM_STAGE_COUNT; stageIndex++)
+        {
+            int32 bindPoint = samplerParameterInfo->BindPoint[stageIndex];
+            if (bindPoint >= 0)
+                pCommandList->SetShaderSamplers((SHADER_PROGRAM_STAGE)stageIndex, bindPoint, handle);
+        }
+    }
+}
+
 uint32 D3D12GPUShaderProgram::GetParameterCount() const
 {
     return m_parameters.GetSize();
@@ -612,36 +744,6 @@ void D3D12GPUShaderProgram::GetParameterInformation(uint32 index, const char **n
     *name = parameter->Name;
     *type = parameter->Type;
     *arraySize = parameter->ArraySize;
-}
-
-void D3D12GPUShaderProgram::SetParameterValue(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue)
-{
-    InternalSetParameterValue(static_cast<D3D12GPUContext *>(pContext), index, valueType, pValue);
-}
-
-void D3D12GPUShaderProgram::SetParameterValueArray(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
-{
-    InternalSetParameterValueArray(static_cast<D3D12GPUContext *>(pContext), index, valueType, pValue, firstElement, numElements);
-}
-
-void D3D12GPUShaderProgram::SetParameterStruct(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize)
-{
-    InternalSetParameterStruct(pContext, index, pValue, valueSize);
-}
-
-void D3D12GPUShaderProgram::SetParameterStructArray(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
-{
-    InternalSetParameterStructArray(pContext, index, pValue, valueSize, firstElement, numElements);
-}
-
-void D3D12GPUShaderProgram::SetParameterResource(GPUContext *pContext, uint32 index, GPUResource *pResource)
-{
-    InternalSetParameterResource(static_cast<D3D12GPUContext *>(pContext), index, pResource, nullptr);
-}
-
-void D3D12GPUShaderProgram::SetParameterTexture(GPUContext *pContext, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState)
-{
-    InternalSetParameterResource(static_cast<D3D12GPUContext *>(pContext), index, pTexture, pSamplerState);
 }
 
 GPUShaderProgram *D3D12GPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)

@@ -72,19 +72,19 @@ void EditorBlockVolumeRenderProxy::QueueForRender(const Camera *pCamera, RenderQ
     }
 }
 
-void EditorBlockVolumeRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void EditorBlockVolumeRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
-    pGPUContext->GetConstants()->SetLocalToWorldMatrix(m_localToWorldMatrix, true);
-    pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
-    m_vertexBuffers.BindBuffers(pGPUContext);
-    pGPUContext->SetIndexBuffer(m_pIndexBuffer, m_indexFormat, 0);
+    pCommandList->GetConstants()->SetLocalToWorldMatrix(m_localToWorldMatrix, true);
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+    m_vertexBuffers.BindBuffers(pCommandList);
+    pCommandList->SetIndexBuffer(m_pIndexBuffer, m_indexFormat, 0);
 }
 
-void EditorBlockVolumeRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void EditorBlockVolumeRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
     DebugAssert(pQueueEntry->UserData[0] < m_batches.GetSize());
     const RenderBatch &batch = m_batches[pQueueEntry->UserData[0]];
-    pGPUContext->DrawIndexed(batch.StartIndex, batch.IndexCount, 0);
+    pCommandList->DrawIndexed(batch.StartIndex, batch.IndexCount, 0);
 }
 
 bool EditorBlockVolumeRenderProxy::CreateDeviceResources() const

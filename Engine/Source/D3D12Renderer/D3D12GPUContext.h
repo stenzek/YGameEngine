@@ -115,6 +115,12 @@ public:
 
     // Shader Setup
     virtual void SetShaderProgram(GPUShaderProgram *pShaderProgram) override final;
+    virtual void SetShaderParameterValue(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue) override final;
+    virtual void SetShaderParameterValueArray(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements) override final;
+    virtual void SetShaderParameterStruct(uint32 index, const void *pValue, uint32 valueSize) override final;
+    virtual void SetShaderParameterStructArray(uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements) override final;
+    virtual void SetShaderParameterResource(uint32 index, GPUResource *pResource) override final;
+    virtual void SetShaderParameterTexture(uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) override final;
 
     // constant buffer management
     virtual void WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex, uint32 offset, uint32 count, const void *pData, bool commit = false) override final;

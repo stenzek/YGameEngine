@@ -527,7 +527,8 @@ void OpenGLRenderBackend::GetCapabilities(RendererCapabilities *pCapabilities) c
     pCapabilities->MaximumSamplers = maxTextureUnits;
     pCapabilities->MaximumRenderTargets = maxRenderTargets;
     pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
-    pCapabilities->SupportsMultithreadedResourceCreation = true;
+    //pCapabilities->SupportsMultithreadedResourceCreation = true;
+    pCapabilities->SupportsMultithreadedResourceCreation = false;
     pCapabilities->SupportsDrawBaseVertex = true; // @TODO
     pCapabilities->SupportsDepthTextures = (GLAD_GL_ARB_depth_texture == GL_TRUE);
     pCapabilities->SupportsTextureArrays = (GLAD_GL_EXT_texture_array == GL_TRUE);

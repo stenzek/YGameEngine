@@ -103,9 +103,9 @@ VertexBufferBindingArray &VertexBufferBindingArray::operator=(const VertexBuffer
     return *this;
 }
 
-void VertexBufferBindingArray::BindBuffers(GPUContext *pGPUDevice) const
+void VertexBufferBindingArray::BindBuffers(GPUCommandList *pCommandList) const
 {
-    pGPUDevice->SetVertexBuffers(0, m_nActiveBuffers, m_pVertexBuffers, m_iVertexBufferOffsets, m_iVertexBufferStrides);
+    pCommandList->SetVertexBuffers(0, m_nActiveBuffers, m_pVertexBuffers, m_iVertexBufferOffsets, m_iVertexBufferStrides);
 }
 
 void VertexBufferBindingArray::Clear()

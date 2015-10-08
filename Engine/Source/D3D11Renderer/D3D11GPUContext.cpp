@@ -1040,6 +1040,42 @@ void D3D11GPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)
     g_pRenderer->GetCounters()->IncrementShaderChangeCounter();
 }
 
+void D3D11GPUContext::SetShaderParameterValue(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterValue(this, index, valueType, pValue);
+}
+
+void D3D11GPUContext::SetShaderParameterValueArray(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterValueArray(this, index, valueType, pValue, firstElement, numElements);
+}
+
+void D3D11GPUContext::SetShaderParameterStruct(uint32 index, const void *pValue, uint32 valueSize)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterStruct(this, index, pValue, valueSize);
+}
+
+void D3D11GPUContext::SetShaderParameterStructArray(uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterStructArray(this, index, pValue, valueSize, firstElement, numElements);
+}
+
+void D3D11GPUContext::SetShaderParameterResource(uint32 index, GPUResource *pResource)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterResource(this, index, pResource, nullptr);
+}
+
+void D3D11GPUContext::SetShaderParameterTexture(uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterResource(this, index, pTexture, pSamplerState);
+}
+
 bool D3D11GPUContext::CreateConstantBuffers()
 {
     uint32 memoryUsage = 0;

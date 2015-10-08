@@ -125,8 +125,8 @@ public:
 
     // Draw methods. UserData[0] will always be populated with what is provided here.
     virtual void QueueForRender(const RenderProxy *pRenderProxy, uint32 userData, const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, RenderQueue *pRenderQueue) const;
-    virtual void SetupForDraw(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const;
-    virtual void DrawQueueEntry(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const;
+    virtual void SetupForDraw(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const;
+    virtual void DrawQueueEntry(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const;
 
     // Type registration
     static void RegisterBuiltinEmitters();

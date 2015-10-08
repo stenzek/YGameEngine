@@ -416,15 +416,15 @@ bool TerrainRendererCDLOD::CreateGridBuffers()
     return true;
 }
     
-bool TerrainRendererCDLOD::BindGridBuffers(GPUContext *pGPUDevice) const
+bool TerrainRendererCDLOD::BindGridBuffers(GPUCommandList *pCommandList) const
 {
     if (!m_GPUResourcesCreated && !const_cast<TerrainRendererCDLOD *>(this)->CreateGPUResources())
         return false;
 
     uint32 vertexBufferOffset = 0;
     uint32 vertexBufferStride = sizeof(float2);
-    pGPUDevice->SetVertexBuffers(0, 1, &m_pVertexBuffer, &vertexBufferOffset, &vertexBufferStride);
-    pGPUDevice->SetIndexBuffer(m_pIndexBuffer, m_indexFormat, 0);
+    pCommandList->SetVertexBuffers(0, 1, &m_pVertexBuffer, &vertexBufferOffset, &vertexBufferStride);
+    pCommandList->SetIndexBuffer(m_pIndexBuffer, m_indexFormat, 0);
     return true;
 }
 
@@ -1075,7 +1075,7 @@ void TerrainSectionRenderProxyCDLOD::QueueForRender(const Camera *pCamera, Rende
         pRenderQueue->AddDebugInfoObject(this);
 }
 
-void TerrainSectionRenderProxyCDLOD::SetupTerrainDraw(const TerrainQuadTreeNode *pNode, GPUContext *pDevice, ShaderProgram *pShaderProgram) const
+void TerrainSectionRenderProxyCDLOD::SetupTerrainDraw(const TerrainQuadTreeNode *pNode, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
     // precalculate these values, quadtree is always in lod0 sizes
     float inverseTextureSize = 1.0f / (float)(m_pSection->GetPointCount());
@@ -1093,31 +1093,31 @@ void TerrainSectionRenderProxyCDLOD::SetupTerrainDraw(const TerrainQuadTreeNode 
     float4 morphConstants(m_morphConstants[pNode->GetLODLevel()]);
 
     // set uniforms
-    pShaderProgram->SetVertexFactoryParameterValue(pDevice, 0, SHADER_PARAMETER_TYPE_FLOAT3, &worldSpaceRectOffset);
-    pShaderProgram->SetVertexFactoryParameterValue(pDevice, 1, SHADER_PARAMETER_TYPE_FLOAT3, &worldSpaceRectSize);
-    pShaderProgram->SetVertexFactoryParameterValue(pDevice, 2, SHADER_PARAMETER_TYPE_FLOAT2, &textureSpaceRectOffset);
-    pShaderProgram->SetVertexFactoryParameterValue(pDevice, 3, SHADER_PARAMETER_TYPE_FLOAT2, &textureSpaceRectSize);
-    pShaderProgram->SetVertexFactoryParameterValue(pDevice, 4, SHADER_PARAMETER_TYPE_FLOAT2, &heightmapDimensions);
-    pShaderProgram->SetVertexFactoryParameterValue(pDevice, 5, SHADER_PARAMETER_TYPE_FLOAT3, &gridDimensions);
-    pShaderProgram->SetVertexFactoryParameterValue(pDevice, 6, SHADER_PARAMETER_TYPE_FLOAT4, &morphConstants);
-    pShaderProgram->SetVertexFactoryParameterResource(pDevice, 7, m_pHeightMapTexture);
-    pShaderProgram->SetVertexFactoryParameterResource(pDevice, 8, m_pHeightMapTexture);
+    pShaderProgram->SetVertexFactoryParameterValue(pCommandList, 0, SHADER_PARAMETER_TYPE_FLOAT3, &worldSpaceRectOffset);
+    pShaderProgram->SetVertexFactoryParameterValue(pCommandList, 1, SHADER_PARAMETER_TYPE_FLOAT3, &worldSpaceRectSize);
+    pShaderProgram->SetVertexFactoryParameterValue(pCommandList, 2, SHADER_PARAMETER_TYPE_FLOAT2, &textureSpaceRectOffset);
+    pShaderProgram->SetVertexFactoryParameterValue(pCommandList, 3, SHADER_PARAMETER_TYPE_FLOAT2, &textureSpaceRectSize);
+    pShaderProgram->SetVertexFactoryParameterValue(pCommandList, 4, SHADER_PARAMETER_TYPE_FLOAT2, &heightmapDimensions);
+    pShaderProgram->SetVertexFactoryParameterValue(pCommandList, 5, SHADER_PARAMETER_TYPE_FLOAT3, &gridDimensions);
+    pShaderProgram->SetVertexFactoryParameterValue(pCommandList, 6, SHADER_PARAMETER_TYPE_FLOAT4, &morphConstants);
+    pShaderProgram->SetVertexFactoryParameterResource(pCommandList, 7, m_pHeightMapTexture);
+    pShaderProgram->SetVertexFactoryParameterResource(pCommandList, 8, m_pHeightMapTexture);
 
     // setup draw
-    m_pRenderer->BindGridBuffers(pDevice);
-    pDevice->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+    m_pRenderer->BindGridBuffers(pCommandList);
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
 }
 
-void TerrainSectionRenderProxyCDLOD::InvokeTerrainDraw(GPUContext *pDevice, uint32 drawFlags) const
+void TerrainSectionRenderProxyCDLOD::InvokeTerrainDraw(GPUCommandList *pCommandList, uint32 drawFlags) const
 {
 #if 1
     if (drawFlags == TerrainQuadTreeQuery::DrawFlagSingleQuad)
     {
-        pDevice->DrawIndexed(m_pRenderer->GetGridIndexEndBR(), m_pRenderer->GetGridIndexCountSingleQuad(), 0);
+        pCommandList->DrawIndexed(m_pRenderer->GetGridIndexEndBR(), m_pRenderer->GetGridIndexCountSingleQuad(), 0);
     }
     else if (drawFlags == TerrainQuadTreeQuery::DrawFlagAll)
     {
-        pDevice->DrawIndexed(0, m_pRenderer->GetGridIndexCountPerSubQuad() * 4, 0);
+        pCommandList->DrawIndexed(0, m_pRenderer->GetGridIndexCountPerSubQuad() * 4, 0);
     }
     else
     {
@@ -1132,27 +1132,27 @@ void TerrainSectionRenderProxyCDLOD::InvokeTerrainDraw(GPUContext *pDevice, uint
                     if (drawFlags & TerrainQuadTreeQuery::DrawFlagBottomRight)
                     {
                         // TL + TR + BL + BR
-                        pDevice->DrawIndexed(0, gridIndexCountPerSubQuad * 4, 0);
+                        pCommandList->DrawIndexed(0, gridIndexCountPerSubQuad * 4, 0);
                         drawFlags &= ~(TerrainQuadTreeQuery::DrawFlagTopLeft | TerrainQuadTreeQuery::DrawFlagTopRight | TerrainQuadTreeQuery::DrawFlagBottomLeft | TerrainQuadTreeQuery::DrawFlagBottomRight);
                     }
                     else
                     {
                         // TL + TR + BL
-                        pDevice->DrawIndexed(0, gridIndexCountPerSubQuad * 3, 0);
+                        pCommandList->DrawIndexed(0, gridIndexCountPerSubQuad * 3, 0);
                         drawFlags &= ~(TerrainQuadTreeQuery::DrawFlagTopLeft | TerrainQuadTreeQuery::DrawFlagTopRight | TerrainQuadTreeQuery::DrawFlagBottomLeft);
                     }
                 }
                 else
                 {
                     // TL + TR
-                    pDevice->DrawIndexed(0, gridIndexCountPerSubQuad * 2, 0);
+                    pCommandList->DrawIndexed(0, gridIndexCountPerSubQuad * 2, 0);
                     drawFlags &= ~(TerrainQuadTreeQuery::DrawFlagTopLeft | TerrainQuadTreeQuery::DrawFlagTopRight);
                 }
             }
             else
             {
                 // TL
-                pDevice->DrawIndexed(0, gridIndexCountPerSubQuad, 0);
+                pCommandList->DrawIndexed(0, gridIndexCountPerSubQuad, 0);
                 drawFlags &= ~(TerrainQuadTreeQuery::DrawFlagTopLeft);
             }
         }
@@ -1164,20 +1164,20 @@ void TerrainSectionRenderProxyCDLOD::InvokeTerrainDraw(GPUContext *pDevice, uint
                 if (drawFlags & TerrainQuadTreeQuery::DrawFlagBottomRight)
                 {
                     // TR + BL + BR
-                    pDevice->DrawIndexed(m_pRenderer->GetGridIndexEndTL(), gridIndexCountPerSubQuad * 3, 0);
+                    pCommandList->DrawIndexed(m_pRenderer->GetGridIndexEndTL(), gridIndexCountPerSubQuad * 3, 0);
                     drawFlags &= ~(TerrainQuadTreeQuery::DrawFlagTopRight | TerrainQuadTreeQuery::DrawFlagBottomLeft | TerrainQuadTreeQuery::DrawFlagBottomRight);
                 }
                 else
                 {
                     // TR + BL
-                    pDevice->DrawIndexed(m_pRenderer->GetGridIndexEndTL(), gridIndexCountPerSubQuad * 2, 0);
+                    pCommandList->DrawIndexed(m_pRenderer->GetGridIndexEndTL(), gridIndexCountPerSubQuad * 2, 0);
                     drawFlags &= ~(TerrainQuadTreeQuery::DrawFlagTopRight | TerrainQuadTreeQuery::DrawFlagBottomLeft);
                 }
             }
             else
             {
                 // TR
-                pDevice->DrawIndexed(m_pRenderer->GetGridIndexEndTL(), gridIndexCountPerSubQuad, 0);
+                pCommandList->DrawIndexed(m_pRenderer->GetGridIndexEndTL(), gridIndexCountPerSubQuad, 0);
                 drawFlags &= ~(TerrainQuadTreeQuery::DrawFlagTopRight);
             }
         }
@@ -1187,13 +1187,13 @@ void TerrainSectionRenderProxyCDLOD::InvokeTerrainDraw(GPUContext *pDevice, uint
             if (drawFlags & TerrainQuadTreeQuery::DrawFlagBottomRight)
             {
                 // BL + BR
-                pDevice->DrawIndexed(m_pRenderer->GetGridIndexEndTR(), gridIndexCountPerSubQuad * 2, 0);
+                pCommandList->DrawIndexed(m_pRenderer->GetGridIndexEndTR(), gridIndexCountPerSubQuad * 2, 0);
                 drawFlags &= ~(TerrainQuadTreeQuery::DrawFlagBottomLeft | TerrainQuadTreeQuery::DrawFlagBottomRight);
             }
             else
             {
                 // BL
-                pDevice->DrawIndexed(m_pRenderer->GetGridIndexEndTR(), gridIndexCountPerSubQuad, 0);
+                pCommandList->DrawIndexed(m_pRenderer->GetGridIndexEndTR(), gridIndexCountPerSubQuad, 0);
                 drawFlags &= ~(TerrainQuadTreeQuery::DrawFlagBottomLeft);
             }
         }
@@ -1201,7 +1201,7 @@ void TerrainSectionRenderProxyCDLOD::InvokeTerrainDraw(GPUContext *pDevice, uint
         if (drawFlags & TerrainQuadTreeQuery::DrawFlagBottomRight)
         {
             // BR
-            pDevice->DrawIndexed(m_pRenderer->GetGridIndexEndBL(), gridIndexCountPerSubQuad, 0);
+            pCommandList->DrawIndexed(m_pRenderer->GetGridIndexEndBL(), gridIndexCountPerSubQuad, 0);
             drawFlags &= ~(TerrainQuadTreeQuery::DrawFlagBottomRight);
         }
     }
@@ -1251,35 +1251,35 @@ void TerrainSectionRenderProxyCDLOD::InvokeTerrainDraw(GPUContext *pDevice, uint
 #endif
 }
 
-void TerrainSectionRenderProxyCDLOD::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void TerrainSectionRenderProxyCDLOD::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
     // height layer?
     if (pQueueEntry->UserData[0] == 0)
     {
         const TerrainQuadTreeNode *pNode = reinterpret_cast<const TerrainQuadTreeNode *>(pQueueEntry->UserDataPointer[0]);
-        SetupTerrainDraw(pNode, pGPUContext, pShaderProgram);
+        SetupTerrainDraw(pNode, pCommandList, pShaderProgram);
     }
     else
     {
-        SetupDetailBatchDraw(pQueueEntry->UserData[0] - 1, pQueueEntry->UserData[1], pQueueEntry->UserData[2], pGPUContext, pShaderProgram);
+        SetupDetailBatchDraw(pQueueEntry->UserData[0] - 1, pQueueEntry->UserData[1], pQueueEntry->UserData[2], pCommandList, pShaderProgram);
     }
 }
 
-void TerrainSectionRenderProxyCDLOD::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void TerrainSectionRenderProxyCDLOD::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
     // base layer?
     if (pQueueEntry->UserData[0] == 0)
     {
         uint32 nodeDrawFlags = pQueueEntry->UserData[1];
-        InvokeTerrainDraw(pGPUContext, nodeDrawFlags);
+        InvokeTerrainDraw(pCommandList, nodeDrawFlags);
     }
     else
     {
-        InvokeDetailBatchDraw(pQueueEntry->UserData[0] - 1, pQueueEntry->UserData[1], pQueueEntry->UserData[2], pGPUContext);
+        InvokeDetailBatchDraw(pQueueEntry->UserData[0] - 1, pQueueEntry->UserData[1], pQueueEntry->UserData[2], pCommandList);
     }
 }
 
-void TerrainSectionRenderProxyCDLOD::DrawDebugInfo(const Camera *pCamera, GPUContext *pGPUContext, MiniGUIContext *pGUIContext) const
+void TerrainSectionRenderProxyCDLOD::DrawDebugInfo(const Camera *pCamera, GPUCommandList *pCommandList, MiniGUIContext *pGUIContext) const
 {
     if (CVars::r_terrain_show_nodes.GetBool())
     {
@@ -1336,8 +1336,12 @@ bool TerrainSectionRenderProxyCDLOD::CreateDetailInstanceBuffer()
     return true;
 }
 
-bool TerrainSectionRenderProxyCDLOD::BuildDetailBatches(GPUContext *pGPUContext, const float3 &eyePosition) const
+bool TerrainSectionRenderProxyCDLOD::BuildDetailBatches(GPUCommandList *pCommandList, const float3 &eyePosition) const
 {
+    // Fixme for command lists.
+    return false;
+
+#if 0
     // any detail instances?
     if (m_pDetailInstanceBuffer == nullptr)
         return false;
@@ -1395,26 +1399,27 @@ bool TerrainSectionRenderProxyCDLOD::BuildDetailBatches(GPUContext *pGPUContext,
     // unmap buffer
     pGPUContext->Unmapbuffer(m_pDetailInstanceBuffer, pBufferPtr);
     return (m_detailBatches.GetSize() > 0);
+#endif
 }
 
-void TerrainSectionRenderProxyCDLOD::SetupDetailBatchDraw(uint32 detailBatchIndex, uint32 meshLODIndex, uint32 meshBatchIndex, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void TerrainSectionRenderProxyCDLOD::SetupDetailBatchDraw(uint32 detailBatchIndex, uint32 meshLODIndex, uint32 meshBatchIndex, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
     const DetailBatch &detailBatch = m_detailBatches[detailBatchIndex];
     const TerrainSection::DetailMesh *pDetailMesh = m_pSection->GetDetailMesh(detailBatchIndex);
     const StaticMesh::LOD *pLOD = pDetailMesh->pStaticMesh->GetLOD(meshLODIndex);
 
-    pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
 
-    pGPUContext->SetVertexBuffer(0, pLOD->GetVertexBuffers()->GetBuffer(0), pLOD->GetVertexBuffers()->GetBufferOffset(0), pLOD->GetVertexBuffers()->GetBufferStride(0));
-    pGPUContext->SetVertexBuffer(1, m_pDetailInstanceBuffer, detailBatch.InstanceBufferOffset, sizeof(LocalVertexFactory::InstanceTransform));
-    pGPUContext->SetIndexBuffer(pLOD->GetIndexBuffer(), pLOD->GetIndexFormat(), 0);
+    pCommandList->SetVertexBuffer(0, pLOD->GetVertexBuffers()->GetBuffer(0), pLOD->GetVertexBuffers()->GetBufferOffset(0), pLOD->GetVertexBuffers()->GetBufferStride(0));
+    pCommandList->SetVertexBuffer(1, m_pDetailInstanceBuffer, detailBatch.InstanceBufferOffset, sizeof(LocalVertexFactory::InstanceTransform));
+    pCommandList->SetIndexBuffer(pLOD->GetIndexBuffer(), pLOD->GetIndexFormat(), 0);
 }
 
-void TerrainSectionRenderProxyCDLOD::InvokeDetailBatchDraw(uint32 detailBatchIndex, uint32 meshLODIndex, uint32 meshBatchIndex, GPUContext *pGPUContext) const
+void TerrainSectionRenderProxyCDLOD::InvokeDetailBatchDraw(uint32 detailBatchIndex, uint32 meshLODIndex, uint32 meshBatchIndex, GPUCommandList *pCommandList) const
 {
     const DetailBatch &detailBatch = m_detailBatches[detailBatchIndex];
     const TerrainSection::DetailMesh *pDetailMesh = m_pSection->GetDetailMesh(detailBatchIndex);
     const StaticMesh::Batch *pBatch = pDetailMesh->pStaticMesh->GetLOD(meshLODIndex)->GetBatch(meshBatchIndex);
 
-    pGPUContext->DrawIndexedInstanced(pBatch->StartIndex, pBatch->NumIndices, 0, detailBatch.InstanceCount);
+    pCommandList->DrawIndexedInstanced(pBatch->StartIndex, pBatch->NumIndices, 0, detailBatch.InstanceCount);
 }

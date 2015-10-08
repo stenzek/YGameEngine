@@ -27,7 +27,7 @@ public:
     void SetQueueEntry(const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry);
 
     // shader accessors
-    ShaderProgram *MakeActive(GPUContext *pContext);
+    ShaderProgram *MakeActive(GPUCommandList *pCommandList);
 
 private:
     enum DIRTY_FLAGS

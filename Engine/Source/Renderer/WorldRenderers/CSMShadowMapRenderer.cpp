@@ -237,13 +237,13 @@ void CSMShadowMapRenderer::BuildCascadeCamera(Camera *pOutCascadeCamera, const C
     }
 }
 
-void CSMShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
+void CSMShadowMapRenderer::DrawShadowMap(GPUCommandList *pCommandList, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
 {
     // draw using multipass technique
-    DrawMultiPass(pGPUContext, pShadowMapData, pViewCamera, shadowDistance, pRenderWorld, pLight);
+    DrawMultiPass(pCommandList, pShadowMapData, pViewCamera, shadowDistance, pRenderWorld, pLight);
 }
 
-void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
+void CSMShadowMapRenderer::DrawMultiPass(GPUCommandList *pCommandList, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
 {
     MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "DrawMultiPass", MAKE_COLOR_R8G8B8_UNORM(200, 47, 85));
 
@@ -252,9 +252,9 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
 
     // set common states
     RENDERER_VIEWPORT shadowMapViewport(0, 0, m_shadowMapResolution, m_shadowMapResolution, 0.0f, 1.0f);
-    pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
-    pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(true, true, GPU_COMPARISON_FUNC_LESS), 0);
-    pGPUContext->SetViewport(&shadowMapViewport);
+    pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
+    pCommandList->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(true, true, GPU_COMPARISON_FUNC_LESS), 0);
+    pCommandList->SetViewport(&shadowMapViewport);
 
     // calculate split depths
     CalculateSplitDepths(pViewCamera, shadowDrawDistance);
@@ -266,8 +266,8 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
     for (uint32 i = 0; i < m_cascadeCount; i++)
     {
         // invoke the clear first of this layer
-        pGPUContext->SetRenderTargets(0, nullptr, pShadowMapData->pShadowMapDSV[i]);
-        pGPUContext->ClearTargets(false, true, false, float4::Zero, 1.0f);
+        pCommandList->SetRenderTargets(0, nullptr, pShadowMapData->pShadowMapDSV[i]);
+        pCommandList->ClearTargets(false, true, false, float4::Zero, 1.0f);
 
         // get camera
         Camera lightCamera;
@@ -304,7 +304,7 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
             continue;
 
         // set constants
-        pGPUContext->GetConstants()->SetFromCamera(lightCamera, true);
+        pCommandList->GetConstants()->SetFromCamera(lightCamera, true);
 
         // draw opaque objects
         {           
@@ -326,11 +326,11 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
                 shaderSelector.SetMaterial((pQueueEntry->pMaterial->GetShader()->GetBlendMode() == MATERIAL_BLENDING_MODE_MASKED) ? pQueueEntry->pMaterial : nullptr);
 
                 // only continue with shader
-                ShaderProgram *pShaderProgram = shaderSelector.MakeActive(pGPUContext);
+                ShaderProgram *pShaderProgram = shaderSelector.MakeActive(pCommandList);
                 if (pShaderProgram != nullptr)
                 {
-                    pQueueEntry->pRenderProxy->SetupForDraw(&lightCamera, pQueueEntry, pGPUContext, pShaderProgram);
-                    pQueueEntry->pRenderProxy->DrawQueueEntry(&lightCamera, pQueueEntry, pGPUContext);
+                    pQueueEntry->pRenderProxy->SetupForDraw(&lightCamera, pQueueEntry, pCommandList, pShaderProgram);
+                    pQueueEntry->pRenderProxy->DrawQueueEntry(&lightCamera, pQueueEntry, pCommandList);
                 }
             }
         }
@@ -355,11 +355,11 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUContext *pGPUContext, ShadowMapData 
                 shaderSelector.SetMaterial((pQueueEntry->pMaterial->GetShader()->GetBlendMode() != MATERIAL_BLENDING_MODE_NONE) ? pQueueEntry->pMaterial : nullptr);
 
                 // only continue with shader
-                ShaderProgram *pShaderProgram = shaderSelector.MakeActive(pGPUContext);
+                ShaderProgram *pShaderProgram = shaderSelector.MakeActive(pCommandList);
                 if (pShaderProgram != nullptr)
                 {
-                    pQueueEntry->pRenderProxy->SetupForDraw(&lightCamera, pQueueEntry, pGPUContext, pShaderProgram);
-                    pQueueEntry->pRenderProxy->DrawQueueEntry(&lightCamera, pQueueEntry, pGPUContext);
+                    pQueueEntry->pRenderProxy->SetupForDraw(&lightCamera, pQueueEntry, pCommandList, pShaderProgram);
+                    pQueueEntry->pRenderProxy->DrawQueueEntry(&lightCamera, pQueueEntry, pCommandList);
                 }
             }
         }

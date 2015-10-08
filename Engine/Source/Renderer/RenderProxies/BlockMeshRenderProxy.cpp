@@ -218,22 +218,22 @@ void BlockMeshRenderProxy::QueueForRender(const Camera *pCamera, RenderQueue *pR
     }
 }
 
-void BlockMeshRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void BlockMeshRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
     uint32 selectedLOD = pQueueEntry->UserData[0];
 
-    pGPUContext->GetConstants()->SetLocalToWorldMatrix(m_localToWorldMatrix, true);
-    pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
-    m_pBlockMesh->GetVertexBuffers(selectedLOD)->BindBuffers(pGPUContext);
-    pGPUContext->SetIndexBuffer(m_pBlockMesh->GetIndexBuffer(selectedLOD), m_pBlockMesh->GetIndexFormat(selectedLOD), 0);
+    pCommandList->GetConstants()->SetLocalToWorldMatrix(m_localToWorldMatrix, true);
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+    m_pBlockMesh->GetVertexBuffers(selectedLOD)->BindBuffers(pCommandList);
+    pCommandList->SetIndexBuffer(m_pBlockMesh->GetIndexBuffer(selectedLOD), m_pBlockMesh->GetIndexFormat(selectedLOD), 0);
 }
 
-void BlockMeshRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void BlockMeshRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
     uint32 selectedLOD = pQueueEntry->UserData[0];
     uint32 batchIndex = pQueueEntry->UserData[1];
     const BlockMesh::Batch *pBatch = m_pBlockMesh->GetBatch(selectedLOD, batchIndex);
-    pGPUContext->DrawIndexed(pBatch->StartIndex, pBatch->IndexCount, 0);
+    pCommandList->DrawIndexed(pBatch->StartIndex, pBatch->IndexCount, 0);
 }
 
 bool BlockMeshRenderProxy::CreateDeviceResources() const

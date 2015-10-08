@@ -32,7 +32,7 @@ public:
     };
 
 public:
-    static void SetBoneMatrices(GPUContext *pContext, ShaderProgram *pShaderProgram, uint32 firstBoneIndex, uint32 boneCount, const float3x4 *pBoneMatrices);
+    static void SetBoneMatrices(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, uint32 firstBoneIndex, uint32 boneCount, const float3x4 *pBoneMatrices);
 
     static uint32 GetVertexSize(RENDERER_PLATFORM platform, RENDERER_FEATURE_LEVEL featureLevel, uint32 flags);
     static bool CreateVerticesBuffer(RENDERER_PLATFORM platform, RENDERER_FEATURE_LEVEL featureLevel, uint32 flags, const Vertex *pVertices, uint32 nVertices, VertexBufferBindingArray *pVertexBufferBindingArray);

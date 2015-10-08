@@ -1127,6 +1127,45 @@ void OpenGLES2GPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)
     }
 }
 
+void OpenGLES2GPUContext::SetShaderParameterValue(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterValue(this, index, valueType, pValue);
+}
+
+void OpenGLES2GPUContext::SetShaderParameterValueArray(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterValueArray(this, index, valueType, pValue, firstElement, numElements);
+}
+
+void OpenGLES2GPUContext::SetShaderParameterStruct(uint32 index, const void *pValue, uint32 valueSize)
+{
+    Log_ErrorPrintf("Unsupported in GLES 2.0");
+    return;
+}
+
+void OpenGLES2GPUContext::SetShaderParameterStructArray(uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
+{
+    Log_ErrorPrintf("Unsupported in GLES 2.0");
+    return;
+}
+
+void OpenGLES2GPUContext::SetShaderParameterResource(uint32 index, GPUResource *pResource)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterTexture(this, index, pResource);
+}
+
+void OpenGLES2GPUContext::SetShaderParameterTexture(uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    if (pSamplerState != nullptr)
+        Log_WarningPrintf("Sampler state will be ignored for GLES 2.0");
+
+    m_pCurrentShaderProgram->InternalSetParameterTexture(this, index, pTexture);
+}
+
 void OpenGLES2GPUContext::WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex, uint32 offset, uint32 count, const void *pData, bool commit /* = false */)
 {
     // Get the starting offset

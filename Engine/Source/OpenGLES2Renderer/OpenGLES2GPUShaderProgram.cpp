@@ -501,41 +501,6 @@ void OpenGLES2GPUShaderProgram::GetParameterInformation(uint32 index, const char
     *arraySize = parameter->ArraySize;
 }
 
-void OpenGLES2GPUShaderProgram::SetParameterValue(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue)
-{
-    InternalSetParameterValue(static_cast<OpenGLES2GPUContext *>(pContext), index, valueType, pValue);
-}
-
-void OpenGLES2GPUShaderProgram::SetParameterValueArray(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
-{
-    InternalSetParameterValueArray(static_cast<OpenGLES2GPUContext *>(pContext), index, valueType, pValue, firstElement, numElements);
-}
-
-void OpenGLES2GPUShaderProgram::SetParameterStruct(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize)
-{
-    Log_ErrorPrintf("OpenGLES2GPUShaderProgram::SetParameterStruct: Unsupported in GLES 2.0");
-    return;
-}
-
-void OpenGLES2GPUShaderProgram::SetParameterStructArray(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
-{
-    Log_ErrorPrintf("OpenGLES2GPUShaderProgram::SetParameterStructArray: Unsupported in GLES 2.0");
-    return;
-}
-
-void OpenGLES2GPUShaderProgram::SetParameterResource(GPUContext *pContext, uint32 index, GPUResource *pResource)
-{
-    InternalSetParameterTexture(static_cast<OpenGLES2GPUContext *>(pContext), index, pResource);
-}
-
-void OpenGLES2GPUShaderProgram::SetParameterTexture(GPUContext *pContext, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState)
-{
-    if (pSamplerState != nullptr)
-        Log_WarningPrintf("OpenGLES2GPUShaderProgram::SetParameterTexture: Sampler state will be ignored for GLES 2.0");
-    
-    InternalSetParameterTexture(static_cast<OpenGLES2GPUContext *>(pContext), index, pTexture);
-}
-
 GPUShaderProgram *OpenGLES2GPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
 {
     OpenGLES2GPUShaderProgram *pProgram = new OpenGLES2GPUShaderProgram();

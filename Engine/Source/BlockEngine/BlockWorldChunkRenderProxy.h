@@ -34,9 +34,9 @@ public:
     virtual ~BlockWorldChunkRenderProxy();
 
     virtual void QueueForRender(const Camera *pCamera, RenderQueue *pRenderQueue) const override;
-    virtual void SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const override;
-    virtual void DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const override;
-    virtual void DrawDebugInfo(const Camera *pCamera, GPUContext *pGPUContext, MiniGUIContext *pGUIContext) const override;
+    virtual void SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const override;
+    virtual void DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const override;
+    virtual void DrawDebugInfo(const Camera *pCamera, GPUCommandList *pCommandList, MiniGUIContext *pGUIContext) const override;
     virtual bool CreateDeviceResources() const override;
     virtual void ReleaseDeviceResources() const override;
 

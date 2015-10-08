@@ -919,36 +919,6 @@ void OpenGLGPUShaderProgram::GetParameterInformation(uint32 index, const char **
     *arraySize = parameter->ArraySize;
 }
 
-void OpenGLGPUShaderProgram::SetParameterValue(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue)
-{
-    InternalSetParameterValue(static_cast<OpenGLGPUContext *>(pContext), index, valueType, pValue);
-}
-
-void OpenGLGPUShaderProgram::SetParameterValueArray(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
-{
-    InternalSetParameterValueArray(static_cast<OpenGLGPUContext *>(pContext), index, valueType, pValue, firstElement, numElements);
-}
-
-void OpenGLGPUShaderProgram::SetParameterStruct(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize)
-{
-    InternalSetParameterStruct(static_cast<OpenGLGPUContext *>(pContext), index, pValue, valueSize);
-}
-
-void OpenGLGPUShaderProgram::SetParameterStructArray(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
-{
-    InternalSetParameterStructArray(static_cast<OpenGLGPUContext *>(pContext), index, pValue, valueSize, firstElement, numElements);
-}
-
-void OpenGLGPUShaderProgram::SetParameterResource(GPUContext *pContext, uint32 index, GPUResource *pResource)
-{
-    InternalSetParameterResource(static_cast<OpenGLGPUContext *>(pContext), index, pResource, nullptr);
-}
-
-void OpenGLGPUShaderProgram::SetParameterTexture(GPUContext *pContext, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState)
-{
-    InternalSetParameterResource(static_cast<OpenGLGPUContext *>(pContext), index, pTexture, static_cast<OpenGLGPUSamplerState *>(pSamplerState));
-}
-
 GPUShaderProgram *OpenGLGPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
 {
     OpenGLGPUShaderProgram *pProgram = new OpenGLGPUShaderProgram();

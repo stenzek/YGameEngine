@@ -255,115 +255,115 @@ int32 ShaderProgram::Compare(const ShaderProgram *a, const ShaderProgram *b)
     return 0;
 }
 
-void ShaderProgram::SetBaseShaderParameterValue(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const
+void ShaderProgram::SetBaseShaderParameterValue(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const
 {
     DebugAssert(index < m_pBaseShaderTypeInfo->GetParameterBindingCount());
     if (m_pBaseShaderParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterValue(pContext, m_pBaseShaderParameterMap[index], type, pValue);
+        pCommandList->SetShaderParameterValue(m_pBaseShaderParameterMap[index], type, pValue);
 }
 
-void ShaderProgram::SetBaseShaderParameterValueArray(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const
+void ShaderProgram::SetBaseShaderParameterValueArray(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const
 {
     DebugAssert(index < m_pBaseShaderTypeInfo->GetParameterBindingCount());
     if (m_pBaseShaderParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterValueArray(pContext, m_pBaseShaderParameterMap[index], type, pValues, firstElement, numElements);
+        pCommandList->SetShaderParameterValueArray(m_pBaseShaderParameterMap[index], type, pValues, firstElement, numElements);
 }
 
-void ShaderProgram::SetBaseShaderParameterStruct(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize) const
+void ShaderProgram::SetBaseShaderParameterStruct(GPUCommandList *pCommandList, uint32 index, const void *pValue, uint32 valueSize) const
 {
     DebugAssert(index < m_pBaseShaderTypeInfo->GetParameterBindingCount());
     if (m_pBaseShaderParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterStruct(pContext, m_pBaseShaderParameterMap[index], pValue, valueSize);
+        pCommandList->SetShaderParameterStruct(m_pBaseShaderParameterMap[index], pValue, valueSize);
 }
 
-void ShaderProgram::SetBaseShaderParameterStructArray(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements) const
+void ShaderProgram::SetBaseShaderParameterStructArray(GPUCommandList *pCommandList, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements) const
 {
     DebugAssert(index < m_pBaseShaderTypeInfo->GetParameterBindingCount());
     if (m_pBaseShaderParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterStructArray(pContext, m_pBaseShaderParameterMap[index], pValue, valueSize, firstElement, numElements);
+        pCommandList->SetShaderParameterStructArray(m_pBaseShaderParameterMap[index], pValue, valueSize, firstElement, numElements);
 }
 
-void ShaderProgram::SetBaseShaderParameterResource(GPUContext *pContext, uint32 index, GPUResource *pResource) const
+void ShaderProgram::SetBaseShaderParameterResource(GPUCommandList *pCommandList, uint32 index, GPUResource *pResource) const
 {
     DebugAssert(index < m_pBaseShaderTypeInfo->GetParameterBindingCount());
     if (m_pBaseShaderParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterResource(pContext, m_pBaseShaderParameterMap[index], pResource);
+        pCommandList->SetShaderParameterResource(m_pBaseShaderParameterMap[index], pResource);
 }
 
-void ShaderProgram::SetBaseShaderParameterTexture(GPUContext *pContext, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const
+void ShaderProgram::SetBaseShaderParameterTexture(GPUCommandList *pCommandList, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const
 {
     DebugAssert(index < m_pBaseShaderTypeInfo->GetParameterBindingCount());
     if (m_pBaseShaderParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterTexture(pContext, m_pBaseShaderParameterMap[index], pTexture, pSamplerState);
+        pCommandList->SetShaderParameterTexture(m_pBaseShaderParameterMap[index], pTexture, pSamplerState);
 }
 
-void ShaderProgram::SetVertexFactoryParameterValue(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const
+void ShaderProgram::SetVertexFactoryParameterValue(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const
 {
     DebugAssert(index < m_pVertexFactoryTypeInfo->GetParameterBindingCount());
     if (m_pVertexFactoryParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterValue(pContext, m_pVertexFactoryParameterMap[index], type, pValue);
+        pCommandList->SetShaderParameterValue(m_pVertexFactoryParameterMap[index], type, pValue);
 }
 
-void ShaderProgram::SetVertexFactoryParameterValueArray(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const
+void ShaderProgram::SetVertexFactoryParameterValueArray(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const
 {
     DebugAssert(index < m_pVertexFactoryTypeInfo->GetParameterBindingCount());
     if (m_pVertexFactoryParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterValueArray(pContext, m_pVertexFactoryParameterMap[index], type, pValues, firstElement, numElements);
+        pCommandList->SetShaderParameterValueArray(m_pVertexFactoryParameterMap[index], type, pValues, firstElement, numElements);
 }
 
-void ShaderProgram::SetVertexFactoryParameterStruct(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize) const
+void ShaderProgram::SetVertexFactoryParameterStruct(GPUCommandList *pCommandList, uint32 index, const void *pValue, uint32 valueSize) const
 {
     DebugAssert(index < m_pVertexFactoryTypeInfo->GetParameterBindingCount());
     if (m_pVertexFactoryParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterStruct(pContext, m_pVertexFactoryParameterMap[index], pValue, valueSize);
+        pCommandList->SetShaderParameterStruct(m_pVertexFactoryParameterMap[index], pValue, valueSize);
 }
 
-void ShaderProgram::SetVertexFactoryParameterStructArray(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements) const
+void ShaderProgram::SetVertexFactoryParameterStructArray(GPUCommandList *pCommandList, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements) const
 {
     DebugAssert(index < m_pVertexFactoryTypeInfo->GetParameterBindingCount());
     if (m_pVertexFactoryParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterStructArray(pContext, m_pVertexFactoryParameterMap[index], pValue, valueSize, firstElement, numElements);
+        pCommandList->SetShaderParameterStructArray(m_pVertexFactoryParameterMap[index], pValue, valueSize, firstElement, numElements);
 }
 
-void ShaderProgram::SetVertexFactoryParameterResource(GPUContext *pContext, uint32 index, GPUResource *pResource) const
+void ShaderProgram::SetVertexFactoryParameterResource(GPUCommandList *pCommandList, uint32 index, GPUResource *pResource) const
 {
     DebugAssert(index < m_pVertexFactoryTypeInfo->GetParameterBindingCount());
     if (m_pVertexFactoryParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterResource(pContext, m_pVertexFactoryParameterMap[index], pResource);
+        pCommandList->SetShaderParameterResource(m_pVertexFactoryParameterMap[index], pResource);
 }
 
-void ShaderProgram::SetVertexFactoryParameterTexture(GPUContext *pContext, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const
+void ShaderProgram::SetVertexFactoryParameterTexture(GPUCommandList *pCommandList, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const
 {
     DebugAssert(index < m_pVertexFactoryTypeInfo->GetParameterBindingCount());
     if (m_pVertexFactoryParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterTexture(pContext, m_pVertexFactoryParameterMap[index], pTexture, pSamplerState);
+        pCommandList->SetShaderParameterTexture(m_pVertexFactoryParameterMap[index], pTexture, pSamplerState);
 }
 
-void ShaderProgram::SetMaterialParameterValue(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const
+void ShaderProgram::SetMaterialParameterValue(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const
 {
     DebugAssert(index < m_pMaterialShader->GetUniformParameterCount());
     if (m_pMaterialShaderUniformParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterValue(pContext, m_pMaterialShaderUniformParameterMap[index], type, pValue);
+        pCommandList->SetShaderParameterValue(m_pMaterialShaderUniformParameterMap[index], type, pValue);
 }
 
-void ShaderProgram::SetMaterialParameterValueArray(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const
+void ShaderProgram::SetMaterialParameterValueArray(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const
 {
     DebugAssert(index < m_pMaterialShader->GetUniformParameterCount());
     if (m_pMaterialShaderUniformParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterValueArray(pContext, m_pMaterialShaderUniformParameterMap[index], type, pValues, firstElement, numElements);
+        pCommandList->SetShaderParameterValueArray(m_pMaterialShaderUniformParameterMap[index], type, pValues, firstElement, numElements);
 }
 
-void ShaderProgram::SetMaterialParameterResource(GPUContext *pContext, uint32 index, GPUResource *pResource) const
+void ShaderProgram::SetMaterialParameterResource(GPUCommandList *pCommandList, uint32 index, GPUResource *pResource) const
 {
     DebugAssert(index < m_pMaterialShader->GetTextureParameterCount());
     if (m_pMaterialShaderTextureParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterResource(pContext, m_pMaterialShaderTextureParameterMap[index], pResource);
+        pCommandList->SetShaderParameterResource(m_pMaterialShaderTextureParameterMap[index], pResource);
 }
 
-void ShaderProgram::SetMaterialParameterTexture(GPUContext *pContext, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const
+void ShaderProgram::SetMaterialParameterTexture(GPUCommandList *pCommandList, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const
 {
     DebugAssert(index < m_pMaterialShader->GetTextureParameterCount() + (m_pMaterialShader->GetRenderMode() == MATERIAL_RENDER_MODE_POST_PROCESS) * 2);
     if (m_pMaterialShaderTextureParameterMap[index] >= 0)
-        m_pGPUProgram->SetParameterTexture(pContext, m_pMaterialShaderTextureParameterMap[index], pTexture, pSamplerState);
+        pCommandList->SetShaderParameterTexture(m_pMaterialShaderTextureParameterMap[index], pTexture, pSamplerState);
 }
 

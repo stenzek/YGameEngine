@@ -1419,6 +1419,42 @@ void OpenGLGPUContext::SetShaderProgram(GPUShaderProgram *pShaderProgram)
     }
 }
 
+void OpenGLGPUContext::SetShaderParameterValue(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterValue(this, index, valueType, pValue);
+}
+
+void OpenGLGPUContext::SetShaderParameterValueArray(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterValueArray(this, index, valueType, pValue, firstElement, numElements);
+}
+
+void OpenGLGPUContext::SetShaderParameterStruct(uint32 index, const void *pValue, uint32 valueSize)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterStruct(this, index, pValue, valueSize);
+}
+
+void OpenGLGPUContext::SetShaderParameterStructArray(uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterStructArray(this, index, pValue, valueSize, firstElement, numElements);
+}
+
+void OpenGLGPUContext::SetShaderParameterResource(uint32 index, GPUResource *pResource)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterResource(this, index, pResource, nullptr);
+}
+
+void OpenGLGPUContext::SetShaderParameterTexture(uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState)
+{
+    DebugAssert(m_pCurrentShaderProgram != nullptr);
+    m_pCurrentShaderProgram->InternalSetParameterResource(this, index, pTexture, static_cast<OpenGLGPUSamplerState *>(pSamplerState));
+}
+
 OpenGLGPUBuffer *OpenGLGPUContext::GetConstantBuffer(uint32 index)
 {
     ConstantBuffer *constantBuffer = &m_constantBuffers[index];

@@ -415,7 +415,7 @@ void CompositeRenderProxy::QueueForRender(const Camera *pCamera, RenderQueue *pR
     }
 }
 
-void CompositeRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void CompositeRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
     uint32 objectIndex = pQueueEntry->UserData[0];
     DebugAssert(objectIndex < m_objectRecords.GetSize());
@@ -424,14 +424,14 @@ void CompositeRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEU
     GPUBuffer *pVertexBuffer = obj.pVertexBuffer;
     uint32 vertexBufferOffset = 0;
     uint32 vertexBufferStride = obj.VertexStride;
-    pGPUContext->SetVertexBuffers(0, 1, &pVertexBuffer, &vertexBufferOffset, &vertexBufferStride);
-    pGPUContext->SetIndexBuffer(obj.pIndexBuffer, obj.IndexFormat, 0);
+    pCommandList->SetVertexBuffers(0, 1, &pVertexBuffer, &vertexBufferOffset, &vertexBufferStride);
+    pCommandList->SetIndexBuffer(obj.pIndexBuffer, obj.IndexFormat, 0);
 
-    pGPUContext->GetConstants()->SetLocalToWorldMatrix(m_LocalToWorldMatrix, true);
-    pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+    pCommandList->GetConstants()->SetLocalToWorldMatrix(m_LocalToWorldMatrix, true);
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
 }
 
-void CompositeRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void CompositeRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
     uint32 objectIndex = pQueueEntry->UserData[0];
     DebugAssert(objectIndex < m_objectRecords.GetSize());
@@ -441,7 +441,7 @@ void CompositeRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QU
     DebugAssert(batchIndex < obj.BatchCount);
 
     const Batch &batchInfo = obj.pBatches[batchIndex];
-    pGPUContext->DrawIndexed(batchInfo.FirstIndex, batchInfo.IndexCount, 0);
+    pCommandList->DrawIndexed(batchInfo.FirstIndex, batchInfo.IndexCount, 0);
 }
 
 bool CompositeRenderProxy::CreateDeviceResources() const

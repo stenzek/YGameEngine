@@ -76,21 +76,21 @@ void ParticleSystemEmitter_Sprite::QueueForRender(const RenderProxy *pRenderProx
     }
 }
 
-void ParticleSystemEmitter_Sprite::SetupForDraw(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void ParticleSystemEmitter_Sprite::SetupForDraw(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
-    pGPUContext->SetDrawTopology(ParticleSystemSpriteVertexFactory::GetDrawTopology(g_pRenderer->GetPlatform(), g_pRenderer->GetFeatureLevel(), pEmitterRenderData->VertexFactoryFlags));
-    pGPUContext->GetConstants()->SetLocalToWorldMatrix(float4x4::Identity, true);
+    pCommandList->SetDrawTopology(ParticleSystemSpriteVertexFactory::GetDrawTopology(g_pRenderer->GetPlatform(), g_pRenderer->GetFeatureLevel(), pEmitterRenderData->VertexFactoryFlags));
+    pCommandList->GetConstants()->SetLocalToWorldMatrix(float4x4::Identity, true);
 
     // set up vertex buffer for instanced quads
     if (pEmitterRenderData->VertexFactoryFlags & ParticleSystemSpriteVertexFactory::Flag_RenderInstancedQuads)
     {
         uint32 vertexBufferOffset = 0;
         uint32 vertexBufferStride = ParticleSystemSpriteVertexFactory::GetVertexSize(g_pRenderer->GetPlatform(), g_pRenderer->GetFeatureLevel(), pEmitterRenderData->VertexFactoryFlags);
-        pGPUContext->SetVertexBuffers(0, 1, &pEmitterRenderData->pGPUBuffer, &vertexBufferOffset, &vertexBufferStride);
+        pCommandList->SetVertexBuffers(0, 1, &pEmitterRenderData->pGPUBuffer, &vertexBufferOffset, &vertexBufferStride);
     }
 }
 
-void ParticleSystemEmitter_Sprite::DrawQueueEntry(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void ParticleSystemEmitter_Sprite::DrawQueueEntry(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
     // branch out
     if (pEmitterRenderData->VertexFactoryFlags & ParticleSystemSpriteVertexFactory::Flag_RenderBasic)
@@ -103,14 +103,14 @@ void ParticleSystemEmitter_Sprite::DrawQueueEntry(const InstanceRenderData *pEmi
         // ehh whatever fix me later please
         byte *pBuffer = new byte[bufferSize];
         ParticleSystemSpriteVertexFactory::FillVertexBuffer(g_pRenderer->GetPlatform(), g_pRenderer->GetFeatureLevel(), pEmitterRenderData->VertexFactoryFlags, pCamera, reinterpret_cast<const ParticleData *>(pEmitterRenderData->pGPUStagingBuffer), pEmitterRenderData->ParticleCount, pBuffer, bufferSize);
-        pGPUContext->DrawUserPointer(pBuffer, vertexSize, nVertices);
+        pCommandList->DrawUserPointer(pBuffer, vertexSize, nVertices);
         delete[] pBuffer;
     }
     else if (pEmitterRenderData->VertexFactoryFlags & ParticleSystemSpriteVertexFactory::Flag_RenderInstancedQuads)
     {
         // invoke instanced draw
         DebugAssert(pEmitterRenderData->ParticleCount > 0);
-        pGPUContext->DrawInstanced(0, 4, pEmitterRenderData->ParticleCount);
+        pCommandList->DrawInstanced(0, 4, pEmitterRenderData->ParticleCount);
     }
 }
 
@@ -281,12 +281,12 @@ void ParticleSystemEmitter_StaticMesh::QueueForRender(const RenderProxy *pRender
 
 }
 
-void ParticleSystemEmitter_StaticMesh::SetupForDraw(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void ParticleSystemEmitter_StaticMesh::SetupForDraw(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
 
 }
 
-void ParticleSystemEmitter_StaticMesh::DrawQueueEntry(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void ParticleSystemEmitter_StaticMesh::DrawQueueEntry(const InstanceRenderData *pEmitterRenderData, const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
 
 }

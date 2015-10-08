@@ -19,7 +19,7 @@ public:
     const uint32 GetActiveBufferCount() const { return m_nActiveBuffers; }
     
     void SetBuffer(uint32 bufferIndex, GPUBuffer *pVertexBuffer, uint32 offset, uint32 stride);
-    void BindBuffers(GPUContext *pGPUDevice) const;
+    void BindBuffers(GPUCommandList *pCommandList) const;
     void Clear();
 
     // sets debug name on all bound buffers

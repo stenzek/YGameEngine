@@ -99,21 +99,21 @@ public:
         }
     }
 
-    virtual void SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const override
+    virtual void SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const override
     {
         const Batch *pBatch = &m_batches[pQueueEntry->UserData[0]];
 
-        pGPUContext->GetConstants()->SetLocalToWorldMatrix(pBatch->TransformMatrix, true);
-        m_vertexBuffers.BindBuffers(pGPUContext);
-        pGPUContext->SetIndexBuffer(m_pIndexBuffer, GPU_INDEX_FORMAT_UINT16, 0);
-        pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+        pCommandList->GetConstants()->SetLocalToWorldMatrix(pBatch->TransformMatrix, true);
+        m_vertexBuffers.BindBuffers(pCommandList);
+        pCommandList->SetIndexBuffer(m_pIndexBuffer, GPU_INDEX_FORMAT_UINT16, 0);
+        pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
     }
 
-    virtual void DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const override
+    virtual void DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const override
     {
         const Batch *pBatch = &m_batches[pQueueEntry->UserData[0]];
 
-        pGPUContext->DrawIndexed(pBatch->BaseIndex + pBatch->FirstIndex, pBatch->IndexCount, pBatch->BaseVertex);
+        pCommandList->DrawIndexed(pBatch->BaseIndex + pBatch->FirstIndex, pBatch->IndexCount, pBatch->BaseVertex);
     }
 
     void UpdateRenderData(MemArray<BlockWorldVertexFactory::Vertex> *pVertices, MemArray<uint16> *pIndices, MemArray<BlockAnimationBlockRenderProxy::Batch> *pBatches, const AABox &boundingBox)

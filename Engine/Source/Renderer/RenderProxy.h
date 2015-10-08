@@ -4,7 +4,7 @@
 
 class Camera;
 class RenderWorld;
-class GPUContext;
+class GPUCommandList;
 class MiniGUIContext;
 class ShaderProgram;
 
@@ -29,10 +29,10 @@ public:
     virtual void OnRemoveFromRenderWorld(RenderWorld *pRenderWorld) { }
 
     virtual void QueueForRender(const Camera *pCamera, RenderQueue *pRenderQueue) const { }
-    virtual void SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const { }
-    virtual void DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const { }
+    virtual void SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const { }
+    virtual void DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const { }
 
-    virtual void DrawDebugInfo(const Camera *pCamera, GPUContext *pGPUContext, MiniGUIContext *pGUIContext) const { }
+    virtual void DrawDebugInfo(const Camera *pCamera, GPUCommandList *pCommandList, MiniGUIContext *pGUIContext) const { }
 
     virtual bool CreateDeviceResources() const { return true; }
     virtual void ReleaseDeviceResources() const { }

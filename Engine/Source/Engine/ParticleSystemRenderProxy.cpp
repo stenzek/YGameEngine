@@ -120,20 +120,20 @@ void ParticleSystemRenderProxy::QueueForRender(const Camera *pCamera, RenderQueu
         m_pParticleSystem->GetEmitter(emitterIndex)->QueueForRender(this, emitterIndex, &m_pEmitterInstanceRenderData[emitterIndex], pCamera, pRenderQueue);
 }
 
-void ParticleSystemRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void ParticleSystemRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
     uint32 emitterIndex = pQueueEntry->UserData[0];
     DebugAssert(emitterIndex < m_emitterCount);
 
     const ParticleSystemEmitter *pEmitter = m_pParticleSystem->GetEmitter(pQueueEntry->UserData[0]);
-    pEmitter->SetupForDraw(&m_pEmitterInstanceRenderData[emitterIndex], pCamera, pQueueEntry, pGPUContext, pShaderProgram);
+    pEmitter->SetupForDraw(&m_pEmitterInstanceRenderData[emitterIndex], pCamera, pQueueEntry, pCommandList, pShaderProgram);
 }
 
-void ParticleSystemRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void ParticleSystemRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
     uint32 emitterIndex = pQueueEntry->UserData[0];
     DebugAssert(emitterIndex < m_emitterCount);
 
     const ParticleSystemEmitter *pEmitter = m_pParticleSystem->GetEmitter(pQueueEntry->UserData[0]);
-    pEmitter->DrawQueueEntry(&m_pEmitterInstanceRenderData[emitterIndex], pCamera, pQueueEntry, pGPUContext);
+    pEmitter->DrawQueueEntry(&m_pEmitterInstanceRenderData[emitterIndex], pCamera, pQueueEntry, pCommandList);
 }

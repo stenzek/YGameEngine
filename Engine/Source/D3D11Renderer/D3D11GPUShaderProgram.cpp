@@ -550,7 +550,7 @@ void D3D11GPUShaderProgram::InternalSetParameterValueArray(D3D11GPUContext *pCon
         pContext->WriteConstantBufferStrided(constantBuffer->EngineConstantBufferIndex, parameterIndex, bufferOffset, parameterInfo->ArrayStride, valueSize, numElements, pValue);
 }
 
-void D3D11GPUShaderProgram::InternalSetParameterStruct(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize)
+void D3D11GPUShaderProgram::InternalSetParameterStruct(D3D11GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize)
 {
     const Parameter *parameterInfo = &m_parameters[parameterIndex];
     DebugAssert(pContext == m_pBoundContext);
@@ -566,7 +566,7 @@ void D3D11GPUShaderProgram::InternalSetParameterStruct(GPUContext *pContext, uin
     pContext->WriteConstantBuffer(constantBuffer->EngineConstantBufferIndex, parameterIndex, parameterInfo->ConstantBufferOffset, valueSize, pValue, false);
 }
 
-void D3D11GPUShaderProgram::InternalSetParameterStructArray(GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
+void D3D11GPUShaderProgram::InternalSetParameterStructArray(D3D11GPUContext *pContext, uint32 parameterIndex, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
 {
     const Parameter *parameterInfo = &m_parameters[parameterIndex];
     DebugAssert(pContext == m_pBoundContext);
@@ -683,36 +683,6 @@ void D3D11GPUShaderProgram::GetParameterInformation(uint32 index, const char **n
     *name = parameter->Name;
     *type = parameter->Type;
     *arraySize = parameter->ArraySize;
-}
-
-void D3D11GPUShaderProgram::SetParameterValue(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue)
-{
-    InternalSetParameterValue(static_cast<D3D11GPUContext *>(pContext), index, valueType, pValue);
-}
-
-void D3D11GPUShaderProgram::SetParameterValueArray(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements)
-{
-    InternalSetParameterValueArray(static_cast<D3D11GPUContext *>(pContext), index, valueType, pValue, firstElement, numElements);
-}
-
-void D3D11GPUShaderProgram::SetParameterStruct(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize)
-{
-    InternalSetParameterStruct(pContext, index, pValue, valueSize);
-}
-
-void D3D11GPUShaderProgram::SetParameterStructArray(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements)
-{
-    InternalSetParameterStructArray(pContext, index, pValue, valueSize, firstElement, numElements);
-}
-
-void D3D11GPUShaderProgram::SetParameterResource(GPUContext *pContext, uint32 index, GPUResource *pResource)
-{
-    InternalSetParameterResource(static_cast<D3D11GPUContext *>(pContext), index, pResource, nullptr);
-}
-
-void D3D11GPUShaderProgram::SetParameterTexture(GPUContext *pContext, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState)
-{
-    InternalSetParameterResource(static_cast<D3D11GPUContext *>(pContext), index, pTexture, pSamplerState);
 }
 
 GPUShaderProgram *D3D11GPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)

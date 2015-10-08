@@ -96,7 +96,7 @@ void ShaderProgramSelector::SetQueueEntry(const RENDER_QUEUE_RENDERABLE_ENTRY *p
     SetVertexFactory(pQueueEntry->pVertexFactoryTypeInfo, pQueueEntry->VertexFactoryFlags);
 }
 
-ShaderProgram *ShaderProgramSelector::MakeActive(GPUContext *pContext)
+ShaderProgram *ShaderProgramSelector::MakeActive(GPUCommandList *pCommandList)
 {
     if (m_dirtyFlags == 0)
         return m_pCurrentProgram;
@@ -111,13 +111,13 @@ ShaderProgram *ShaderProgramSelector::MakeActive(GPUContext *pContext)
             return nullptr;
 
         // bind shader
-        pContext->SetShaderProgram(m_pCurrentProgram->GetGPUProgram());
+        pCommandList->SetShaderProgram(m_pCurrentProgram->GetGPUProgram());
     }
 
     // bind materials
     if ((dirtyFlags & DirtyMaterial) && m_pMaterial != nullptr)
     {
-        if (m_pCurrentProgram == nullptr || !m_pMaterial->BindDeviceResources(pContext, m_pCurrentProgram))
+        if (m_pCurrentProgram == nullptr || !m_pMaterial->BindDeviceResources(pCommandList, m_pCurrentProgram))
             return nullptr;
     }
 

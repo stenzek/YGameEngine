@@ -324,21 +324,21 @@ void SkeletalMeshRenderProxy::QueueForRender(const Camera *pCamera, RenderQueue 
     }
 }
 
-void SkeletalMeshRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void SkeletalMeshRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
     const SkeletalMesh::Batch *pBatch = m_pSkeletalMesh->GetBatch(pQueueEntry->UserData[0]);
-    SkeletalMeshVertexFactory::SetBoneMatrices(pGPUContext, pShaderProgram, 0, pBatch->BoneRefCount, &m_boneTransforms[pBatch->BaseBoneRef]);
+    SkeletalMeshVertexFactory::SetBoneMatrices(pCommandList, pShaderProgram, 0, pBatch->BoneRefCount, &m_boneTransforms[pBatch->BaseBoneRef]);
 
-    pGPUContext->GetConstants()->SetLocalToWorldMatrix(m_localToWorldMatrix, true);
-    pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
-    m_VertexBuffers.BindBuffers(pGPUContext);
-    pGPUContext->SetIndexBuffer(m_pSkeletalMesh->GetIndexBuffer(), GPU_INDEX_FORMAT_UINT16, 0);
+    pCommandList->GetConstants()->SetLocalToWorldMatrix(m_localToWorldMatrix, true);
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+    m_VertexBuffers.BindBuffers(pCommandList);
+    pCommandList->SetIndexBuffer(m_pSkeletalMesh->GetIndexBuffer(), GPU_INDEX_FORMAT_UINT16, 0);
 }
 
-void SkeletalMeshRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void SkeletalMeshRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
     const SkeletalMesh::Batch *pBatch = m_pSkeletalMesh->GetBatch(pQueueEntry->UserData[0]);
-    pGPUContext->DrawIndexed(pBatch->FirstIndex, pBatch->IndexCount, pBatch->BaseVertex);
+    pCommandList->DrawIndexed(pBatch->FirstIndex, pBatch->IndexCount, pBatch->BaseVertex);
 }
 
 bool SkeletalMeshRenderProxy::CreateDeviceResources() const
@@ -475,7 +475,7 @@ void SkeletalMeshRenderProxy::ResetToBaseFrameTransform()
     }
 }
 
-void SkeletalMeshRenderProxy::DrawDebugInfo(const Camera *pCamera, GPUContext *pGPUContext, MiniGUIContext *pGUIContext) const
+void SkeletalMeshRenderProxy::DrawDebugInfo(const Camera *pCamera, GPUCommandList *pCommandList, MiniGUIContext *pGUIContext) const
 {
     if (CVars::r_show_skeletons.GetBool())
     {

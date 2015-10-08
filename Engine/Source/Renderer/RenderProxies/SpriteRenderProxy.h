@@ -21,7 +21,7 @@ public:
     void SetShadowFlags(uint32 shadowFlags);
 
     virtual void QueueForRender(const Camera *pCamera, RenderQueue *pRenderQueue) const override;
-    virtual void DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const override;
+    virtual void DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const override;
     virtual bool CreateDeviceResources() const override;
     virtual void ReleaseDeviceResources() const override;
 

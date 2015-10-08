@@ -286,25 +286,25 @@ void StaticMeshRenderProxy::QueueForRender(const Camera *pCamera, RenderQueue *p
     }
 }
 
-void StaticMeshRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void StaticMeshRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
     uint32 lodIndex = pQueueEntry->UserData[0];
     const StaticMesh::LOD *pLOD = m_pStaticMesh->GetLOD(lodIndex);
 
-    pGPUContext->GetConstants()->SetLocalToWorldMatrix(m_localToWorldMatrix, true);
-    pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+    pCommandList->GetConstants()->SetLocalToWorldMatrix(m_localToWorldMatrix, true);
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
 
-    pLOD->GetVertexBuffers()->BindBuffers(pGPUContext);
-    pGPUContext->SetIndexBuffer(pLOD->GetIndexBuffer(), pLOD->GetIndexFormat(), 0);
+    pLOD->GetVertexBuffers()->BindBuffers(pCommandList);
+    pCommandList->SetIndexBuffer(pLOD->GetIndexBuffer(), pLOD->GetIndexFormat(), 0);
 }
 
-void StaticMeshRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void StaticMeshRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
     uint32 lodIndex = pQueueEntry->UserData[0];
     uint32 batchIndex = pQueueEntry->UserData[1];
     const StaticMesh::Batch *pBatch = m_pStaticMesh->GetLOD(lodIndex)->GetBatch(batchIndex);
 
-    pGPUContext->DrawIndexed(pBatch->StartIndex, pBatch->NumIndices, 0);
+    pCommandList->DrawIndexed(pBatch->StartIndex, pBatch->NumIndices, 0);
 }
 
 bool StaticMeshRenderProxy::CreateDeviceResources() const

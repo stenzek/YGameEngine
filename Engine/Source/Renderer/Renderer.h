@@ -314,12 +314,6 @@ public:
     // --- parameters ---
     virtual uint32 GetParameterCount() const = 0;
     virtual void GetParameterInformation(uint32 index, const char **name, SHADER_PARAMETER_TYPE *type, uint32 *arraySize) = 0;
-    virtual void SetParameterValue(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue) = 0;
-    virtual void SetParameterValueArray(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements) = 0;
-    virtual void SetParameterStruct(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize) = 0;
-    virtual void SetParameterStructArray(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements) = 0;
-    virtual void SetParameterResource(GPUContext *pContext, uint32 index, GPUResource *pResource) = 0;
-    virtual void SetParameterTexture(GPUContext *pContext, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) = 0;
 };
 
 class GPUShaderPipeline : public GPUShaderProgram
@@ -587,15 +581,12 @@ public:
 
     // Shader Setup
     virtual void SetShaderProgram(GPUShaderProgram *pShaderProgram) = 0;
-//     virtual void GetShaderConstantBuffers(uint32 firstBuffer, uint32 nBuffers, GPUBuffer **ppBuffers, uint32 *pBufferOffsets, uint32 *pBufferSizes) = 0;
-//     virtual void SetShaderConstantBuffers(uint32 firstBuffer, uint32 nBuffers, GPUBuffer *const *ppBuffers, const uint32 *pBufferOffsets, const uint32 *pBufferSizes) = 0;
-//     virtual void SetShaderConstantBuffer(uint32 bufferIndex, GPUBuffer *pBuffer, uint32 offset, uint32 size) = 0;
-//     virtual void GetShaderTextures(uint32 firstTexture, uint32 nTextures, GPUTexture **ppTextures) = 0;
-//     virtual void SetShaderTextures(uint32 firstTexture, uint32 nTextures, GPUTexture *const *ppTextures) = 0;
-//     virtual void SetShaderTexture(uint32 textureIndex, GPUTexture *pTexture) = 0;
-//     virtual void GetShaderSamplers(uint32 firstSampler, uint32 nSamplers, GPUSamplerState **ppSamplers) = 0;
-//     virtual void SetShaderSamplers(uint32 firstSampler, uint32 nSamplers, GPUSamplerState *const *ppSamplers) = 0;
-//     virtual void SetShaderSampler(uint32 samplerIndex, GPUSamplerState *pSampler) = 0;
+    virtual void SetShaderParameterValue(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue) = 0;
+    virtual void SetShaderParameterValueArray(uint32 index, SHADER_PARAMETER_TYPE valueType, const void *pValue, uint32 firstElement, uint32 numElements) = 0;
+    virtual void SetShaderParameterStruct(uint32 index, const void *pValue, uint32 valueSize) = 0;
+    virtual void SetShaderParameterStructArray(uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements) = 0;
+    virtual void SetShaderParameterResource(uint32 index, GPUResource *pResource) = 0;
+    virtual void SetShaderParameterTexture(uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) = 0;
 
     // Constant Buffers
     virtual void WriteConstantBuffer(uint32 bufferIndex, uint32 fieldIndex, uint32 offset, uint32 count, const void *pData, bool commit = false) = 0;

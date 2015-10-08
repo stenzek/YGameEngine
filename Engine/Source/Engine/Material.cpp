@@ -206,7 +206,7 @@ bool Material::CreateDeviceResources() const
     return true;
 }
 
-bool Material::BindDeviceResources(GPUContext *pContext, ShaderProgram *pProgram) const
+bool Material::BindDeviceResources(GPUCommandList *pCommandList, ShaderProgram *pProgram) const
 {
     uint32 i;
 
@@ -214,12 +214,12 @@ bool Material::BindDeviceResources(GPUContext *pContext, ShaderProgram *pProgram
         return false;
 
     for (i = 0; i < m_ShaderUniformParameters.GetSize(); i++)
-        pProgram->SetMaterialParameterValue(pContext, i, m_pShader->GetUniformParameter(i)->Type, &m_ShaderUniformParameters[i]);
+        pProgram->SetMaterialParameterValue(pCommandList, i, m_pShader->GetUniformParameter(i)->Type, &m_ShaderUniformParameters[i]);
 
     for (i = 0; i < m_ShaderTextureParameters.GetSize(); i++)
     {
         const MaterialShader::TextureParameter::Value &value = m_ShaderTextureParameters[i];
-        pProgram->SetMaterialParameterResource(pContext, i, (value.pGPUTexture != NULL) ? value.pGPUTexture : value.pTexture->GetGPUTexture());
+        pProgram->SetMaterialParameterResource(pCommandList, i, (value.pGPUTexture != NULL) ? value.pGPUTexture : value.pTexture->GetGPUTexture());
     }
     
     return true;

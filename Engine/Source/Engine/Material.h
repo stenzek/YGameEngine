@@ -28,7 +28,7 @@ public:
 
     // device resource management
     bool CreateDeviceResources() const;
-    bool BindDeviceResources(GPUContext *pContext, ShaderProgram *pProgram) const;
+    bool BindDeviceResources(GPUCommandList *pCommandList, ShaderProgram *pProgram) const;
     void ReleaseDeviceResources() const;
 
     // wrappers to shader

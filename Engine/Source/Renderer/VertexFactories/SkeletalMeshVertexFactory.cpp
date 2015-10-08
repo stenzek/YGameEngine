@@ -11,16 +11,16 @@ BEGIN_SHADER_COMPONENT_PARAMETERS(SkeletalMeshVertexFactory)
     DEFINE_SHADER_COMPONENT_PARAMETER("BoneMatrices4x4", SHADER_PARAMETER_TYPE_FLOAT4X4)
 END_SHADER_COMPONENT_PARAMETERS()
 
-void SkeletalMeshVertexFactory::SetBoneMatrices(GPUContext *pContext, ShaderProgram *pShaderProgram, uint32 firstBoneIndex, uint32 boneCount, const float3x4 *pBoneMatrices)
+void SkeletalMeshVertexFactory::SetBoneMatrices(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, uint32 firstBoneIndex, uint32 boneCount, const float3x4 *pBoneMatrices)
 {
-    pShaderProgram->SetVertexFactoryParameterValueArray(pContext, 0, SHADER_PARAMETER_TYPE_FLOAT3X4, pBoneMatrices, firstBoneIndex, boneCount);
+    pShaderProgram->SetVertexFactoryParameterValueArray(pCommandList, 0, SHADER_PARAMETER_TYPE_FLOAT3X4, pBoneMatrices, firstBoneIndex, boneCount);
     if (g_pRenderer->GetFeatureLevel() == RENDERER_FEATURE_LEVEL_ES2)
     {
         // Fixme, please, this is disgusting.
         for (uint32 i = 0; i < boneCount; i++)
         {
             float4x4 bm44(pBoneMatrices[i]);
-            pShaderProgram->SetVertexFactoryParameterValueArray(pContext, 1, SHADER_PARAMETER_TYPE_FLOAT4X4, &bm44, firstBoneIndex + i, 1);
+            pShaderProgram->SetVertexFactoryParameterValueArray(pCommandList, 1, SHADER_PARAMETER_TYPE_FLOAT4X4, &bm44, firstBoneIndex + i, 1);
         }
     }
 }

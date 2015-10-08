@@ -26,22 +26,22 @@ public:
     GPUShaderProgram *GetGPUProgram() const { return m_pGPUProgram; }
 
     // --- parameter tables ---
-    void SetBaseShaderParameterValue(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const;
-    void SetBaseShaderParameterValueArray(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const;
-    void SetBaseShaderParameterStruct(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize) const;
-    void SetBaseShaderParameterStructArray(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements) const;
-    void SetBaseShaderParameterResource(GPUContext *pContext, uint32 index, GPUResource *pResource) const;
-    void SetBaseShaderParameterTexture(GPUContext *pContext, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const;
-    void SetVertexFactoryParameterValue(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const;
-    void SetVertexFactoryParameterValueArray(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const;
-    void SetVertexFactoryParameterStruct(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize) const;
-    void SetVertexFactoryParameterStructArray(GPUContext *pContext, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements) const;
-    void SetVertexFactoryParameterResource(GPUContext *pContext, uint32 index, GPUResource *pResource) const;
-    void SetVertexFactoryParameterTexture(GPUContext *pContext, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const;
-    void SetMaterialParameterValue(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const;
-    void SetMaterialParameterValueArray(GPUContext *pContext, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const;
-    void SetMaterialParameterResource(GPUContext *pContext, uint32 index, GPUResource *pResource) const;
-    void SetMaterialParameterTexture(GPUContext *pContext, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const;
+    void SetBaseShaderParameterValue(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const;
+    void SetBaseShaderParameterValueArray(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const;
+    void SetBaseShaderParameterStruct(GPUCommandList *pCommandList, uint32 index, const void *pValue, uint32 valueSize) const;
+    void SetBaseShaderParameterStructArray(GPUCommandList *pCommandList, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements) const;
+    void SetBaseShaderParameterResource(GPUCommandList *pCommandList, uint32 index, GPUResource *pResource) const;
+    void SetBaseShaderParameterTexture(GPUCommandList *pCommandList, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const;
+    void SetVertexFactoryParameterValue(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const;
+    void SetVertexFactoryParameterValueArray(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const;
+    void SetVertexFactoryParameterStruct(GPUCommandList *pCommandList, uint32 index, const void *pValue, uint32 valueSize) const;
+    void SetVertexFactoryParameterStructArray(GPUCommandList *pCommandList, uint32 index, const void *pValue, uint32 valueSize, uint32 firstElement, uint32 numElements) const;
+    void SetVertexFactoryParameterResource(GPUCommandList *pCommandList, uint32 index, GPUResource *pResource) const;
+    void SetVertexFactoryParameterTexture(GPUCommandList *pCommandList, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const;
+    void SetMaterialParameterValue(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValue) const;
+    void SetMaterialParameterValueArray(GPUCommandList *pCommandList, uint32 index, SHADER_PARAMETER_TYPE type, const void *pValues, uint32 firstElement, uint32 numElements) const;
+    void SetMaterialParameterResource(GPUCommandList *pCommandList, uint32 index, GPUResource *pResource) const;
+    void SetMaterialParameterTexture(GPUCommandList *pCommandList, uint32 index, GPUTexture *pTexture, GPUSamplerState *pSamplerState) const;
 
     // comparitor
     static int32 Compare(const ShaderProgram *a, const ShaderProgram *b);

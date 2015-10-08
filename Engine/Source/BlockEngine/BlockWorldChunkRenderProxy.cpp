@@ -216,7 +216,7 @@ BlockWorldChunkRenderProxy *BlockWorldChunkRenderProxy::CreateForChunk(uint32 en
 #endif
 
     // upload to gpu, either deferred or immediate
-    if (0 && g_pRenderer->GetCapabilities().SupportsMultithreadedResourceCreation)
+    if (g_pRenderer->GetCapabilities().SupportsMultithreadedResourceCreation)
     {
         // if deferred upload fails, queue it for next frame
         if (!pRenderProxy->UploadMeshToGPU(pBuilder))
@@ -442,14 +442,14 @@ void BlockWorldChunkRenderProxy::QueueForRender(const Camera *pCamera, RenderQue
     }
 }
 
-void BlockWorldChunkRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void BlockWorldChunkRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
     if (pQueueEntry->UserData[0] == 0)
     {
-        pGPUContext->GetConstants()->SetLocalToWorldMatrix(m_transformMatrix, true);
-        pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
-        m_vertexBuffers.BindBuffers(pGPUContext);
-        pGPUContext->SetIndexBuffer(m_pIndexBuffer, m_indexFormat, 0);
+        pCommandList->GetConstants()->SetLocalToWorldMatrix(m_transformMatrix, true);
+        pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+        m_vertexBuffers.BindBuffers(pCommandList);
+        pCommandList->SetIndexBuffer(m_pIndexBuffer, m_indexFormat, 0);
     }
     else
     {
@@ -457,15 +457,15 @@ void BlockWorldChunkRenderProxy::SetupForDraw(const Camera *pCamera, const RENDE
         const StaticMesh *pMesh = m_pPalette->GetMesh(renderMeshInstance.MeshIndex);
         const StaticMesh::LOD *pLOD = pMesh->GetLOD(pQueueEntry->UserData[1]);
         
-        pGPUContext->GetConstants()->SetLocalToWorldMatrix(m_transformMatrix, true);
-        pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
-        pGPUContext->SetVertexBuffer(0, pLOD->GetVertexBuffers()->GetBuffer(0), pLOD->GetVertexBuffers()->GetBufferOffset(0), pLOD->GetVertexBuffers()->GetBufferStride(0));
-        pGPUContext->SetVertexBuffer(1, m_pMeshInstanceBuffer, renderMeshInstance.InstanceBufferOffset, sizeof(float3x4));
-        pGPUContext->SetIndexBuffer(pLOD->GetIndexBuffer(), pLOD->GetIndexFormat(), 0);
+        pCommandList->GetConstants()->SetLocalToWorldMatrix(m_transformMatrix, true);
+        pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+        pCommandList->SetVertexBuffer(0, pLOD->GetVertexBuffers()->GetBuffer(0), pLOD->GetVertexBuffers()->GetBufferOffset(0), pLOD->GetVertexBuffers()->GetBufferStride(0));
+        pCommandList->SetVertexBuffer(1, m_pMeshInstanceBuffer, renderMeshInstance.InstanceBufferOffset, sizeof(float3x4));
+        pCommandList->SetIndexBuffer(pLOD->GetIndexBuffer(), pLOD->GetIndexFormat(), 0);
     }
 }
 
-void BlockWorldChunkRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void BlockWorldChunkRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
     if (pQueueEntry->UserData[0] == 0)
     {
@@ -473,7 +473,7 @@ void BlockWorldChunkRenderProxy::DrawQueueEntry(const Camera *pCamera, const REN
         DebugAssert(batchIndex < m_renderBatches.GetSize());
 
         const RenderBatch &renderBatch = m_renderBatches[batchIndex];
-        pGPUContext->DrawIndexed(renderBatch.StartIndex, renderBatch.IndexCount, 0);
+        pCommandList->DrawIndexed(renderBatch.StartIndex, renderBatch.IndexCount, 0);
     }
     else
     {
@@ -482,11 +482,11 @@ void BlockWorldChunkRenderProxy::DrawQueueEntry(const Camera *pCamera, const REN
         const StaticMesh::LOD *pLOD = pMesh->GetLOD(pQueueEntry->UserData[1]);
         const StaticMesh::Batch *pBatch = pLOD->GetBatch(pQueueEntry->UserData[2]);
 
-        pGPUContext->DrawIndexedInstanced(pBatch->StartIndex, pBatch->NumIndices, 0, renderMeshInstance.InstanceCount);
+        pCommandList->DrawIndexedInstanced(pBatch->StartIndex, pBatch->NumIndices, 0, renderMeshInstance.InstanceCount);
     }
 }
 
-void BlockWorldChunkRenderProxy::DrawDebugInfo(const Camera *pCamera, GPUContext *pGPUContext, MiniGUIContext *pGUIContext) const
+void BlockWorldChunkRenderProxy::DrawDebugInfo(const Camera *pCamera, GPUCommandList *pCommandList, MiniGUIContext *pGUIContext) const
 {
     if (CVars::r_block_world_show_lods.GetBool())
     {

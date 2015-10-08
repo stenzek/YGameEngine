@@ -38,7 +38,7 @@ public:
     virtual void ReleaseGPUResources() override;
 
     // readers for renderproxy
-    bool BindGridBuffers(GPUContext *pGPUDevice) const;
+    bool BindGridBuffers(GPUCommandList *pCommandList) const;
     uint32 GetGridSize() const { return m_gridSize; }
     uint32 GetGridIndexCount() const { return m_indexCount; }
     uint32 GetGridIndexCountPerSubQuad() const { return m_indexCountPerSubQuad; }
@@ -95,9 +95,9 @@ public:
 
     // RenderProxy methods
     virtual void QueueForRender(const Camera *pCamera, RenderQueue *pRenderQueue) const override;
-    virtual void SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const override;
-    virtual void DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const override;
-    virtual void DrawDebugInfo(const Camera *pCamera, GPUContext *pGPUContext, MiniGUIContext *pGUIContext) const override;
+    virtual void SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const override;
+    virtual void DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const override;
+    virtual void DrawDebugInfo(const Camera *pCamera, GPUCommandList *pCommandList, MiniGUIContext *pGUIContext) const override;
 
 private:
     // texture creators
@@ -110,11 +110,11 @@ private:
 
     // helpers
     void CalculateMorphConstants(float cameraNearDistance, float cameraFarDistance) const;
-    void SetupTerrainDraw(const TerrainQuadTreeNode *pNode, GPUContext *pDevice, ShaderProgram *pShaderProgram) const;
-    void InvokeTerrainDraw(GPUContext *pDevice, uint32 drawFlags) const;
-    bool BuildDetailBatches(GPUContext *pGPUContext, const float3 &eyePosition) const;
-    void SetupDetailBatchDraw(uint32 detailBatchIndex, uint32 meshLODIndex, uint32 meshBatchIndex, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const;
-    void InvokeDetailBatchDraw(uint32 detailBatchIndex, uint32 meshLODIndex, uint32 meshBatchIndex, GPUContext *pGPUContext) const;
+    void SetupTerrainDraw(const TerrainQuadTreeNode *pNode, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const;
+    void InvokeTerrainDraw(GPUCommandList *pCommandList, uint32 drawFlags) const;
+    bool BuildDetailBatches(GPUCommandList *pCommandList, const float3 &eyePosition) const;
+    void SetupDetailBatchDraw(uint32 detailBatchIndex, uint32 meshLODIndex, uint32 meshBatchIndex, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const;
+    void InvokeDetailBatchDraw(uint32 detailBatchIndex, uint32 meshLODIndex, uint32 meshBatchIndex, GPUCommandList *pCommandList) const;
 
     // vars
     const TerrainRendererCDLOD *m_pRenderer;

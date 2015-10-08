@@ -347,7 +347,7 @@ void BlockDrawTemplate::BlockRenderProxy::QueueForRender(const Camera *pCamera, 
     }
 }
 
-void BlockDrawTemplate::BlockRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext, ShaderProgram *pShaderProgram) const
+void BlockDrawTemplate::BlockRenderProxy::SetupForDraw(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList, ShaderProgram *pShaderProgram) const
 {
     const Batch &batchInfo = m_pDrawTemplate->m_batches[pQueueEntry->UserData[0]];
 
@@ -358,9 +358,9 @@ void BlockDrawTemplate::BlockRenderProxy::SetupForDraw(const Camera *pCamera, co
             return;
 
         // bind the mesh buffers
-        pMeshLOD->GetVertexBuffers()->BindBuffers(pGPUContext);
-        pGPUContext->SetIndexBuffer(pMeshLOD->GetIndexBuffer(), pMeshLOD->GetIndexFormat(), 0);
-        pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+        pMeshLOD->GetVertexBuffers()->BindBuffers(pCommandList);
+        pCommandList->SetIndexBuffer(pMeshLOD->GetIndexBuffer(), pMeshLOD->GetIndexFormat(), 0);
+        pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
 
         // bit of a hack, we just fudge the world matrix to push the mesh to the right location..
         float scale = batchInfo.pBlockType->MeshShapeSettings.Scale;
@@ -369,22 +369,22 @@ void BlockDrawTemplate::BlockRenderProxy::SetupForDraw(const Camera *pCamera, co
                                    0.0f, 0.0f, scale, 0.0f,
                                    0.0f, 0.0f, 0.0f, 1.0f);
 
-        pGPUContext->GetConstants()->SetLocalToWorldMatrix(m_transformMatrix * worldMatrixOffset, true);
+        pCommandList->GetConstants()->SetLocalToWorldMatrix(m_transformMatrix * worldMatrixOffset, true);
     }
     else
     {
-        pGPUContext->SetVertexBuffer(0, m_pDrawTemplate->m_pVertexBuffer, 0, sizeof(BlockWorldVertexFactory::Vertex));
-        pGPUContext->SetIndexBuffer(m_pDrawTemplate->m_pIndexBuffer, GPU_INDEX_FORMAT_UINT16, 0);
-        pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
-        pGPUContext->GetConstants()->SetLocalToWorldMatrix(m_transformMatrix, true);
+        pCommandList->SetVertexBuffer(0, m_pDrawTemplate->m_pVertexBuffer, 0, sizeof(BlockWorldVertexFactory::Vertex));
+        pCommandList->SetIndexBuffer(m_pDrawTemplate->m_pIndexBuffer, GPU_INDEX_FORMAT_UINT16, 0);
+        pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+        pCommandList->GetConstants()->SetLocalToWorldMatrix(m_transformMatrix, true);
     }
 }
 
-void BlockDrawTemplate::BlockRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUContext *pGPUContext) const
+void BlockDrawTemplate::BlockRenderProxy::DrawQueueEntry(const Camera *pCamera, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, GPUCommandList *pCommandList) const
 {
     const Batch &batchInfo = m_pDrawTemplate->m_batches[pQueueEntry->UserData[0]];
 
-    pGPUContext->DrawIndexed(batchInfo.BaseIndex + batchInfo.FirstIndex, batchInfo.IndexCount, batchInfo.BaseVertex);
+    pCommandList->DrawIndexed(batchInfo.BaseIndex + batchInfo.FirstIndex, batchInfo.IndexCount, batchInfo.BaseVertex);
 }
 
 void BlockDrawTemplate::BlockRenderProxy::UpdateBounds()

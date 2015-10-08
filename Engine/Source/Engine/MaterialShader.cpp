@@ -6,7 +6,7 @@
 #include "Renderer/VertexFactory.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/RenderQueue.h"
-//Log_SetChannel(MaterialShader);
+Log_SetChannel(MaterialShader);
 
 DEFINE_RESOURCE_TYPE_INFO(MaterialShader);
 DEFINE_RESOURCE_GENERIC_FACTORY(MaterialShader);
@@ -108,6 +108,13 @@ bool MaterialShader::Load(const char *resourceName, ByteStream *pStream)
         pDestinationStaticSwitchParameter->DefaultValue = staticSwitchHeader.DefaultValue;
         if (!binaryReader.SafeReadFixedString(staticSwitchHeader.NameLength, &pDestinationStaticSwitchParameter->Name))
             return false;
+    }
+
+    // create on gpu
+    if (!CreateDeviceResources())
+    {
+        Log_ErrorPrintf("GPU upload failed.");
+        return false;
     }
 
     // ok

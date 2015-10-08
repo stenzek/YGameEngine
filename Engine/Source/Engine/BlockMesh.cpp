@@ -171,7 +171,20 @@ bool BlockMesh::Load(const char *resourceName, ByteStream *pStream)
         return false;
     }
     
-    return pStream->InErrorState();
+    if (pStream->InErrorState())
+    {
+        Log_DevPrintf("Stream in error state.");
+        return false;
+    }
+
+    // create on gpu
+    if (!CreateGPUResources())
+    {
+        Log_ErrorPrintf("GPU upload failed.");
+        return false;
+    }
+
+    return true;
 }
 
 bool BlockMesh::CreateRenderData()

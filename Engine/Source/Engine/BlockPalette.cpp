@@ -457,6 +457,13 @@ bool BlockPalette::Load(const char *FileName, ByteStream *pStream)
 
 #undef ABORTREASON
 
+    // create on gpu
+    if (!CreateGPUResources())
+    {
+        Log_ErrorPrintf("GPU upload failed.");
+        return false;
+    }
+
     return true;
 }
 

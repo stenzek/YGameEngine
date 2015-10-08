@@ -178,6 +178,14 @@ bool Material::Load(const char *resourceName, ByteStream *pStream)
 
     // store static switch mask
     m_iShaderStaticSwitchMask = header.StaticSwitchMask;
+
+    // create on gpu
+    if (!CreateDeviceResources())
+    {
+        Log_ErrorPrintf("GPU upload failed.");
+        return false;
+    }
+
     return true;
 }
 

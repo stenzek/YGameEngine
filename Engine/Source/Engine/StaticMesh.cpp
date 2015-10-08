@@ -253,6 +253,13 @@ bool StaticMesh::LOD::LoadFromStream(ByteStream *pStream, uint32 vertexFactoryFl
         delete[] fileBatches;
     }
 
+    // create on gpu
+    if (!CreateGPUResources())
+    {
+        Log_ErrorPrintf("GPU upload failed.");
+        return false;
+    }
+
     m_loaded = true;
     return true;
 }

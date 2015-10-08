@@ -367,6 +367,13 @@ bool Texture2D::Load(const char *name, ByteStream *pStream)
             return false;
     }
 
+    // create on gpu
+    if (!CreateDeviceResources())
+    {
+        Log_ErrorPrintf("GPU upload failed.");
+        return false;
+    }
+
     return true;
 }
 
@@ -606,6 +613,13 @@ bool Texture2DArray::Load(const char *name, ByteStream *pStream)
             return false;
     }
 
+    // create on gpu
+    if (!CreateDeviceResources())
+    {
+        Log_ErrorPrintf("GPU upload failed.");
+        return false;
+    }
+
     return true;
 }
 
@@ -795,6 +809,13 @@ bool TextureCube::Load(const char *name, ByteStream *pStream)
         dstImage.pPixels = new byte[dstImage.Size];
         if (!pStream->Read2(dstImage.pPixels, dstImage.Size))
             return false;
+    }
+
+    // create on gpu
+    if (!CreateDeviceResources())
+    {
+        Log_ErrorPrintf("GPU upload failed.");
+        return false;
     }
 
     return true;

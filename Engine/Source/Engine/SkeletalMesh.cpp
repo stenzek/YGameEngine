@@ -208,6 +208,14 @@ bool SkeletalMesh::LoadFromStream(const char *name, ByteStream *pStream)
 
     // done
     m_strName = name;
+
+    // create on gpu
+    if (!CreateGPUResources())
+    {
+        Log_ErrorPrintf("GPU upload failed.");
+        return false;
+    }
+
     return true;
 }
 

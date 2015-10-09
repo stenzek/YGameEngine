@@ -35,7 +35,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Source\Core\QueuedAllocator.h" />
     <ClInclude Include="YBaseLib\Include\YBaseLib\AlignedMemArray.h" />
     <ClInclude Include="YBaseLib\Include\YBaseLib\Android\AndroidBarrier.h" />
     <ClInclude Include="YBaseLib\Include\YBaseLib\Android\AndroidConditionVariable.h" />
@@ -59,6 +58,7 @@
     <ClInclude Include="YBaseLib\Include\YBaseLib\CallbackQueue.h" />
     <ClInclude Include="YBaseLib\Include\YBaseLib\CircularBuffer.h" />
     <ClInclude Include="YBaseLib\Include\YBaseLib\CIStringHashTable.h" />
+    <ClInclude Include="YBaseLib\Include\YBaseLib\QueuedAllocator.h" />
     <ClInclude Include="YBaseLib\Include\YBaseLib\Sockets\BaseSocket.h" />
     <ClInclude Include="YBaseLib\Include\YBaseLib\Sockets\BufferedStreamSocket.h" />
     <ClInclude Include="YBaseLib\Include\YBaseLib\Sockets\Common.h" />

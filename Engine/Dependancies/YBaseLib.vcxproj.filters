@@ -221,7 +221,7 @@
     <ClInclude Include="YBaseLib\Include\YBaseLib\Sockets\Generic\ListenSocket.h">
       <Filter>Sockets\Generic</Filter>
     </ClInclude>
-    <ClInclude Include="..\Source\Core\QueuedAllocator.h" />
+    <ClInclude Include="YBaseLib\Include\YBaseLib\QueuedAllocator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="YBaseLib\Source\YBaseLib\HTML5\HTML5FileSystem.cpp">

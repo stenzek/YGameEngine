@@ -1032,6 +1032,10 @@ public:
     // CreateGraphicsPipeline
     // CreateComputePipeline
 
+    // command list allocator
+    GPUCommandList *AllocateCommandList();
+    void ReleaseCommandList(GPUCommandList *pCommandList);
+
 protected:
     // allowed to be called by upper classes
     bool BaseOnStart();
@@ -1068,6 +1072,10 @@ protected:
 
     // stats
     RendererCounters m_stats;
+
+    // command list pool
+    PODArray<GPUCommandList *> m_freeCommandListPool;
+    uint32 m_outstandingCommandListCount;
 
 private:
     bool InternalDrawPlain(GPUContext *pGPUDevice, const PlainVertexFactory::Vertex *pVertices, uint32 nVertices, uint32 flags);

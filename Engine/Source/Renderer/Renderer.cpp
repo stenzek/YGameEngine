@@ -508,6 +508,14 @@ void Renderer::BaseOnShutdown()
 
     // release all non-material shaders
     m_nullMaterialShaderMap.ReleaseGPUResources();
+
+    // free command list pool
+    Assert(m_outstandingCommandListCount == 0);
+    while (m_freeCommandListPool.GetSize() > 0)
+    {
+        GPUCommandList *pCommandList = m_freeCommandListPool.PopFront();
+        pCommandList->Release();
+    }
 }
 
 void Renderer::CorrectProjectionMatrix(float4x4 &projectionMatrix)
@@ -927,6 +935,30 @@ GPUShaderProgram *Renderer::CreateComputeProgram(ByteStream *pByteCodeStream)
         pReturnValue = GetGPUDevice()->CreateComputeProgram(pByteCodeStream);
     });
     return pReturnValue;
+}
+
+GPUCommandList *Renderer::AllocateCommandList()
+{
+    DebugAssert(Renderer::IsOnRenderThread());
+    m_outstandingCommandListCount++;
+
+    // free one in pool?
+    if (m_freeCommandListPool.GetSize() > 0)
+        return m_freeCommandListPool.PopFront();
+
+    // alloc new
+    GPUCommandList *pCommandList = GetGPUContext()->CreateCommandList();
+    if (pCommandList == nullptr)
+        Log_ErrorPrintf("Command list allocation failed.");
+
+    return pCommandList;
+}
+
+void Renderer::ReleaseCommandList(GPUCommandList *pCommandList)
+{
+    DebugAssert(m_outstandingCommandListCount > 0);
+    m_freeCommandListPool.Add(pCommandList);
+    m_outstandingCommandListCount--;
 }
 
 bool Renderer::ChangeResolution(RENDERER_FULLSCREEN_STATE state, uint32 width /*= 0*/, uint32 height /*= 0*/, uint32 refreshRate /*= 0*/)

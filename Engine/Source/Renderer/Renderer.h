@@ -953,7 +953,7 @@ public:
     static const bool IsOnRenderThread() { return (Thread::GetCurrentThreadId() == s_renderThreadId); }
     static const bool HasRenderThread() { return (s_renderCommandQueue.GetWorkerThreadCount() != 0); }
     static TaskQueue *GetCommandQueue() { return &s_renderCommandQueue; }
-    static TaskQueue *GetRenderWorkerCommandQueue() { return &s_renderWorkerCommandQueue; }
+    static TaskQueue *GetWorkerCommandQueue() { return &s_renderWorkerCommandQueue; }
 
     // accesses shader permutation
     ShaderProgram *GetShaderProgram(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const GPU_VERTEX_ELEMENT_DESC *pVertexAttributes, uint32 nVertexAttributes, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
@@ -1080,4 +1080,5 @@ extern Renderer *g_pRenderer;
 #define QUEUE_RENDERER_LAMBDA_COMMAND g_pRenderer->GetCommandQueue()->QueueLambdaTask
 #define QUEUE_BLOCKING_RENDERER_COMMAND(obj) g_pRenderer->GetCommandQueue()->QueueBlockingTask(&obj, sizeof(obj))
 #define QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND g_pRenderer->GetCommandQueue()->QueueBlockingLambdaTask
-
+#define QUEUE_RENDERER_WORKER_COMMAND(obj) g_pRenderer->GetWorkerCommandQueue()->QueueTask(&obj, sizeof(obj))
+#define QUEUE_RENDERER_WORKER_LAMBDA_COMMAND g_pRenderer->GetWorkerCommandQueue()->QueueLambdaTask

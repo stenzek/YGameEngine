@@ -135,9 +135,9 @@ void Engine::Shutdown()
     for (;;)
     {
         bool result;
-        result = m_asyncCommandQueue.ExecuteQueuedCommands();
-        result |= m_backgroundCommandQueue.ExecuteQueuedCommands();
-        result |= m_mainThreadCommandQueue.ExecuteQueuedCommands();
+        result = m_asyncCommandQueue.ExecuteQueuedTasks();
+        result |= m_backgroundCommandQueue.ExecuteQueuedTasks();
+        result |= m_mainThreadCommandQueue.ExecuteQueuedTasks();
         if (result)
             continue;
         else

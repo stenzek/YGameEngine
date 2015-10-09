@@ -592,14 +592,14 @@ void BaseGame::MainThreadFrame(float deltaTime)
 
     // wait for async commands to finish, use the main thread to help them out
     {
-        MICROPROFILE_SCOPEI("BaseGame", "CompleteAsyncCommands", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
-        g_pEngine->GetAsyncCommandQueue()->ExecuteQueuedCommands();
+        MICROPROFILE_SCOPEI("BaseGame", "CompleteAsyncTasks", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+        g_pEngine->GetAsyncCommandQueue()->ExecuteQueuedTasks();
     }
 
     // run any callbacks
     {
-        MICROPROFILE_SCOPEI("BaseGame", "ExecuteQueuedCommands", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
-        g_pEngine->GetMainThreadCommandQueue()->ExecuteQueuedCommands();
+        MICROPROFILE_SCOPEI("BaseGame", "ExecuteQueuedTasks", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+        g_pEngine->GetMainThreadCommandQueue()->ExecuteQueuedTasks();
     }
 
     // run normal tick

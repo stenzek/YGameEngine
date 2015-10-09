@@ -35,6 +35,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Source\Core\QueuedAllocator.h" />
     <ClInclude Include="YBaseLib\Include\YBaseLib\AlignedMemArray.h" />
     <ClInclude Include="YBaseLib\Include\YBaseLib\Android\AndroidBarrier.h" />
     <ClInclude Include="YBaseLib\Include\YBaseLib\Android\AndroidConditionVariable.h" />

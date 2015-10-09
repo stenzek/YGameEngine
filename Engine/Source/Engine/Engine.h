@@ -2,6 +2,7 @@
 #include "Engine/Common.h"
 #include "Engine/CommandQueue.h"
 #include "Core/RandomNumberGenerator.h"
+#include "YBaseLib/TaskQueue.h"
 
 class Font;
 
@@ -45,9 +46,9 @@ public:
     virtual void Shutdown();
 
     // command queue access
-    CommandQueue *GetMainThreadCommandQueue() { return &m_mainThreadCommandQueue; }
-    CommandQueue *GetAsyncCommandQueue() { return &m_asyncCommandQueue; }
-    CommandQueue *GetBackgroundCommandQueue() { return &m_backgroundCommandQueue; }
+    TaskQueue *GetMainThreadCommandQueue() { return &m_mainThreadCommandQueue; }
+    TaskQueue *GetAsyncCommandQueue() { return &m_asyncCommandQueue; }
+    TaskQueue *GetBackgroundCommandQueue() { return &m_backgroundCommandQueue; }
 
     // game thread random number generator
     // can only be accessed from game thread!
@@ -84,13 +85,13 @@ private:
     ThreadPool *m_pWorkerThreadPool;
 
     // main thread command queue
-    CommandQueue m_mainThreadCommandQueue;
+    TaskQueue m_mainThreadCommandQueue;
 
     // async command queue
-    CommandQueue m_asyncCommandQueue;
+    TaskQueue m_asyncCommandQueue;
 
     // background command queue
-    CommandQueue m_backgroundCommandQueue;
+    TaskQueue m_backgroundCommandQueue;
 
     // random number generator
     RandomNumberGenerator m_randomNumberGenerator;
@@ -99,9 +100,9 @@ private:
 extern Engine *g_pEngine;
 
 // command queue helper macros
-#define QUEUE_MAIN_THREAD_COMMAND(obj) g_pEngine->GetMainThreadCommandQueue()->QueueCommand(&obj, sizeof(obj))
-#define QUEUE_MAIN_THREAD_LAMBDA_COMMAND g_pEngine->GetMainThreadCommandQueue()->QueueLambdaCommand
-#define QUEUE_ASYNC_COMMAND(obj) g_pEngine->GetAsyncCommandQueue()->QueueCommand(&obj, sizeof(obj))
-#define QUEUE_ASYNC_LAMBDA_COMMAND g_pEngine->GetAsyncCommandQueue()->QueueLambdaCommand
-#define QUEUE_BACKGROUND_COMMAND(obj) g_pEngine->GetBackgroundCommandQueue()->QueueCommand(&obj, sizeof(obj))
-#define QUEUE_BACKGROUND_LAMBDA_COMMAND g_pEngine->GetBackgroundCommandQueue()->QueueLambdaCommand
+#define QUEUE_MAIN_THREAD_COMMAND(obj) g_pEngine->GetMainThreadCommandQueue()->QueueTask(&obj, sizeof(obj))
+#define QUEUE_MAIN_THREAD_LAMBDA_COMMAND g_pEngine->GetMainThreadCommandQueue()->QueueLambdaTask
+#define QUEUE_ASYNC_COMMAND(obj) g_pEngine->GetAsyncCommandQueue()->QueueTask(&obj, sizeof(obj))
+#define QUEUE_ASYNC_LAMBDA_COMMAND g_pEngine->GetAsyncCommandQueue()->QueueLambdaTask
+#define QUEUE_BACKGROUND_COMMAND(obj) g_pEngine->GetBackgroundCommandQueue()->QueueTask(&obj, sizeof(obj))
+#define QUEUE_BACKGROUND_LAMBDA_COMMAND g_pEngine->GetBackgroundCommandQueue()->QueueLambdaTask

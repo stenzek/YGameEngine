@@ -456,6 +456,7 @@ Renderer::Renderer(RenderBackend *pBackendInterface, RendererOutputWindow *pOutp
     : m_fixedResources(this)
     , m_pBackendInterface(pBackendInterface)
     , m_pImplicitOutputWindow(pOutputWindow)
+    , m_outstandingCommandListCount(0)
 {
     m_eRendererPlatform = pBackendInterface->GetPlatform();
     m_eRendererFeatureLevel = pBackendInterface->GetFeatureLevel();

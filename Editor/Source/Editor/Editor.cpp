@@ -503,7 +503,7 @@ void Editor::OnFrameExecuteTimerTriggered()
     OnFrameExecution(timeSinceLastFrame);
 
     // run any render commands queued from other threads
-    g_pRenderer->GetCommandQueue()->ExecuteQueuedCommands();
+    g_pRenderer->GetCommandQueue()->ExecuteQueuedTasks();
 
     // estimate the current fps
     //m_editorFPS = (float)(1000.0 / m_lastFrameTime.GetTimeMilliseconds());

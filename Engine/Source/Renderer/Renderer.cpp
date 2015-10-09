@@ -73,7 +73,7 @@ static const RENDERER_PLATFORM_FACTORY_FUNCTION s_renderSystemDeclarations[] =
 // active renderer pointer
 Renderer *g_pRenderer = NULL;
 Thread::ThreadIdType Renderer::s_renderThreadId = static_cast<Thread::ThreadIdType>(0);
-CommandQueue Renderer::s_renderCommandQueue;
+TaskQueue Renderer::s_renderCommandQueue;
 
 //----------------------------------------------------- Output Window Class ----------------------------------------------------------------------------------------------------------
 
@@ -238,7 +238,7 @@ bool Renderer::Create(const RendererInitializationParameters *pCreateParameters)
     StartRenderThread(pCreateParameters->EnableThreadedRendering);
 
     // event that gets triggered once the renderer is created, or creation fails
-    s_renderCommandQueue.QueueBlockingLambdaCommand([pCreateParameters]()
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([pCreateParameters]()
     {
         // initialize video subsystem
         static bool sdlVideoSubSystemInitialized = false;
@@ -422,7 +422,7 @@ void Renderer::Shutdown()
     Log_InfoPrint("------ Renderer::Shutdown() -------");
 
     // has to be executed on the render thread
-    s_renderCommandQueue.QueueBlockingLambdaCommand([]()
+    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([]()
     {
         // save backend interface pointer
         RenderBackend *pBackendInterface = g_pRenderer->m_pBackendInterface;

@@ -1124,7 +1124,7 @@ void BaseGame::MainThreadGameLoopIteration()
         // not using render thread, we run in a different order (process logic, then render, to reduce wait-for-vsync stalls)
         MainThreadFrame(deltaTime);
         RenderThreadFrame(deltaTime);
-        Renderer::GetCommandQueue()->ExecuteQueuedCommands();
+        Renderer::GetCommandQueue()->ExecuteQueuedTasks();
     }
 
     // end of this modal state?

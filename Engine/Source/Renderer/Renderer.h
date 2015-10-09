@@ -1,7 +1,7 @@
 #pragma once
 #include "Renderer/Common.h"
 #include "Renderer/RendererTypes.h"
-#include "Engine/CommandQueue.h"
+#include "YBaseLib/TaskQueue.h"
 
 // Include helper classes
 #include "Renderer/VertexFactories/PlainVertexFactory.h"        // <--- TODO REMOVE ME
@@ -952,7 +952,8 @@ public:
     static const Thread::ThreadIdType GetRenderThreadId() { return s_renderThreadId; }
     static const bool IsOnRenderThread() { return (Thread::GetCurrentThreadId() == s_renderThreadId); }
     static const bool HasRenderThread() { return (s_renderCommandQueue.GetWorkerThreadCount() != 0); }
-    static CommandQueue *GetCommandQueue() { return &s_renderCommandQueue; }
+    static TaskQueue *GetCommandQueue() { return &s_renderCommandQueue; }
+    static TaskQueue *GetRenderWorkerCommandQueue() { return &s_renderWorkerCommandQueue; }
 
     // accesses shader permutation
     ShaderProgram *GetShaderProgram(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const GPU_VERTEX_ELEMENT_DESC *pVertexAttributes, uint32 nVertexAttributes, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
@@ -1040,7 +1041,8 @@ protected:
     static bool StartRenderThread(bool createWorkerThread);
     static void StopRenderThread();
     static Thread::ThreadIdType s_renderThreadId;
-    static CommandQueue s_renderCommandQueue;
+    static TaskQueue s_renderCommandQueue;
+    static TaskQueue s_renderWorkerCommandQueue;
 
     // renderer
     RENDERER_PLATFORM m_eRendererPlatform;
@@ -1074,8 +1076,8 @@ private:
 extern Renderer *g_pRenderer;
 
 // render thread helper macros
-#define QUEUE_RENDERER_COMMAND(obj) g_pRenderer->GetCommandQueue()->QueueCommand(&obj, sizeof(obj))
-#define QUEUE_RENDERER_LAMBDA_COMMAND g_pRenderer->GetCommandQueue()->QueueLambdaCommand
-#define QUEUE_BLOCKING_RENDERER_COMMAND(obj) g_pRenderer->GetCommandQueue()->QueueBlockingCommand(&obj, sizeof(obj))
-#define QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND g_pRenderer->GetCommandQueue()->QueueBlockingLambdaCommand
+#define QUEUE_RENDERER_COMMAND(obj) g_pRenderer->GetCommandQueue()->QueueTask(&obj, sizeof(obj))
+#define QUEUE_RENDERER_LAMBDA_COMMAND g_pRenderer->GetCommandQueue()->QueueLambdaTask
+#define QUEUE_BLOCKING_RENDERER_COMMAND(obj) g_pRenderer->GetCommandQueue()->QueueBlockingTask(&obj, sizeof(obj))
+#define QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND g_pRenderer->GetCommandQueue()->QueueBlockingLambdaTask
 

@@ -527,6 +527,7 @@ void OpenGLRenderBackend::GetCapabilities(RendererCapabilities *pCapabilities) c
     pCapabilities->MaximumSamplers = maxTextureUnits;
     pCapabilities->MaximumRenderTargets = maxRenderTargets;
     pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
+    pCapabilities->SupportsCommandLists = false;
     //pCapabilities->SupportsMultithreadedResourceCreation = true;
     pCapabilities->SupportsMultithreadedResourceCreation = false;
     pCapabilities->SupportsDrawBaseVertex = true; // @TODO

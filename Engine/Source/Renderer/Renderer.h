@@ -674,6 +674,7 @@ struct RendererCapabilities
     struct
     {
         bool SupportsMultithreadedResourceCreation : 1;
+        bool SupportsCommandLists : 1;
         bool SupportsDrawBaseVertex : 1;
         bool SupportsDepthTextures : 1;
         bool SupportsTextureArrays : 1;
@@ -681,7 +682,7 @@ struct RendererCapabilities
         bool SupportsGeometryShaders : 1;
         bool SupportsSinglePassCubeMaps : 1;
         bool SupportsInstancing : 1;
-    uint32: 1;
+        uint32: 1;
     };
 };
 

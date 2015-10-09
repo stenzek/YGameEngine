@@ -304,6 +304,7 @@ void D3D11RenderBackend::GetCapabilities(RendererCapabilities *pCapabilities) co
     pCapabilities->MaximumTextureUnits = D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT;
     pCapabilities->MaximumSamplers = D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT;
     pCapabilities->MaximumRenderTargets = D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
+    pCapabilities->SupportsCommandLists = false;
     pCapabilities->SupportsMultithreadedResourceCreation = true;
     pCapabilities->SupportsDrawBaseVertex = true;
     pCapabilities->SupportsDepthTextures = true;

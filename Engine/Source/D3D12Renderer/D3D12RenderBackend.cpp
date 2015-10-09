@@ -673,6 +673,7 @@ void D3D12RenderBackend::GetCapabilities(RendererCapabilities *pCapabilities) co
     pCapabilities->MaximumTextureUnits = D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS;
     pCapabilities->MaximumSamplers = D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS;
     pCapabilities->MaximumRenderTargets = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
+    pCapabilities->SupportsCommandLists = true;
     //pCapabilities->SupportsMultithreadedResourceCreation = true;
     pCapabilities->SupportsMultithreadedResourceCreation = false;
     pCapabilities->SupportsDrawBaseVertex = true;

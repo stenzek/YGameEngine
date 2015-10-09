@@ -271,6 +271,7 @@ void OpenGLES2RenderBackend::GetCapabilities(RendererCapabilities *pCapabilities
     pCapabilities->MaximumSamplers = maxTextureUnits;
     pCapabilities->MaximumRenderTargets = 1;
     pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
+    pCapabilities->SupportsCommandLists = false;
     pCapabilities->SupportsMultithreadedResourceCreation = false;
     pCapabilities->SupportsDrawBaseVertex = false;
     pCapabilities->SupportsDepthTextures = true;

@@ -1064,6 +1064,7 @@ protected:
 
     // non-material shader map
     ShaderMap m_nullMaterialShaderMap;
+    Mutex m_shaderLock;
 
     // state manager
     Renderer::FixedResources m_fixedResources;

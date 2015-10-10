@@ -1181,7 +1181,7 @@ void Renderer::BlitTextureUsingShader(GPUCommandList *pCommandList, GPUTexture2D
 
 ShaderProgram *Renderer::GetShaderProgram(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const GPU_VERTEX_ELEMENT_DESC *pVertexAttributes, uint32 nVertexAttributes, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
 {
-    DebugAssert(IsOnRenderThread());
+    MutexLock lock(m_shaderLock);
 
     // select shader map to use
     ShaderMap &shaderMap = (pMaterialShader != NULL) ? pMaterialShader->GetShaderMap() : m_nullMaterialShaderMap;
@@ -1192,7 +1192,7 @@ ShaderProgram *Renderer::GetShaderProgram(uint32 globalShaderFlags, const Shader
 
 ShaderProgram *Renderer::GetShaderProgram(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
 {
-    DebugAssert(IsOnRenderThread());
+    MutexLock lock(m_shaderLock);
 
     // select shader map to use
     ShaderMap &shaderMap = (pMaterialShader != NULL) ? pMaterialShader->GetShaderMap() : m_nullMaterialShaderMap;

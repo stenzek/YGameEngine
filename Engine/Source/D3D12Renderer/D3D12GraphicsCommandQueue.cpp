@@ -89,6 +89,8 @@ bool D3D12GraphicsCommandQueue::Initialize()
 
 void D3D12GraphicsCommandQueue::ReleaseStaleResources()
 {
+    DebugAssert(Renderer::IsOnRenderThread());
+
     // clean up as much as we can
     UpdateLastCompletedFenceValue();
     DeletePendingResources(m_lastCompletedFenceValue);
@@ -159,7 +161,7 @@ void D3D12GraphicsCommandQueue::InsertIntoPool(MemArray<KeyValuePair<T *, uint64
 ID3D12CommandAllocator *D3D12GraphicsCommandQueue::RequestCommandAllocator()
 {
     ID3D12CommandAllocator *pReturnAllocator;
-    DebugAssert(Renderer::IsOnRenderThread());
+    MutexLock lock(m_allocatorLock);
 
     // search the pool first
     pReturnAllocator = SearchPool<ID3D12CommandAllocator>(m_commandAllocatorPool);
@@ -216,6 +218,8 @@ ID3D12CommandAllocator *D3D12GraphicsCommandQueue::RequestCommandAllocator()
 
 void D3D12GraphicsCommandQueue::ReleaseCommandAllocator(ID3D12CommandAllocator *pAllocator, uint64 availableFenceValue)
 {
+    MutexLock lock(m_allocatorLock);
+
     DebugAssert(m_outstandingCommandAllocators > 0);
     InsertIntoPool<ID3D12CommandAllocator>(m_commandAllocatorPool, pAllocator, availableFenceValue);
     m_outstandingCommandAllocators--;
@@ -224,7 +228,7 @@ void D3D12GraphicsCommandQueue::ReleaseCommandAllocator(ID3D12CommandAllocator *
 D3D12LinearBufferHeap *D3D12GraphicsCommandQueue::RequestLinearBufferHeap()
 {
     D3D12LinearBufferHeap *pReturnHeap;
-    DebugAssert(Renderer::IsOnRenderThread());
+    MutexLock lock(m_allocatorLock);
 
     // search the pool first
     pReturnHeap = SearchPool<D3D12LinearBufferHeap>(m_linearBufferHeapPool);
@@ -265,6 +269,8 @@ D3D12LinearBufferHeap *D3D12GraphicsCommandQueue::RequestLinearBufferHeap()
 
 void D3D12GraphicsCommandQueue::ReleaseLinearBufferHeap(D3D12LinearBufferHeap *pHeap, uint64 availableFenceValue)
 {
+    MutexLock lock(m_allocatorLock);
+
     DebugAssert(m_outstandingLinearBufferHeaps > 0);
     InsertIntoPool<D3D12LinearBufferHeap>(m_linearBufferHeapPool, pHeap, availableFenceValue);
     m_outstandingLinearBufferHeaps--;
@@ -273,7 +279,7 @@ void D3D12GraphicsCommandQueue::ReleaseLinearBufferHeap(D3D12LinearBufferHeap *p
 D3D12LinearDescriptorHeap *D3D12GraphicsCommandQueue::RequestLinearViewHeap()
 {
     D3D12LinearDescriptorHeap *pReturnHeap;
-    DebugAssert(Renderer::IsOnRenderThread());
+    MutexLock lock(m_allocatorLock);
 
     // search the pool first
     pReturnHeap = SearchPool<D3D12LinearDescriptorHeap>(m_linearViewHeapPool);
@@ -314,6 +320,8 @@ D3D12LinearDescriptorHeap *D3D12GraphicsCommandQueue::RequestLinearViewHeap()
 
 void D3D12GraphicsCommandQueue::ReleaseLinearViewHeap(D3D12LinearDescriptorHeap *pHeap, uint64 availableFenceValue)
 {
+    MutexLock lock(m_allocatorLock);
+
     DebugAssert(m_outstandingLinearViewHeaps > 0);
     InsertIntoPool<D3D12LinearDescriptorHeap>(m_linearViewHeapPool, pHeap, availableFenceValue);
     m_outstandingLinearViewHeaps--;
@@ -322,7 +330,7 @@ void D3D12GraphicsCommandQueue::ReleaseLinearViewHeap(D3D12LinearDescriptorHeap 
 D3D12LinearDescriptorHeap *D3D12GraphicsCommandQueue::RequestLinearSamplerHeap()
 {
     D3D12LinearDescriptorHeap *pReturnHeap;
-    DebugAssert(Renderer::IsOnRenderThread());
+    MutexLock lock(m_allocatorLock);
 
     // search the pool first
     pReturnHeap = SearchPool<D3D12LinearDescriptorHeap>(m_linearSamplerHeapPool);
@@ -363,6 +371,8 @@ D3D12LinearDescriptorHeap *D3D12GraphicsCommandQueue::RequestLinearSamplerHeap()
 
 void D3D12GraphicsCommandQueue::ReleaseLinearSamplerHeap(D3D12LinearDescriptorHeap *pHeap, uint64 availableFenceValue)
 {
+    MutexLock lock(m_allocatorLock);
+
     DebugAssert(m_outstandingLinearSamplerHeaps > 0);
     InsertIntoPool<D3D12LinearDescriptorHeap>(m_linearSamplerHeapPool, pHeap, availableFenceValue);
     m_outstandingLinearSamplerHeaps--;
@@ -370,6 +380,7 @@ void D3D12GraphicsCommandQueue::ReleaseLinearSamplerHeap(D3D12LinearDescriptorHe
 
 void D3D12GraphicsCommandQueue::WaitForFence(uint64 fence)
 {
+    DebugAssert(Renderer::IsOnRenderThread());
     UpdateLastCompletedFenceValue();
 
     if (m_lastCompletedFenceValue < fence)
@@ -429,6 +440,8 @@ void D3D12GraphicsCommandQueue::ScheduleDescriptorForDeletion(const D3D12Descrip
 
 void D3D12GraphicsCommandQueue::DeletePendingResources(uint64 fenceValue)
 {
+    DebugAssert(Renderer::IsOnRenderThread());
+
     m_pendingResourceLock.Lock();
 
     for (uint32 i = 0; i < m_pendingDeletionResources.GetSize(); )

@@ -2,7 +2,6 @@
 #include "OpenGLRenderer/OpenGLGPUQuery.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
 #include "OpenGLRenderer/OpenGLGPUDevice.h"
-#include "OpenGLRenderer/OpenGLRenderBackend.h"
 //Log_SetChannel(OpenGLRenderBackend);
 
 OpenGLGPUQuery::OpenGLGPUQuery(GPU_QUERY_TYPE type, GLuint id)
@@ -38,6 +37,10 @@ void OpenGLGPUQuery::SetDebugName(const char *name)
 
 GPUQuery *OpenGLGPUDevice::CreateQuery(GPU_QUERY_TYPE Type)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     GLuint glQueryId = 0;
 
     switch (Type)
@@ -65,8 +68,6 @@ GPUQuery *OpenGLGPUDevice::CreateQuery(GPU_QUERY_TYPE Type)
         UnreachableCode();
         break;
     }
-
-    FlushOffThreadCommands();
 
     return new OpenGLGPUQuery(Type, glQueryId);
 }

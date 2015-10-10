@@ -2,7 +2,6 @@
 #include "OpenGLRenderer/OpenGLGPUShaderProgram.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
 #include "OpenGLRenderer/OpenGLGPUDevice.h"
-#include "OpenGLRenderer/OpenGLRenderBackend.h"
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(OpenGLRenderBackend);
 
@@ -254,7 +253,7 @@ bool OpenGLGPUShaderProgram::LoadBlob(OpenGLGPUDevice *pRenderer, const GPU_VERT
             else
             {
                 // lookup in engine constant buffer list
-                const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(uniformBuffer->Name, RENDERER_PLATFORM_OPENGL, OpenGLRenderBackend::GetInstance()->GetFeatureLevel());
+                const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(uniformBuffer->Name, RENDERER_PLATFORM_OPENGL, pRenderer->GetFeatureLevel());
                 if (pEngineConstantBuffer == nullptr)
                 {
                     Log_ErrorPrintf("OpenGLGPUShaderProgram::Create: Shader is requesting unknown non-local constant buffer named '%s'.", uniformBuffer->Name.GetCharArray());
@@ -921,6 +920,10 @@ void OpenGLGPUShaderProgram::GetParameterInformation(uint32 index, const char **
 
 GPUShaderProgram *OpenGLGPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     OpenGLGPUShaderProgram *pProgram = new OpenGLGPUShaderProgram();
     if (!pProgram->LoadBlob(this, pVertexElements, nVertexElements, pByteCodeStream))
     {
@@ -928,19 +931,20 @@ GPUShaderProgram *OpenGLGPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMEN
         return nullptr;
     }
 
-    FlushOffThreadCommands();
     return pProgram;
 }
 
 GPUShaderProgram *OpenGLGPUDevice::CreateComputeProgram(ByteStream *pByteCodeStream)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     OpenGLGPUShaderProgram *pProgram = new OpenGLGPUShaderProgram();
     if (!pProgram->LoadBlob(this, nullptr, 0, pByteCodeStream))
     {
         pProgram->Release();
         return nullptr;
     }
-
-    FlushOffThreadCommands();
     return pProgram;
 }

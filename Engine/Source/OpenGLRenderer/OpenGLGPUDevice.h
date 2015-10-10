@@ -119,8 +119,28 @@ private:
 class OpenGLGPUDevice : public GPUDevice
 {
 public:
-    OpenGLGPUDevice(SDL_GLContext pSDLGLContext, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat);
+    struct UploadContextReference
+    {
+        UploadContextReference(OpenGLGPUDevice *pDevice);
+        ~UploadContextReference();
+        bool HasContext() const;
+
+        OpenGLGPUDevice *pDevice;
+        bool ContextNeedsRelease;
+    };
+
+public:
+    OpenGLGPUDevice(SDL_GLContext pMainGLContext, SDL_GLContext pOffThreadGLContext, OpenGLGPUOutputBuffer *pImplicitOutputBuffer,
+                    RENDERER_FEATURE_LEVEL featureLevel, TEXTURE_PLATFORM texturePlatform, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat);
+
     ~OpenGLGPUDevice();
+
+    // Device queries.
+    virtual RENDERER_PLATFORM GetPlatform() const override final;
+    virtual RENDERER_FEATURE_LEVEL GetFeatureLevel() const override final;
+    virtual TEXTURE_PLATFORM GetTexturePlatform() const override final;
+    virtual void GetCapabilities(RendererCapabilities *pCapabilities) const override final;
+    virtual bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = nullptr) const override final;
 
     // Creates a swap chain on an existing window.
     virtual GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) override final;
@@ -152,20 +172,27 @@ public:
     virtual void EndResourceBatchUpload() override final;
 
     // helper methods
-    SDL_GLContext GetSDLGLContext() const { return m_pSDLGLContext; }
-    OpenGLGPUContext *GetGPUContext() const { return m_pGPUContext; }
-    void SetGPUContext(OpenGLGPUContext *pContext) { m_pGPUContext = pContext; }
+    SDL_GLContext GetGLContext() { return m_pMainGLContext; }
+    SDL_GLContext GetOffThreadGLContext();
+    void ReleaseOffThreadGLContext();
+    OpenGLGPUContext *GetImmediateContext() { return m_pImmediateContext; }
+    void SetImmediateContext(OpenGLGPUContext *pContext) { m_pImmediateContext = pContext; }
     void BindMutatorTextureUnit();
     void RestoreMutatorTextureUnit();
-    void FlushOffThreadCommands();
 
 private:
-    SDL_GLContext m_pSDLGLContext;
-    OpenGLGPUContext *m_pGPUContext;
+    SDL_GLContext m_pMainGLContext;
+    SDL_GLContext m_pOffThreadGLContext;
+    Mutex m_offThreadGLContextLock;
+
+    OpenGLGPUContext *m_pImmediateContext;
+    OpenGLGPUOutputBuffer *m_pImplicitOutputBuffer;
+
+    RENDERER_FEATURE_LEVEL m_featureLevel;
+    TEXTURE_PLATFORM m_texturePlatform;
+
     PIXEL_FORMAT m_outputBackBufferFormat;
     PIXEL_FORMAT m_outputDepthStencilFormat;
-    uint32 m_offThreadBatchEnableCount;
-    uint32 m_offThreadBatchUploadCount;
 };
 
 

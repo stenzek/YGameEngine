@@ -5,7 +5,6 @@
 #include "OpenGLRenderer/OpenGLGPUTexture.h"
 #include "OpenGLRenderer/OpenGLGPUBuffer.h"
 #include "OpenGLRenderer/OpenGLGPUShaderProgram.h"
-#include "OpenGLRenderer/OpenGLRenderBackend.h"
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(OpenGLRenderBackend);
 
@@ -14,7 +13,7 @@ Log_SetChannel(OpenGLRenderBackend);
 OpenGLGPUContext::OpenGLGPUContext(OpenGLGPUDevice *pDevice, SDL_GLContext pSDLGLContext, OpenGLGPUOutputBuffer *pOutputBuffer)
 {
     m_pDevice = pDevice;
-    m_pDevice->SetGPUContext(this);
+    m_pDevice->SetImmediateContext(this);
     m_pDevice->AddRef();
 
     m_pSDLGLContext = pSDLGLContext;
@@ -152,7 +151,7 @@ OpenGLGPUContext::~OpenGLGPUContext()
     SAFE_RELEASE(m_pCurrentOutputBuffer);
 
     // release device
-    m_pDevice->SetGPUContext(nullptr);
+    m_pDevice->SetImmediateContext(nullptr);
     m_pDevice->Release();
 }
 
@@ -1503,7 +1502,7 @@ bool OpenGLGPUContext::CreateConstantBuffers()
             continue;
         if (declaration->GetPlatformRequirement() != RENDERER_PLATFORM_COUNT && declaration->GetPlatformRequirement() != RENDERER_PLATFORM_OPENGL)
             continue;
-        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > OpenGLRenderBackend::GetInstance()->GetFeatureLevel())
+        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > m_pDevice->GetFeatureLevel())
             continue;
 
         // set size so we know to allocate it later or on demand

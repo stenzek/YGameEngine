@@ -1,5 +1,4 @@
 #include "OpenGLRenderer/PrecompiledHeader.h"
-#include "OpenGLRenderer/OpenGLRenderBackend.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
 #include "OpenGLRenderer/OpenGLGPUBuffer.h"
 #include "OpenGLRenderer/OpenGLGPUOutputBuffer.h"
@@ -7,26 +6,6 @@
 #include "Engine/EngineCVars.h"
 #include "Engine/SDLHeaders.h"
 Log_SetChannel(OpenGLRenderBackend);
-
-OpenGLRenderBackend *OpenGLRenderBackend::m_pInstance = nullptr;
-
-OpenGLRenderBackend::OpenGLRenderBackend()
-    : m_featureLevel(RENDERER_FEATURE_LEVEL_COUNT)
-    , m_texturePlatform(NUM_TEXTURE_PLATFORMS)
-    , m_outputBackBufferFormat(PIXEL_FORMAT_UNKNOWN)
-    , m_outputDepthStencilFormat(PIXEL_FORMAT_UNKNOWN)
-    , m_pGPUDevice(nullptr)
-    , m_pGPUContext(nullptr)
-{
-    DebugAssert(m_pInstance == nullptr);
-    m_pInstance = this;
-}
-
-OpenGLRenderBackend::~OpenGLRenderBackend()
-{
-    DebugAssert(m_pInstance == this);
-    m_pInstance = nullptr;
-}
 
 // our gl debug callback
 static void APIENTRY GLDebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
@@ -244,21 +223,21 @@ static void InitializeCurrentGLContext()
     }
 }
 
-bool OpenGLRenderBackend::Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer)
+bool OpenGLRenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, GPUDevice **ppDevice, GPUContext **ppImmediateContext, GPUOutputBuffer **ppOutputBuffer)
 {
     // select formats
-    m_outputBackBufferFormat = pCreateParameters->BackBufferFormat;
-    m_outputDepthStencilFormat = pCreateParameters->DepthStencilBufferFormat;
+    PIXEL_FORMAT outputBackBufferFormat = pCreateParameters->BackBufferFormat;
+    PIXEL_FORMAT outputDepthStencilFormat = pCreateParameters->DepthStencilBufferFormat;
 
     // if the backbuffer format is unspecified, use the best for the platform
-    if (m_outputBackBufferFormat == PIXEL_FORMAT_UNKNOWN)
+    if (outputBackBufferFormat == PIXEL_FORMAT_UNKNOWN)
     {
         // by default this is rgba8
-        m_outputBackBufferFormat = PIXEL_FORMAT_R8G8B8A8_UNORM;
+        outputBackBufferFormat = PIXEL_FORMAT_R8G8B8A8_UNORM;
     }
 
     // initialize colour attributes
-    if (!SetSDLGLColorAttributes(m_outputBackBufferFormat, m_outputDepthStencilFormat))
+    if (!SetSDLGLColorAttributes(outputBackBufferFormat, outputDepthStencilFormat))
     {
         Log_ErrorPrintf("OpenGLRenderBackend::Create: Failed to set opengl window system parameters.");
         return false;
@@ -274,7 +253,9 @@ bool OpenGLRenderBackend::Create(const RendererInitializationParameters *pCreate
     };
 
     // try creating each one until we get one
-    SDL_GLContext pSDLGLContext = nullptr;
+    SDL_GLContext pMainSDLGLContext = nullptr;
+    RENDERER_FEATURE_LEVEL featureLevel;
+    TEXTURE_PLATFORM texturePlatform;
     for (uint32 i = 0; i < countof(featureLevelCreationOrder); i++)
     {
         // set the attributes
@@ -283,8 +264,8 @@ bool OpenGLRenderBackend::Create(const RendererInitializationParameters *pCreate
 
         // try creation
         Log_DevPrintf("OpenGLRenderBackend::Create: Trying to create a %s context", NameTable_GetNameString(NameTables::RendererFeatureLevel, featureLevelCreationOrder[i]));
-        pSDLGLContext = SDL_GL_CreateContext(pSDLWindow);
-        if (pSDLGLContext == nullptr)
+        pMainSDLGLContext = SDL_GL_CreateContext(pSDLWindow);
+        if (pMainSDLGLContext == nullptr)
             continue;
 
         // log+return
@@ -295,28 +276,43 @@ bool OpenGLRenderBackend::Create(const RendererInitializationParameters *pCreate
         {
             Log_ErrorPrintf("OpenGLRenderBackend::Create: Failed to initialize GLEW");
             SDL_GL_MakeCurrent(nullptr, nullptr);
-            SDL_GL_DeleteContext(pSDLGLContext);
+            SDL_GL_DeleteContext(pMainSDLGLContext);
             continue;
         }
 
         // set context settings
-        m_featureLevel = featureLevelCreationOrder[i];
-        m_texturePlatform = (featureLevelCreationOrder[i] == RENDERER_FEATURE_LEVEL_SM4) ? TEXTURE_PLATFORM_DXTC : TEXTURE_PLATFORM_DXTC;
+        featureLevel = featureLevelCreationOrder[i];
+        texturePlatform = (featureLevelCreationOrder[i] == RENDERER_FEATURE_LEVEL_SM4) ? TEXTURE_PLATFORM_DXTC : TEXTURE_PLATFORM_DXTC;
         InitializeCurrentGLContext();
         break;
     }
 
     // failed?
-    if (pSDLGLContext == nullptr)
+    if (pMainSDLGLContext == nullptr)
     {
         Log_ErrorPrintf("OpenGLRenderBackend::Create: Failed to create an acceptable GL context");
         return nullptr;
     }
 
+    // create the off-thread context
+    SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+    SDL_GLContext pOffThreadGLContext = SDL_GL_CreateContext(pSDLWindow);
+    if (pOffThreadGLContext == nullptr)
+    {
+        SDL_GL_MakeCurrent(nullptr, nullptr);
+        SDL_GL_DeleteContext(pMainSDLGLContext);
+        Log_ErrorPrintf("OpenGLRenderBackend::Create: Failed to create off-thread GL context");
+        return nullptr;
+    }
+
+    // initialize off-thread context, and restore main context
+    InitializeCurrentGLContext();
+    SDL_GL_MakeCurrent(pSDLWindow, pMainSDLGLContext);
+
     // log some info
     {
-        Log_InfoPrintf("OpenGL Renderer Feature Level: %s", NameTable_GetNameString(NameTables::RendererFeatureLevelFullName, m_featureLevel));
-        Log_InfoPrintf("Texture Platform: %s", NameTable_GetNameString(NameTables::TexturePlatform, m_texturePlatform));
+        Log_InfoPrintf("OpenGL Renderer Feature Level: %s", NameTable_GetNameString(NameTables::RendererFeatureLevelFullName, featureLevel));
+        Log_InfoPrintf("Texture Platform: %s", NameTable_GetNameString(NameTables::TexturePlatform, texturePlatform));
 
         // log vendor info
         Log_InfoPrintf("GL_VENDOR: %s", (glGetString(GL_VENDOR) != NULL) ? glGetString(GL_VENDOR) : (const GLubyte *)"NULL");
@@ -369,7 +365,7 @@ bool OpenGLRenderBackend::Create(const RendererInitializationParameters *pCreate
     {
         Log_ErrorPrintf("OpenGLRenderBackend::Create: Requires support for at least %u vertex attributes and %u render targets. (%u/%u)", (uint32)GPU_INPUT_LAYOUT_MAX_ELEMENTS, (uint32)GPU_MAX_SIMULTANEOUS_RENDER_TARGETS, maxVertexAttributes, maxColorAttachments);
         SDL_GL_MakeCurrent(nullptr, nullptr);
-        SDL_GL_DeleteContext(pSDLGLContext);
+        SDL_GL_DeleteContext(pMainSDLGLContext);
         return false;
     }
 
@@ -408,174 +404,26 @@ bool OpenGLRenderBackend::Create(const RendererInitializationParameters *pCreate
         Log_WarningPrint("Missing GL_ARB_copy_image and GL_NV_copy_image, performance will suffer as a result. Please update your drivers.");
 
     // create output buffer
-    m_pImplicitOutputBuffer = new OpenGLGPUOutputBuffer(pSDLWindow, m_outputBackBufferFormat, m_outputDepthStencilFormat, pCreateParameters->ImplicitSwapChainVSyncType, false);
+    OpenGLGPUOutputBuffer *pImplicitOutputBuffer = new OpenGLGPUOutputBuffer(pSDLWindow, outputBackBufferFormat, outputDepthStencilFormat, pCreateParameters->ImplicitSwapChainVSyncType, false);
 
     // create device and context
-    m_pGPUDevice = new OpenGLGPUDevice(pSDLGLContext, m_outputBackBufferFormat, m_outputDepthStencilFormat);
-    m_pGPUContext = new OpenGLGPUContext(m_pGPUDevice, pSDLGLContext, m_pImplicitOutputBuffer);
-    if (!m_pGPUContext->Create())
+    OpenGLGPUDevice *pDevice = new OpenGLGPUDevice(pMainSDLGLContext, pOffThreadGLContext, pImplicitOutputBuffer, featureLevel, texturePlatform, outputBackBufferFormat, outputDepthStencilFormat);
+    OpenGLGPUContext *pContext = new OpenGLGPUContext(pDevice, pMainSDLGLContext, pImplicitOutputBuffer);
+    if (!pContext->Create())
     {
         Log_ErrorPrintf("OpenGLRenderBackend::Create: Could not create device context.");
+        pImplicitOutputBuffer->Release();
+        pContext->Release();
+        pDevice->Release();
         return false;
     }
-
-    // add references for returned pointers
-    m_pGPUDevice->AddRef();
-    m_pGPUContext->AddRef();
-    m_pImplicitOutputBuffer->AddRef();
 
     // set pointers
-    *ppBackend = this;
-    *ppDevice = m_pGPUDevice;
-    *ppContext = m_pGPUContext;
-    *ppOutputBuffer = m_pImplicitOutputBuffer;
+    *ppDevice = pDevice;
+    *ppImmediateContext = pContext;
+    *ppOutputBuffer = pImplicitOutputBuffer;
 
-    Log_InfoPrint("OpenGLRenderBackend::Create: Creation successful.");
-    return true;
-}
-
-void OpenGLRenderBackend::Shutdown()
-{
-    // cleanup our objects
-    SAFE_RELEASE(m_pImplicitOutputBuffer);
-    SAFE_RELEASE(m_pGPUContext);
-    SAFE_RELEASE(m_pGPUDevice);
-
-    // done
-    delete this;
-}
-
-// Since we have multiple threads, the last GL error has to be thread-local
-Y_DECLARE_THREAD_LOCAL(GLenum) s_lastGLError = GL_NO_ERROR;
-
-void OpenGLRenderBackend::ClearLastGLError()
-{
-    s_lastGLError = GL_NO_ERROR;
-    while (glGetError() != GL_NO_ERROR)
-        ;
-}
-
-GLenum OpenGLRenderBackend::CheckForGLError()
-{
-    GLenum error = glGetError();
-    s_lastGLError = error;
-    return (error != GL_NO_ERROR);
-}
-
-GLenum OpenGLRenderBackend::GetLastGLError()
-{
-    return s_lastGLError;
-}
-
-void OpenGLRenderBackend::PrintLastGLError(const char *format, ...)
-{
-    char buffer[128];
-    va_list ap;
-
-    va_start(ap, format);
-    Y_vsnprintf(buffer, countof(buffer), format, ap);
-    va_end(ap);
-
-    GLenum error = s_lastGLError;
-    if (error != GL_NO_ERROR)
-        Log_ErrorPrintf("%s%s (0x%X)", buffer, NameTable_GetNameString(NameTables::GLErrors, error), error);
-    else
-        Log_ErrorPrintf("%sno error", buffer);
-}
-
-bool OpenGLRenderBackend::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat /*= NULL*/) const
-{
-    // @TODO
-    return true;
-}
-
-RENDERER_PLATFORM OpenGLRenderBackend::GetPlatform() const
-{
-    return RENDERER_PLATFORM_OPENGL;
-}
-
-RENDERER_FEATURE_LEVEL OpenGLRenderBackend::GetFeatureLevel() const
-{
-    return m_featureLevel;
-}
-
-TEXTURE_PLATFORM OpenGLRenderBackend::GetTexturePlatform() const
-{
-    return m_texturePlatform;
-}
-
-void OpenGLRenderBackend::GetCapabilities(RendererCapabilities *pCapabilities) const
-{
-    // run glget calls
-    uint32 maxTextureAnisotropy = 0;
-    uint32 maxVertexAttributes = 0;
-    uint32 maxColorAttachments = 0;
-    uint32 maxUniformBufferBindings = 0;
-    uint32 maxTextureUnits = 0;
-    uint32 maxRenderTargets = 0;
-    glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, reinterpret_cast<GLint *>(&maxTextureAnisotropy));
-    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, reinterpret_cast<GLint *>(&maxVertexAttributes));
-    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, reinterpret_cast<GLint *>(&maxColorAttachments));
-    glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, reinterpret_cast<GLint *>(&maxUniformBufferBindings));
-    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, reinterpret_cast<GLint *>(&maxTextureUnits));
-    glGetIntegerv(GL_MAX_DRAW_BUFFERS, reinterpret_cast<GLint *>(&maxRenderTargets));
-
-    pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
-    pCapabilities->MaximumVertexBuffers = maxVertexAttributes;
-    pCapabilities->MaximumConstantBuffers = maxUniformBufferBindings;
-    pCapabilities->MaximumTextureUnits = maxTextureUnits;
-    pCapabilities->MaximumSamplers = maxTextureUnits;
-    pCapabilities->MaximumRenderTargets = maxRenderTargets;
-    pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
-    pCapabilities->SupportsCommandLists = false;
-    //pCapabilities->SupportsMultithreadedResourceCreation = true;
-    pCapabilities->SupportsMultithreadedResourceCreation = false;
-    pCapabilities->SupportsDrawBaseVertex = true; // @TODO
-    pCapabilities->SupportsDepthTextures = (GLAD_GL_ARB_depth_texture == GL_TRUE);
-    pCapabilities->SupportsTextureArrays = (GLAD_GL_EXT_texture_array == GL_TRUE);
-    pCapabilities->SupportsCubeMapTextureArrays = (GLAD_GL_ARB_texture_cube_map_array == GL_TRUE);
-    pCapabilities->SupportsGeometryShaders = (GLAD_GL_EXT_geometry_shader4 == GL_TRUE);
-    pCapabilities->SupportsSinglePassCubeMaps = (GLAD_GL_EXT_geometry_shader4 == GL_TRUE && GLAD_GL_ARB_viewport_array == GL_TRUE);
-    pCapabilities->SupportsInstancing = (GLAD_GL_EXT_draw_instanced == GL_TRUE);
-
-}
-
-GPUDevice *OpenGLRenderBackend::CreateDeviceInterface()
-{
-    // Create another SDL GL Context. Everything should already be initialized from the first context.
-    SDL_GLContext newContext = nullptr;
-    QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([this, &newContext]()
-    {
-        SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-        newContext = SDL_GL_CreateContext(m_pImplicitOutputBuffer->GetSDLWindow());
-        if (newContext == nullptr)
-        {
-            Log_ErrorPrintf("SDL_GL_CreateContext failed: %s", SDL_GetError());
-            return;
-        }
-
-        // restore old context
-        SDL_GL_MakeCurrent(m_pImplicitOutputBuffer->GetSDLWindow(), m_pGPUDevice->GetSDLGLContext());
-    });
-    if (newContext == nullptr)
-        return nullptr;
-
-    // Activate this context.
-    SDL_GL_MakeCurrent(m_pImplicitOutputBuffer->GetSDLWindow(), newContext);
-
-    // Create a device wrapping this context.
-    return new OpenGLGPUDevice(newContext, m_outputBackBufferFormat, m_outputDepthStencilFormat);
-}
-
-bool OpenGLRenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer)
-{
-    OpenGLRenderBackend *pBackend = new OpenGLRenderBackend();
-    if (!pBackend->Create(pCreateParameters, pSDLWindow, ppBackend, ppDevice, ppContext, ppOutputBuffer))
-    {
-        pBackend->Shutdown();
-        return false;
-    }
-
+    Log_InfoPrint("OpenGL render backend creation successful.");
     return true;
 }
 

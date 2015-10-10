@@ -720,3 +720,41 @@ void OpenGLHelpers::SetObjectDebugName(GLenum type, GLuint id, const char *debug
     }
 #endif
 }
+
+// Since we have multiple threads, the last GL error has to be thread-local
+Y_DECLARE_THREAD_LOCAL(GLenum) s_lastGLError = GL_NO_ERROR;
+
+void OpenGLHelpers::ClearLastGLError()
+{
+    s_lastGLError = GL_NO_ERROR;
+    while (glGetError() != GL_NO_ERROR)
+        ;
+}
+
+GLenum OpenGLHelpers::CheckForGLError()
+{
+    GLenum error = glGetError();
+    s_lastGLError = error;
+    return (error != GL_NO_ERROR);
+}
+
+GLenum OpenGLHelpers::GetLastGLError()
+{
+    return s_lastGLError;
+}
+
+void OpenGLHelpers::PrintLastGLError(const char *format, ...)
+{
+    char buffer[128];
+    va_list ap;
+
+    va_start(ap, format);
+    Y_vsnprintf(buffer, countof(buffer), format, ap);
+    va_end(ap);
+
+    GLenum error = s_lastGLError;
+    if (error != GL_NO_ERROR)
+        Log_ErrorPrintf("%s%s (0x%X)", buffer, NameTable_GetNameString(NameTables::GLErrors, error), error);
+    else
+        Log_ErrorPrintf("%sno error", buffer);
+}

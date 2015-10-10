@@ -2,7 +2,6 @@
 #include "OpenGLRenderer/OpenGLGPUBuffer.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
 #include "OpenGLRenderer/OpenGLGPUDevice.h"
-#include "OpenGLRenderer/OpenGLRenderBackend.h"
 Log_SetChannel(OpenGLRenderBackend);
 
 OpenGLGPUBuffer::OpenGLGPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, GLuint glBufferId, GLenum glBufferUsage)
@@ -37,6 +36,10 @@ void OpenGLGPUBuffer::SetDebugName(const char *debugName)
 
 GPUBuffer *OpenGLGPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData /* = NULL */)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     GL_CHECKED_SECTION_BEGIN();
 
     GLuint bufferId = 0;
@@ -78,7 +81,6 @@ GPUBuffer *OpenGLGPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const voi
     }
 
     // create object
-    FlushOffThreadCommands();
     return new OpenGLGPUBuffer(pDesc, bufferId, bufferUsage);
 }
 

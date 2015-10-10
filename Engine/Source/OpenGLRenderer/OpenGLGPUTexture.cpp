@@ -2,7 +2,6 @@
 #include "OpenGLRenderer/OpenGLGPUTexture.h"
 #include "OpenGLRenderer/OpenGLGPUContext.h"
 #include "OpenGLRenderer/OpenGLGPUDevice.h"
-#include "OpenGLRenderer/OpenGLRenderBackend.h"
 Log_SetChannel(OpenGLRenderBackend);
 
 //#undef GLEW_ARB_texture_storage
@@ -127,6 +126,10 @@ void OpenGLGPUTexture1D::SetDebugName(const char *name)
 
 GPUTexture1D *OpenGLGPUDevice::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
     DebugAssert(pPixelFormatInfo != nullptr && !pPixelFormatInfo->IsBlockCompressed);
@@ -245,9 +248,6 @@ GPUTexture1D *OpenGLGPUDevice::CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextur
         glDeleteTextures(1, &glTextureId);
         return nullptr;
     }
-
-    // flush if we're not main context
-    FlushOffThreadCommands();
 
     // create texture class
     return new OpenGLGPUTexture1D(pTextureDesc, glTextureId);
@@ -394,6 +394,10 @@ void OpenGLGPUTexture1DArray::SetDebugName(const char *name)
 
 GPUTexture1DArray *OpenGLGPUDevice::CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
     DebugAssert(pPixelFormatInfo != nullptr && !pPixelFormatInfo->IsBlockCompressed);
@@ -538,9 +542,6 @@ GPUTexture1DArray *OpenGLGPUDevice::CreateTexture1DArray(const GPU_TEXTURE1DARRA
         return nullptr;
     }
 
-    // flush if we're not main context
-    FlushOffThreadCommands();
-
     // create texture class
     return new OpenGLGPUTexture1DArray(pTextureDesc, glTextureId);
 }
@@ -675,6 +676,10 @@ void OpenGLGPUTexture2D::SetDebugName(const char *name)
 
 GPUTexture2D *OpenGLGPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
     DebugAssert(pPixelFormatInfo != nullptr);
@@ -853,9 +858,6 @@ GPUTexture2D *OpenGLGPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextur
         return nullptr;
     }
 
-    // flush if we're not main context
-    FlushOffThreadCommands();
-
     // create texture class
     return new OpenGLGPUTexture2D(pTextureDesc, glTextureId);
 }
@@ -1030,6 +1032,10 @@ void OpenGLGPUTexture2DArray::SetDebugName(const char *name)
 
 GPUTexture2DArray *OpenGLGPUDevice::CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
     DebugAssert(pPixelFormatInfo != nullptr);
@@ -1247,9 +1253,6 @@ GPUTexture2DArray *OpenGLGPUDevice::CreateTexture2DArray(const GPU_TEXTURE2DARRA
         return nullptr;
     }
 
-    // flush if we're not main context
-    FlushOffThreadCommands();
-
     // create texture class
     return new OpenGLGPUTexture2DArray(pTextureDesc, glTextureId);
 }
@@ -1412,6 +1415,10 @@ void OpenGLGPUTexture3D::SetDebugName(const char *name)
 
 GPUTexture3D *OpenGLGPUDevice::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */, const uint32 *pInitialDataSlicePitch /* = nullptr */)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
     DebugAssert(pPixelFormatInfo != nullptr);
@@ -1607,9 +1614,6 @@ GPUTexture3D *OpenGLGPUDevice::CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextur
         return nullptr;
     }
 
-    // flush if we're not main context
-    FlushOffThreadCommands();
-
     // create texture class
     return new OpenGLGPUTexture3D(pTextureDesc, glTextureId);
 }
@@ -1789,6 +1793,10 @@ void OpenGLGPUTextureCube::SetDebugName(const char *name)
 
 GPUTextureCube *OpenGLGPUDevice::CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
     DebugAssert(pPixelFormatInfo != nullptr);
@@ -2022,9 +2030,6 @@ GPUTextureCube *OpenGLGPUDevice::CreateTextureCube(const GPU_TEXTURECUBE_DESC *p
         return nullptr;
     }
 
-    // flush if we're not main context
-    FlushOffThreadCommands();
-
     // create texture class
     return new OpenGLGPUTextureCube(pTextureDesc, glTextureId);
 }
@@ -2188,6 +2193,10 @@ void OpenGLGPUTextureCubeArray::SetDebugName(const char *name)
 
 GPUTextureCubeArray *OpenGLGPUDevice::CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData /* = nullptr */, const uint32 *pInitialDataPitch /* = nullptr */)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
     DebugAssert(pPixelFormatInfo != nullptr);
@@ -2406,9 +2415,6 @@ GPUTextureCubeArray *OpenGLGPUDevice::CreateTextureCubeArray(const GPU_TEXTURECU
         return nullptr;
     }
 
-    // flush if we're not main context
-    FlushOffThreadCommands();
-
     // create texture class
     return new OpenGLGPUTextureCubeArray(pTextureDesc, glTextureId);
 }
@@ -2566,6 +2572,10 @@ void OpenGLGPUDepthTexture::SetDebugName(const char *name)
 
 GPUDepthTexture *OpenGLGPUDevice::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     // get pixel format info
     const PIXEL_FORMAT_INFO *pPixelFormatInfo = PixelFormat_GetPixelFormatInfo(pTextureDesc->Format);
     DebugAssert(pPixelFormatInfo != nullptr);
@@ -2604,9 +2614,6 @@ GPUDepthTexture *OpenGLGPUDevice::CreateDepthTexture(const GPU_DEPTH_TEXTURE_DES
         glDeleteTextures(1, &glRenderBufferId);
         return nullptr;
     }
-
-    // flush if we're not main context
-    FlushOffThreadCommands();
 
     // create texture class
     return new OpenGLGPUDepthTexture(pTextureDesc, glRenderBufferId);

@@ -59,7 +59,6 @@
     <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUShaderProgram.h" />
     <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUTexture.h" />
     <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUDevice.h" />
-    <ClInclude Include="Source\OpenGLRenderer\OpenGLRenderBackend.h" />
     <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUOutputBuffer.h" />
     <ClInclude Include="Source\OpenGLRenderer\OpenGLShaderCacheEntry.h" />
     <ClInclude Include="Source\OpenGLRenderer\PrecompiledHeader.h" />

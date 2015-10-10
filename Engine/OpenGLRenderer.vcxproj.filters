@@ -25,7 +25,6 @@
     <ClInclude Include="Source\OpenGLRenderer\OpenGLCVars.h" />
     <ClInclude Include="Source\OpenGLRenderer\PrecompiledHeader.h" />
     <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUDevice.h" />
-    <ClInclude Include="Source\OpenGLRenderer\OpenGLRenderBackend.h" />
     <ClInclude Include="Source\OpenGLRenderer\OpenGLGPUOutputBuffer.h" />
   </ItemGroup>
 </Project>

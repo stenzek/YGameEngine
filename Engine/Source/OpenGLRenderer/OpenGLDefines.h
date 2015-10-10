@@ -40,4 +40,15 @@ namespace OpenGLHelpers
     void ApplySamplerStateToTexture(GLenum target, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc);
 
     void SetObjectDebugName(GLenum type, GLuint id, const char *debugName);
+
+    // GL error handling
+    void ClearLastGLError();
+    GLenum CheckForGLError();
+    GLenum GetLastGLError();
+    void PrintLastGLError(const char *format, ...);
 }
+
+// shorter macros
+#define GL_CHECKED_SECTION_BEGIN() (OpenGLHelpers::ClearLastGLError())
+#define GL_CHECK_ERROR_STATE() (OpenGLHelpers::CheckForGLError() != GL_NO_ERROR)
+#define GL_PRINT_ERROR(...) OpenGLHelpers::PrintLastGLError(__VA_ARGS__)

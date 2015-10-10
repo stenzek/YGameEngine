@@ -1,77 +1,194 @@
 #include "OpenGLRenderer/PrecompiledHeader.h"
 #include "OpenGLRenderer/OpenGLGPUDevice.h"
-#include "OpenGLRenderer/OpenGLRenderBackend.h"
 #include "Engine/EngineCVars.h"
 Log_SetChannel(OpenGLRenderBackend);
 
-OpenGLGPUDevice::OpenGLGPUDevice(SDL_GLContext pSDLGLContext, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat)
-    : m_pSDLGLContext(pSDLGLContext)
-    , m_pGPUContext(nullptr)
+Y_DECLARE_THREAD_LOCAL(SDL_GLContext) s_currentThreadGLContext = nullptr;
+Y_DECLARE_THREAD_LOCAL(uint32) s_currentThreadUploadBatchCount = 0;
+
+OpenGLGPUDevice::UploadContextReference::UploadContextReference(OpenGLGPUDevice *pDevice)
+    : pDevice(pDevice)
+{
+    // Check if we have a context already. If not, use the off-thread context.
+    if (s_currentThreadGLContext != nullptr)
+    {
+        ContextNeedsRelease = false;
+        return;
+    }
+    else if (pDevice->GetOffThreadGLContext() != nullptr)
+    {
+        ContextNeedsRelease = true;
+        return;
+    }
+
+    // Flag us as not getting a context.
+    ContextNeedsRelease = false;
+    pDevice = nullptr;
+}
+
+OpenGLGPUDevice::UploadContextReference::~UploadContextReference()
+{
+    if (ContextNeedsRelease)
+        pDevice->ReleaseOffThreadGLContext();
+}
+
+bool OpenGLGPUDevice::UploadContextReference::HasContext() const
+{
+    return (pDevice != nullptr);
+}
+
+OpenGLGPUDevice::OpenGLGPUDevice(SDL_GLContext pMainGLContext, SDL_GLContext pOffThreadGLContext, OpenGLGPUOutputBuffer *pImplicitOutputBuffer, RENDERER_FEATURE_LEVEL featureLevel, TEXTURE_PLATFORM texturePlatform, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat)
+    : m_pMainGLContext(pMainGLContext)
+    , m_pOffThreadGLContext(pOffThreadGLContext)
+    , m_pImmediateContext(nullptr)
+    , m_pImplicitOutputBuffer(pImplicitOutputBuffer)
+    , m_featureLevel(featureLevel)
+    , m_texturePlatform(texturePlatform)
     , m_outputBackBufferFormat(outputBackBufferFormat)
     , m_outputDepthStencilFormat(outputDepthStencilFormat)
-    , m_offThreadBatchEnableCount(0)
-    , m_offThreadBatchUploadCount(0)
 {
-
+    m_pImplicitOutputBuffer->AddRef();
 }
 
 OpenGLGPUDevice::~OpenGLGPUDevice()
 {
-    // nuke GL context
+    DebugAssert(m_pImmediateContext == nullptr);
+
+    // clear current context
     SDL_GL_MakeCurrent(nullptr, nullptr);
-    SDL_GL_DeleteContext(m_pSDLGLContext);
+
+    // nuke off-thread gl context
+    SDL_GL_DeleteContext(m_pOffThreadGLContext);
+
+    // nuke main GL context
+    SDL_GL_DeleteContext(m_pMainGLContext);
+
+    // now the window/buffer can go
+    m_pImplicitOutputBuffer->Release();
+}
+
+RENDERER_PLATFORM OpenGLGPUDevice::GetPlatform() const
+{
+    return RENDERER_PLATFORM_OPENGL;
+}
+
+RENDERER_FEATURE_LEVEL OpenGLGPUDevice::GetFeatureLevel() const
+{
+    return m_featureLevel;
+}
+
+TEXTURE_PLATFORM OpenGLGPUDevice::GetTexturePlatform() const
+{
+    return m_texturePlatform;
+}
+
+void OpenGLGPUDevice::GetCapabilities(RendererCapabilities *pCapabilities) const
+{
+    // run glget calls
+    uint32 maxTextureAnisotropy = 0;
+    uint32 maxVertexAttributes = 0;
+    uint32 maxColorAttachments = 0;
+    uint32 maxUniformBufferBindings = 0;
+    uint32 maxTextureUnits = 0;
+    uint32 maxRenderTargets = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, reinterpret_cast<GLint *>(&maxTextureAnisotropy));
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, reinterpret_cast<GLint *>(&maxVertexAttributes));
+    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, reinterpret_cast<GLint *>(&maxColorAttachments));
+    glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, reinterpret_cast<GLint *>(&maxUniformBufferBindings));
+    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, reinterpret_cast<GLint *>(&maxTextureUnits));
+    glGetIntegerv(GL_MAX_DRAW_BUFFERS, reinterpret_cast<GLint *>(&maxRenderTargets));
+
+    pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
+    pCapabilities->MaximumVertexBuffers = maxVertexAttributes;
+    pCapabilities->MaximumConstantBuffers = maxUniformBufferBindings;
+    pCapabilities->MaximumTextureUnits = maxTextureUnits;
+    pCapabilities->MaximumSamplers = maxTextureUnits;
+    pCapabilities->MaximumRenderTargets = maxRenderTargets;
+    pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
+    pCapabilities->SupportsCommandLists = false;
+    //pCapabilities->SupportsMultithreadedResourceCreation = true;
+    pCapabilities->SupportsMultithreadedResourceCreation = false;
+    pCapabilities->SupportsDrawBaseVertex = true; // @TODO
+    pCapabilities->SupportsDepthTextures = (GLAD_GL_ARB_depth_texture == GL_TRUE);
+    pCapabilities->SupportsTextureArrays = (GLAD_GL_EXT_texture_array == GL_TRUE);
+    pCapabilities->SupportsCubeMapTextureArrays = (GLAD_GL_ARB_texture_cube_map_array == GL_TRUE);
+    pCapabilities->SupportsGeometryShaders = (GLAD_GL_EXT_geometry_shader4 == GL_TRUE);
+    pCapabilities->SupportsSinglePassCubeMaps = (GLAD_GL_EXT_geometry_shader4 == GL_TRUE && GLAD_GL_ARB_viewport_array == GL_TRUE);
+    pCapabilities->SupportsInstancing = (GLAD_GL_EXT_draw_instanced == GL_TRUE);
+
+}
+
+bool OpenGLGPUDevice::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat /*= NULL*/) const
+{
+    // @TODO
+    return true;
+}
+
+SDL_GLContext OpenGLGPUDevice::GetOffThreadGLContext()
+{
+    DebugAssert(s_currentThreadGLContext == nullptr);
+
+    m_offThreadGLContextLock.Lock();
+
+    SDL_GL_MakeCurrent(m_pImplicitOutputBuffer->GetSDLWindow(), m_pOffThreadGLContext);
+    s_currentThreadGLContext = m_pOffThreadGLContext;
+
+    return m_pOffThreadGLContext;
+}
+
+void OpenGLGPUDevice::ReleaseOffThreadGLContext()
+{
+    DebugAssert(s_currentThreadGLContext == m_pOffThreadGLContext);
+
+    // glFlush() or glFinish() for shared lists?
+    glFinish();
+
+    s_currentThreadGLContext = nullptr;
+    SDL_GL_MakeCurrent(nullptr, nullptr);
+
+    m_offThreadGLContextLock.Unlock();
 }
 
 
 void OpenGLGPUDevice::BindMutatorTextureUnit()
 {
-    if (m_pGPUContext != nullptr)
-        m_pGPUContext->BindMutatorTextureUnit();
+    if (m_pImmediateContext != nullptr)
+        m_pImmediateContext->BindMutatorTextureUnit();
 }
 
 void OpenGLGPUDevice::RestoreMutatorTextureUnit()
 {
-    if (m_pGPUContext != nullptr)
-        m_pGPUContext->RestoreMutatorTextureUnit();
+    if (m_pImmediateContext != nullptr)
+        m_pImmediateContext->RestoreMutatorTextureUnit();
 }
 
 void OpenGLGPUDevice::BeginResourceBatchUpload()
 {
-    if (m_pGPUContext != nullptr)
-        return;
+    // First time?
+    if ((s_currentThreadUploadBatchCount++) == 0)
+    {
+        // Either on main thread or no upload begun.
+        DebugAssert(s_currentThreadGLContext == m_pMainGLContext || s_currentThreadGLContext == nullptr);
 
-    m_offThreadBatchEnableCount++;
+        // If off-thread, get a context.
+        if (s_currentThreadGLContext == nullptr)
+            GetOffThreadGLContext();
+    }
 }
 
 void OpenGLGPUDevice::EndResourceBatchUpload()
 {
-    if (m_pGPUContext != nullptr)
-        return;
+    DebugAssert(s_currentThreadUploadBatchCount > 0);
 
-    DebugAssert(m_offThreadBatchEnableCount > 0);
-    if ((--m_offThreadBatchEnableCount) == 0)
+    if ((--s_currentThreadUploadBatchCount) == 0)
     {
-        if (m_offThreadBatchUploadCount > 0)
-        {
-            m_offThreadBatchUploadCount = 0;
-            glFlush();
-        }
-    }
-}
+        DebugAssert(s_currentThreadGLContext != nullptr);
 
-void OpenGLGPUDevice::FlushOffThreadCommands()
-{
-    if (m_pGPUContext == nullptr)
-    {
-        if (m_offThreadBatchEnableCount == 0)
+        // Are we on an off thread?
+        if (s_currentThreadGLContext != m_pMainGLContext)
         {
-            // glFlush() or glFinish() for shared lists?
-            glFlush();
-        }
-        else
-        {
-            // push it for later
-            m_offThreadBatchUploadCount++;
+            // Release context.
+            ReleaseOffThreadGLContext();
         }
     }
 }
@@ -106,6 +223,10 @@ void OpenGLGPUSamplerState::SetDebugName(const char *name)
 
 GPUSamplerState *OpenGLGPUDevice::CreateSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc)
 {
+    UploadContextReference ctxRef(this);
+    if (!ctxRef.HasContext())
+        return nullptr;
+
     GL_CHECKED_SECTION_BEGIN();
 
     GLuint samplerID = 0;
@@ -132,9 +253,6 @@ GPUSamplerState *OpenGLGPUDevice::CreateSamplerState(const GPU_SAMPLER_STATE_DES
         glSamplerParameterf(samplerID, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)pSamplerStateDesc->MaxAnisotropy);
     else
         glSamplerParameterf(samplerID, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.0f);
-
-    // flush if we're not main context
-    FlushOffThreadCommands();
 
     return new OpenGLGPUSamplerState(pSamplerStateDesc, samplerID);
 }

@@ -1770,9 +1770,7 @@ Renderer::FixedResources::~FixedResources()
 
 GPURasterizerState *Renderer::FixedResources::GetRasterizerState(RENDERER_FILL_MODE fillMode /*= RENDERER_FILL_SOLID*/, RENDERER_CULL_MODE cullMode /*= RENDERER_CULL_BACK*/, bool depthBias /*= false*/, bool depthClamping /*= false*/, bool scissorTest /*= false*/)
 {
-    DebugAssert(IsOnRenderThread());
-
-    GPURasterizerState *pRasterizerState = m_pRasterizerStates[fillMode][cullMode][depthBias][depthClamping][scissorTest];
+    GPURasterizerState *pRasterizerState = m_pRasterizerStates[fillMode][cullMode][depthBias][depthClamping][scissorTest].Load();
     if (pRasterizerState == nullptr)
     {
         RENDERER_RASTERIZER_STATE_DESC rasterizerStateDesc;
@@ -1790,7 +1788,11 @@ GPURasterizerState *Renderer::FixedResources::GetRasterizerState(RENDERER_FILL_M
             return nullptr;
         }
 
-        m_pRasterizerStates[fillMode][cullMode][depthBias][depthClamping][scissorTest] = pRasterizerState;
+        if (!m_pRasterizerStates[fillMode][cullMode][depthBias][depthClamping][scissorTest].Set(pRasterizerState))
+        {
+            pRasterizerState->Release();
+            pRasterizerState = m_pRasterizerStates[fillMode][cullMode][depthBias][depthClamping][scissorTest].Load();
+        }
     }
 
     return pRasterizerState;
@@ -1798,9 +1800,7 @@ GPURasterizerState *Renderer::FixedResources::GetRasterizerState(RENDERER_FILL_M
 
 GPUDepthStencilState *Renderer::FixedResources::GetDepthStencilState(bool depthTestEnabled /*= true*/, bool depthWriteEnabled /*= true*/, GPU_COMPARISON_FUNC comparisonFunc /*= GPU_COMPARISON_FUNC_LESS*/)
 {
-    DebugAssert(IsOnRenderThread());
-
-    GPUDepthStencilState *pDepthStencilState = m_pDepthStencilStates[depthTestEnabled][depthWriteEnabled][comparisonFunc];
+    GPUDepthStencilState *pDepthStencilState = m_pDepthStencilStates[depthTestEnabled][depthWriteEnabled][comparisonFunc].Load();
     if (pDepthStencilState == nullptr)
     {
         RENDERER_DEPTHSTENCIL_STATE_DESC depthStencilStateDesc;
@@ -1816,7 +1816,11 @@ GPUDepthStencilState *Renderer::FixedResources::GetDepthStencilState(bool depthT
             return nullptr;
         }
 
-        m_pDepthStencilStates[depthTestEnabled][depthWriteEnabled][comparisonFunc] = pDepthStencilState;
+        if (!m_pDepthStencilStates[depthTestEnabled][depthWriteEnabled][comparisonFunc].Set(pDepthStencilState))
+        {
+            pDepthStencilState->Release();
+            pDepthStencilState = m_pDepthStencilStates[depthTestEnabled][depthWriteEnabled][comparisonFunc].Load();
+        }
     }
 
     return pDepthStencilState;

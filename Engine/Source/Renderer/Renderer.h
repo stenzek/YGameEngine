@@ -851,11 +851,11 @@ public:
 
         // rasterizer
         // rs[wireframe][culling][depthbias][depthclip][scissor]
-        GPURasterizerState *m_pRasterizerStates[RENDERER_FILL_MODE_COUNT][RENDERER_CULL_MODE_COUNT][2][2][2];
+        AtomicPointer<GPURasterizerState> m_pRasterizerStates[RENDERER_FILL_MODE_COUNT][RENDERER_CULL_MODE_COUNT][2][2][2];
 
         // depthstencil
         // ds[test][writes][comparison]
-        GPUDepthStencilState *m_pDepthStencilStates[2][2][GPU_COMPARISON_FUNC_COUNT];
+        AtomicPointer<GPUDepthStencilState> m_pDepthStencilStates[2][2][GPU_COMPARISON_FUNC_COUNT];
 
         // blending
         GPUBlendState *m_pBlendStateNoBlending;

@@ -231,6 +231,9 @@ WorldRenderer::WorldRenderer(GPUContext *pGPUContext, const Options *pOptions)
 
     // work out global shader flags
     m_globalShaderFlags = SHADER_GLOBAL_FLAG_SHADER_QUALITY_HIGH;
+
+    // fixme with general solution
+    m_hQueueingCommandsSemaphore = CreateSemaphore(nullptr, 0, Y_INT32_MAX, nullptr);
 }
 
 WorldRenderer::~WorldRenderer()

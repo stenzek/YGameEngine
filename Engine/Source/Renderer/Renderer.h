@@ -25,6 +25,30 @@ class ShaderProgram;
 // Required for output window
 struct SDL_Window;
 
+// Capability mask
+struct RendererCapabilities
+{
+    uint32 MaxTextureAnisotropy;
+    uint32 MaximumVertexBuffers;
+    uint32 MaximumConstantBuffers;
+    uint32 MaximumTextureUnits;
+    uint32 MaximumSamplers;
+    uint32 MaximumRenderTargets;
+    struct
+    {
+        bool SupportsMultithreadedResourceCreation : 1;
+        bool SupportsCommandLists : 1;
+        bool SupportsDrawBaseVertex : 1;
+        bool SupportsDepthTextures : 1;
+        bool SupportsTextureArrays : 1;
+        bool SupportsCubeMapTextureArrays : 1;
+        bool SupportsGeometryShaders : 1;
+        bool SupportsSinglePassCubeMaps : 1;
+        bool SupportsInstancing : 1;
+    uint32: 1;
+    };
+};
+
 // Base class of all gpu resources
 class GPUResource : public ReferenceCounted
 {
@@ -476,6 +500,13 @@ public:
     GPUDevice() {}
     virtual ~GPUDevice() {}
 
+    // Device queries.
+    virtual RENDERER_PLATFORM GetPlatform() const = 0;
+    virtual RENDERER_FEATURE_LEVEL GetFeatureLevel() const = 0;
+    virtual TEXTURE_PLATFORM GetTexturePlatform() const = 0;
+    virtual void GetCapabilities(RendererCapabilities *pCapabilities) const = 0;
+    virtual bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = nullptr) const = 0;
+
     // Creates a swap chain on an existing window.
     virtual GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) = 0;
     virtual GPUOutputBuffer *CreateOutputBuffer(SDL_Window *pSDLWindow, RENDERER_VSYNC_TYPE vsyncType) = 0;
@@ -662,47 +693,6 @@ public:
     // Query readback
     virtual GPU_QUERY_GETDATA_RESULT GetQueryData(GPUQuery *pQuery, void *pData, uint32 cbData, uint32 flags) = 0;
 };
-
-struct RendererCapabilities
-{
-    uint32 MaxTextureAnisotropy;
-    uint32 MaximumVertexBuffers;
-    uint32 MaximumConstantBuffers;
-    uint32 MaximumTextureUnits;
-    uint32 MaximumSamplers;
-    uint32 MaximumRenderTargets;
-    struct
-    {
-        bool SupportsMultithreadedResourceCreation : 1;
-        bool SupportsCommandLists : 1;
-        bool SupportsDrawBaseVertex : 1;
-        bool SupportsDepthTextures : 1;
-        bool SupportsTextureArrays : 1;
-        bool SupportsCubeMapTextureArrays : 1;
-        bool SupportsGeometryShaders : 1;
-        bool SupportsSinglePassCubeMaps : 1;
-        bool SupportsInstancing : 1;
-        uint32: 1;
-    };
-};
-
-class RenderBackend
-{
-public:
-    // Device queries.
-    virtual RENDERER_PLATFORM GetPlatform() const = 0;
-    virtual RENDERER_FEATURE_LEVEL GetFeatureLevel() const = 0;
-    virtual TEXTURE_PLATFORM GetTexturePlatform() const = 0;
-    virtual void GetCapabilities(RendererCapabilities *pCapabilities) const = 0;
-    virtual bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = nullptr) const = 0;
-
-    // Create a device interface. Must be called on the thread that wishes to own this device interface.
-    virtual GPUDevice *CreateDeviceInterface() = 0;
-
-    // Shuts down the renderer backend.
-    virtual void Shutdown() = 0;
-};
-
 
 struct RendererInitializationParameters
 {
@@ -898,7 +888,7 @@ public:
     };
 
 public:
-    Renderer(RenderBackend *pBackendInterface, RendererOutputWindow *pOutputWindow);
+    Renderer(GPUDevice *pDevice, GPUContext *pImmediateContext, RendererOutputWindow *pOutputWindow);
     virtual ~Renderer();
 
     // Find the default renderer platform for this running platform
@@ -908,7 +898,7 @@ public:
     static bool Create(const RendererInitializationParameters *pCreateParameters);
 
     // Shutdown the renderer.
-    static void Shutdown();
+    void Shutdown();
 
     // draw a fullscreen quad
     void DrawFullScreenQuad(GPUCommandList *pCommandList);
@@ -926,25 +916,18 @@ public:
     const RENDERER_PLATFORM GetPlatform() const { return m_eRendererPlatform; }
     const RENDERER_FEATURE_LEVEL GetFeatureLevel() const { return m_eRendererFeatureLevel; }
     const TEXTURE_PLATFORM GetTexturePlatform() const { return m_eTexturePlatform; }
-    const RendererCapabilities &GetCapabilities() const { return m_RendererCapabilities; }
+    const RendererCapabilities &GetCapabilities() const { return m_capabilities; }
     const float GetTexelOffset() const { return m_fTexelOffset; }
 
     // Accesses the implicit swap chain.
     RendererOutputWindow *GetImplicitOutputWindow() { return m_pImplicitOutputWindow; }
     bool ChangeResolution(RENDERER_FULLSCREEN_STATE state, uint32 width = 0, uint32 height = 0, uint32 refreshRate = 0);
 
-    // raw backend access, should not be needed in most cases.
-    RenderBackend *GetBackendInterface() const { return m_pBackendInterface; }
-
-    // creates a device object for the thread calling.
-    bool EnableResourceCreationForCurrentThread();
-    void DisableResourceCreationForCurrentThread();
-
     // device/context access. these will return the value for the current thread, and thus attempting to
     // call GetGPUDevice() on a thread that has not registered for uploads, or GetGPUContext() on a thread
     // other than the render thread will cause the process to crash.
-    static GPUDevice *GetGPUDevice();
-    static GPUContext *GetGPUContext();
+    GPUDevice *GetGPUDevice() const { return m_pDevice; }
+    GPUContext *GetGPUContext() const;
 
     // Stats access
     RendererCounters *GetCounters() { return &m_stats; }
@@ -1007,29 +990,29 @@ public:
     RendererOutputWindow *CreateOutputWindow(const char *windowTitle, uint32 windowWidth, uint32 windowHeight, RENDERER_VSYNC_TYPE vsyncType);
 
     // Creates a swap chain on an existing window.
-    static GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType);
-    static GPUOutputBuffer *CreateOutputBuffer(SDL_Window *pSDLWindow, RENDERER_VSYNC_TYPE vsyncType);
+    GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType);
+    GPUOutputBuffer *CreateOutputBuffer(SDL_Window *pSDLWindow, RENDERER_VSYNC_TYPE vsyncType);
 
     // Resource creation
-    static GPUDepthStencilState *CreateDepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc);
-    static GPURasterizerState *CreateRasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc);
-    static GPUBlendState *CreateBlendState(const RENDERER_BLEND_STATE_DESC *pBlendStateDesc);
-    static GPUQuery *CreateQuery(GPU_QUERY_TYPE type);
-    static GPUBuffer *CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData = NULL);
-    static GPUTexture1D *CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
-    static GPUTexture1DArray *CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
-    static GPUTexture2D *CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
-    static GPUTexture2DArray *CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
-    static GPUTexture3D *CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL, const uint32 *pInitialDataSlicePitch = NULL);
-    static GPUTextureCube *CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
-    static GPUTextureCubeArray *CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
-    static GPUDepthTexture *CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc);
-    static GPUSamplerState *CreateSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc);
-    static GPURenderTargetView *CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc);
-    static GPUDepthStencilBufferView *CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc);
-    static GPUComputeView *CreateComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc);
-    static GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream);
-    static GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream);
+    GPUDepthStencilState *CreateDepthStencilState(const RENDERER_DEPTHSTENCIL_STATE_DESC *pDepthStencilStateDesc);
+    GPURasterizerState *CreateRasterizerState(const RENDERER_RASTERIZER_STATE_DESC *pRasterizerStateDesc);
+    GPUBlendState *CreateBlendState(const RENDERER_BLEND_STATE_DESC *pBlendStateDesc);
+    GPUQuery *CreateQuery(GPU_QUERY_TYPE type);
+    GPUBuffer *CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void *pInitialData = NULL);
+    GPUTexture1D *CreateTexture1D(const GPU_TEXTURE1D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUTexture1DArray *CreateTexture1DArray(const GPU_TEXTURE1DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUTexture2D *CreateTexture2D(const GPU_TEXTURE2D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUTexture2DArray *CreateTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUTexture3D *CreateTexture3D(const GPU_TEXTURE3D_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL, const uint32 *pInitialDataSlicePitch = NULL);
+    GPUTextureCube *CreateTextureCube(const GPU_TEXTURECUBE_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUTextureCubeArray *CreateTextureCubeArray(const GPU_TEXTURECUBEARRAY_DESC *pTextureDesc, const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const void **ppInitialData = NULL, const uint32 *pInitialDataPitch = NULL);
+    GPUDepthTexture *CreateDepthTexture(const GPU_DEPTH_TEXTURE_DESC *pTextureDesc);
+    GPUSamplerState *CreateSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc);
+    GPURenderTargetView *CreateRenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc);
+    GPUDepthStencilBufferView *CreateDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc);
+    GPUComputeView *CreateComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc);
+    GPUShaderProgram *CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream);
+    GPUShaderProgram *CreateComputeProgram(ByteStream *pByteCodeStream);
     // CreateGraphicsPipeline
     // CreateComputePipeline
 
@@ -1053,11 +1036,12 @@ protected:
     RENDERER_PLATFORM m_eRendererPlatform;
     RENDERER_FEATURE_LEVEL m_eRendererFeatureLevel;
     TEXTURE_PLATFORM m_eTexturePlatform;
-    RendererCapabilities m_RendererCapabilities;
+    RendererCapabilities m_capabilities;
     float m_fTexelOffset;
 
     // backend
-    RenderBackend *m_pBackendInterface;
+    GPUDevice *m_pDevice;
+    GPUContext *m_pImmediateContext;
 
     // output window
     RendererOutputWindow *m_pImplicitOutputWindow;

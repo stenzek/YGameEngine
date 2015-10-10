@@ -3,7 +3,6 @@
 #include "D3D11Renderer/D3D11GPUContext.h"
 #include "D3D11Renderer/D3D11GPUBuffer.h"
 #include "D3D11Renderer/D3D11GPUDevice.h"
-#include "D3D11Renderer/D3D11RenderBackend.h"
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(Renderer);
 
@@ -288,7 +287,7 @@ bool D3D11GPUShaderProgram::Create(D3D11GPUDevice *pDevice, const GPU_VERTEX_ELE
             pDstConstantBuffer->EngineConstantBufferIndex = 0;
         
             // lookup engine constant buffer
-            const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(pDstConstantBuffer->Name, RENDERER_PLATFORM_D3D11, D3D11RenderBackend::GetInstance()->GetFeatureLevel());
+            const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(pDstConstantBuffer->Name, RENDERER_PLATFORM_D3D11, pDevice->GetFeatureLevel());
             if (pEngineConstantBuffer == nullptr)
             {
                 Log_ErrorPrintf("D3D11ShaderProgram::Create: Shader is requesting unknown constant buffer named '%s'.", pDstConstantBuffer->Name);

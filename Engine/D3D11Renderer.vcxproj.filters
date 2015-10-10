@@ -25,7 +25,6 @@
     <ClInclude Include="Source\D3D11Renderer\PrecompiledHeader.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUDevice.h" />
     <ClInclude Include="Source\D3D11Renderer\D3D11GPUOutputBuffer.h" />
-    <ClInclude Include="Source\D3D11Renderer\D3D11RenderBackend.h" />
     <ClInclude Include="Source\D3D11Renderer\D3DShaderCacheEntry.h" />
   </ItemGroup>
 </Project>

@@ -5,7 +5,6 @@
 #include "D3D11Renderer/D3D11GPUBuffer.h"
 #include "D3D11Renderer/D3D11GPUTexture.h"
 #include "D3D11Renderer/D3D11GPUShaderProgram.h"
-#include "D3D11Renderer/D3D11RenderBackend.h"
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(D3D11GPUContext);
 
@@ -1098,7 +1097,7 @@ bool D3D11GPUContext::CreateConstantBuffers()
             continue;
         if (declaration->GetPlatformRequirement() != RENDERER_PLATFORM_COUNT && declaration->GetPlatformRequirement() != RENDERER_PLATFORM_D3D11)
             continue;
-        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > D3D11RenderBackend::GetInstance()->GetFeatureLevel())
+        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > m_pDevice->GetFeatureLevel())
             continue;
 
         // set size so we know to allocate it later or on demand

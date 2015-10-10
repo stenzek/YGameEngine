@@ -6,11 +6,14 @@
 #include "Engine/EngineCVars.h"
 Log_SetChannel(D3D11GPUDevice);
 
-D3D11GPUDevice::D3D11GPUDevice(IDXGIFactory *pDXGIFactory, IDXGIAdapter *pDXGIAdapter, ID3D11Device *pD3DDevice, ID3D11Device1 *pD3DDevice1, DXGI_FORMAT windowBackBufferFormat, DXGI_FORMAT windowDepthStencilFormat)
+D3D11GPUDevice::D3D11GPUDevice(IDXGIFactory *pDXGIFactory, IDXGIAdapter *pDXGIAdapter, ID3D11Device *pD3DDevice, ID3D11Device1 *pD3DDevice1, D3D_FEATURE_LEVEL D3DFeatureLevel, RENDERER_FEATURE_LEVEL featureLevel, TEXTURE_PLATFORM texturePlatform, DXGI_FORMAT windowBackBufferFormat, DXGI_FORMAT windowDepthStencilFormat)
     : m_pDXGIFactory(pDXGIFactory)
     , m_pDXGIAdapter(pDXGIAdapter)
     , m_pD3DDevice(pD3DDevice)
     , m_pD3DDevice1(pD3DDevice1)
+    , m_D3DFeatureLevel(D3DFeatureLevel)
+    , m_featureLevel(featureLevel)
+    , m_texturePlatform(texturePlatform)
     , m_swapChainBackBufferFormat(windowBackBufferFormat)
     , m_swapChainDepthStencilBufferFormat(windowDepthStencilFormat)
 {
@@ -31,6 +34,81 @@ D3D11GPUDevice::~D3D11GPUDevice()
 
     SAFE_RELEASE(m_pDXGIAdapter);
     SAFE_RELEASE(m_pDXGIFactory);
+
+#ifdef Y_BUILD_CONFIG_DEBUG
+    // dump remaining objects
+    {
+        HMODULE hDXGIDebugModule = GetModuleHandleA("dxgidebug.dll");
+        if (hDXGIDebugModule != NULL)
+        {
+            HRESULT(WINAPI *pDXGIGetDebugInterface)(REFIID riid, void **ppDebug);
+            pDXGIGetDebugInterface = (HRESULT(WINAPI *)(REFIID, void **))GetProcAddress(hDXGIDebugModule, "DXGIGetDebugInterface");
+            if (pDXGIGetDebugInterface != NULL)
+            {
+                IDXGIDebug *pDXGIDebug;
+                if (SUCCEEDED(pDXGIGetDebugInterface(__uuidof(pDXGIDebug), reinterpret_cast<void **>(&pDXGIDebug))))
+                {
+                    Log_DevPrint("=== Begin remaining DXGI and D3D object dump ===");
+                    pDXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+                    Log_DevPrint("=== End remaining DXGI and D3D object dump ===");
+                    pDXGIDebug->Release();
+                }
+            }
+        }
+    }
+#endif
+}
+
+RENDERER_PLATFORM D3D11GPUDevice::GetPlatform() const
+{
+    return RENDERER_PLATFORM_D3D11;
+}
+
+RENDERER_FEATURE_LEVEL D3D11GPUDevice::GetFeatureLevel() const
+{
+    return m_featureLevel;
+}
+
+TEXTURE_PLATFORM D3D11GPUDevice::GetTexturePlatform() const
+{
+    return m_texturePlatform;
+}
+
+void D3D11GPUDevice::GetCapabilities(RendererCapabilities *pCapabilities) const
+{
+    pCapabilities->MaxTextureAnisotropy = D3D11_MAX_MAXANISOTROPY;
+    pCapabilities->MaximumVertexBuffers = D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT;
+    pCapabilities->MaximumConstantBuffers = D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT;
+    pCapabilities->MaximumTextureUnits = D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT;
+    pCapabilities->MaximumSamplers = D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT;
+    pCapabilities->MaximumRenderTargets = D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
+    pCapabilities->SupportsCommandLists = false;
+    pCapabilities->SupportsMultithreadedResourceCreation = true;
+    pCapabilities->SupportsDrawBaseVertex = true;
+    pCapabilities->SupportsDepthTextures = true;
+    pCapabilities->SupportsTextureArrays = (m_featureLevel >= D3D_FEATURE_LEVEL_10_0);
+    pCapabilities->SupportsCubeMapTextureArrays = (m_featureLevel >= D3D_FEATURE_LEVEL_10_1);
+    pCapabilities->SupportsGeometryShaders = (m_featureLevel >= D3D_FEATURE_LEVEL_10_0);
+    pCapabilities->SupportsSinglePassCubeMaps = (m_featureLevel >= D3D_FEATURE_LEVEL_10_0);
+    pCapabilities->SupportsInstancing = (m_featureLevel >= D3D_FEATURE_LEVEL_10_0);
+}
+
+bool D3D11GPUDevice::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat /*= NULL*/) const
+{
+    DXGI_FORMAT DXGIFormat = D3D11TypeConversion::PixelFormatToDXGIFormat(PixelFormat);
+    if (DXGIFormat == DXGI_FORMAT_UNKNOWN)
+    {
+        // use r8g8b8a8
+        if (CompatibleFormat != NULL)
+            *CompatibleFormat = PIXEL_FORMAT_R8G8B8A8_UNORM;
+
+        return false;
+    }
+
+    if (CompatibleFormat != NULL)
+        *CompatibleFormat = PixelFormat;
+
+    return true;
 }
 
 void D3D11GPUDevice::BeginResourceBatchUpload()
@@ -186,3 +264,4 @@ GPUBlendState *D3D11GPUDevice::CreateBlendState(const RENDERER_BLEND_STATE_DESC 
     D3D11BlendState *pBlendState = new D3D11BlendState(pBlendStateDesc, pD3DBlendState);
     return pBlendState;
 }
+

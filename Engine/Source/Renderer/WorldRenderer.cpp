@@ -225,15 +225,14 @@ WorldRenderer::WorldRenderer(GPUContext *pGPUContext, const Options *pOptions)
     , m_pOcclusionCullingCubeVertexBuffer(nullptr)
     , m_pOcclusionCullingCubeIndexBuffer(nullptr)
     , m_pOcclusionCullingProgram(nullptr)
+    , m_hQueueingCommandsSemaphore(CreateSemaphore(nullptr, 0, Y_INT32_MAX, nullptr))
+    , m_commandListsPending(0)
 {
     // disable unusable features
     m_options.DisableUnsupportedFeatures();
 
     // work out global shader flags
     m_globalShaderFlags = SHADER_GLOBAL_FLAG_SHADER_QUALITY_HIGH;
-
-    // fixme with general solution
-    m_hQueueingCommandsSemaphore = CreateSemaphore(nullptr, 0, Y_INT32_MAX, nullptr);
 }
 
 WorldRenderer::~WorldRenderer()

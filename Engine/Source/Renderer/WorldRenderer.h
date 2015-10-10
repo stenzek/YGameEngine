@@ -226,7 +226,6 @@ protected:
     PODArray<GPUCommandList *> m_readySecondaryCommandLists;
     uint32 m_commandListsPending;
     Mutex m_commandListLock;
-    bool m_multiThreadedRenderingEnabled;
 
     // begin multithreaded rendering
     template<class T>

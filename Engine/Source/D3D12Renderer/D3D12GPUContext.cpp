@@ -2182,7 +2182,12 @@ void D3D12GPUContext::ExecuteCommandList(GPUCommandList *pCommandList)
     D3D12GPUCommandList *pD3D12CommandList = reinterpret_cast<D3D12GPUCommandList *>(pCommandList);
 
     // transition pending resources before execution.
-    m_pDevice->TransitionPendingResources(m_pGraphicsCommandQueue);
+    //m_pDevice->TransitionPendingResources(m_pGraphicsCommandQueue);
+
+    // current command list has to be executed before (this will also take care of any transitions)
+    // @TODO remove this at some point, it's bad...
+    FlushCommandList(true, false, false);
+    RestoreCommandListDependantState();
 
     // execute on our command queue
     m_pGraphicsCommandQueue->ExecuteCommandList(pD3D12CommandList->GetD3DCommandList());

@@ -40,7 +40,6 @@ class OpenGLES2GPUBlendState;
 class OpenGLES2GPUOutputBuffer;
 class OpenGLES2GPURenderTargetView;
 class OpenGLES2GPUDepthStencilBufferView;
-class OpenGLES2RenderBackend;
 class OpenGLES2ConstantLibrary;
 
 #include "OpenGLES2Renderer/OpenGLES2Defines.h"

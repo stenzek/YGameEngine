@@ -4,32 +4,86 @@
 #include "Engine/EngineCVars.h"
 Log_SetChannel(OpenGLES2RenderBackend);
 
-OpenGLES2GPUDevice::OpenGLES2GPUDevice(OpenGLES2RenderBackend *pBackend, SDL_GLContext pSDLGLContext, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat)
-    : m_pRenderBackend(pBackend)
-    , m_pSDLGLContext(pSDLGLContext)
+OpenGLES2GPUDevice::OpenGLES2GPUDevice(SDL_GLContext pSDLGLContext, RENDERER_FEATURE_LEVEL featureLevel, TEXTURE_PLATFORM texturePlatform, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat)
+    : m_pSDLGLContext(pSDLGLContext)
+    , m_pImmediateContext(nullptr)
+    , m_featureLevel(featureLevel)
+    , m_texturePlatform(texturePlatform)
     , m_outputBackBufferFormat(outputBackBufferFormat)
     , m_outputDepthStencilFormat(outputDepthStencilFormat)
+    , m_constantLibrary(featureLevel)
 {
 
 }
 
 OpenGLES2GPUDevice::~OpenGLES2GPUDevice()
 {
+    DebugAssert(m_pImmediateContext == nullptr);
+
     // nuke GL context
     SDL_GL_MakeCurrent(nullptr, nullptr);
     SDL_GL_DeleteContext(m_pSDLGLContext);
 }
 
+RENDERER_PLATFORM OpenGLES2GPUDevice::GetPlatform() const
+{
+    return RENDERER_PLATFORM_OPENGLES2;
+}
+
+RENDERER_FEATURE_LEVEL OpenGLES2GPUDevice::GetFeatureLevel() const
+{
+    return m_featureLevel;
+}
+
+TEXTURE_PLATFORM OpenGLES2GPUDevice::GetTexturePlatform() const
+{
+    return m_texturePlatform;
+}
+
+void OpenGLES2GPUDevice::GetCapabilities(RendererCapabilities *pCapabilities) const
+{
+    // run glget calls
+    uint32 maxTextureAnisotropy = 0;
+    uint32 maxVertexAttributes = 0;
+    uint32 maxTextureUnits = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, reinterpret_cast<GLint *>(&maxTextureAnisotropy));
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, reinterpret_cast<GLint *>(&maxVertexAttributes));
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, reinterpret_cast<GLint *>(&maxTextureUnits));
+
+    pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
+    pCapabilities->MaximumVertexBuffers = maxVertexAttributes;
+    pCapabilities->MaximumConstantBuffers = 0;
+    pCapabilities->MaximumTextureUnits = maxTextureUnits;
+    pCapabilities->MaximumSamplers = maxTextureUnits;
+    pCapabilities->MaximumRenderTargets = 1;
+    pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
+    pCapabilities->SupportsCommandLists = false;
+    pCapabilities->SupportsMultithreadedResourceCreation = false;
+    pCapabilities->SupportsDrawBaseVertex = false;
+    pCapabilities->SupportsDepthTextures = true;
+    pCapabilities->SupportsTextureArrays = false;
+    pCapabilities->SupportsCubeMapTextureArrays = false;
+    pCapabilities->SupportsGeometryShaders = false;
+    pCapabilities->SupportsSinglePassCubeMaps = false;
+    pCapabilities->SupportsInstancing = false;
+}
+
+bool OpenGLES2GPUDevice::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat /*= NULL*/) const
+{
+    // @TODO
+    return true;
+}
+
 void OpenGLES2GPUDevice::BindMutatorTextureUnit()
 {
-    if (m_pGPUContext != nullptr)
-        m_pGPUContext->BindMutatorTextureUnit();
+    if (m_pImmediateContext != nullptr)
+        m_pImmediateContext->BindMutatorTextureUnit();
 }
 
 void OpenGLES2GPUDevice::RestoreMutatorTextureUnit()
 {
-    if (m_pGPUContext != nullptr)
-        m_pGPUContext->RestoreMutatorTextureUnit();
+    if (m_pImmediateContext != nullptr)
+        m_pImmediateContext->RestoreMutatorTextureUnit();
 }
 
 void OpenGLES2GPUDevice::BeginResourceBatchUpload()

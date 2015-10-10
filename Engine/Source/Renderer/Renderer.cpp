@@ -64,7 +64,7 @@ static const RENDERER_PLATFORM_FACTORY_FUNCTION s_renderSystemDeclarations[] =
     //{ RENDERER_PLATFORM_OPENGL,     OpenGLRenderBackend_Create,     true    },
 #endif
 #if defined(WITH_RENDERER_OPENGLES2)
-    //{ RENDERER_PLATFORM_OPENGLES2,  OpenGLES2RenderBackend_Create,  true    },
+    { RENDERER_PLATFORM_OPENGLES2,  OpenGLES2RenderBackend_Create,  true    },
 #endif
 };
 

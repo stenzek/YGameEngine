@@ -6,18 +6,15 @@
 #include "OpenGLES2Renderer/OpenGLES2GPUBuffer.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUShaderProgram.h"
 #include "OpenGLES2Renderer/OpenGLES2ConstantLibrary.h"
-#include "OpenGLES2Renderer/OpenGLES2RenderBackend.h"
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(OpenGLES2RenderBackend);
 
 #define DEFER_SHADER_STATE_CHANGES 1
 
-OpenGLES2GPUContext::OpenGLES2GPUContext(OpenGLES2RenderBackend *pBackend, OpenGLES2GPUDevice *pDevice, SDL_GLContext pSDLGLContext, OpenGLES2GPUOutputBuffer *pOutputBuffer)
+OpenGLES2GPUContext::OpenGLES2GPUContext(OpenGLES2GPUDevice *pDevice, SDL_GLContext pSDLGLContext, OpenGLES2GPUOutputBuffer *pOutputBuffer)
 {
-    m_pBackend = pBackend;
-
     m_pDevice = pDevice;
-    m_pDevice->SetGPUContext(this);
+    m_pDevice->SetImmediateContext(this);
     m_pDevice->AddRef();
 
     m_pSDLGLContext = pSDLGLContext;
@@ -117,7 +114,7 @@ OpenGLES2GPUContext::~OpenGLES2GPUContext()
     SAFE_RELEASE(m_pCurrentOutputBuffer);
 
     // no longer the context
-    m_pDevice->SetGPUContext(nullptr);
+    m_pDevice->SetImmediateContext(nullptr);
     m_pDevice->Release();
 }
 
@@ -184,7 +181,7 @@ bool OpenGLES2GPUContext::Create()
     m_pConstants = new GPUContextConstants(this);
 
     // allocate constant library buffer
-    m_pConstantLibrary = m_pBackend->GetConstantLibrary();
+    m_pConstantLibrary = m_pDevice->GetConstantLibrary();
     m_pConstantLibraryBuffer = (byte *)Y_malloc(m_pConstantLibrary->GetConstantStorageBufferSize());
 
     // update swap interval

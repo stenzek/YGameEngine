@@ -25,6 +25,5 @@
     <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUBuffer.h" />
     <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUDevice.h" />
     <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUOutputBuffer.h" />
-    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2RenderBackend.h" />
   </ItemGroup>
 </Project>

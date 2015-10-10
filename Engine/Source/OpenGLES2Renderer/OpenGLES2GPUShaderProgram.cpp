@@ -2,7 +2,6 @@
 #include "OpenGLES2Renderer/OpenGLES2GPUShaderProgram.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUContext.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUDevice.h"
-#include "OpenGLES2Renderer/OpenGLES2RenderBackend.h"
 #include "OpenGLRenderer/OpenGLShaderCacheEntry.h"
 Log_SetChannel(OpenGLES2RenderBackend);
 
@@ -329,7 +328,7 @@ bool OpenGLES2GPUShaderProgram::LoadProgram(OpenGLES2GPUDevice *pDevice, const G
                 parameter->BindLocation = uniformLocation;
 
                 // we have to check the library for a mapping of a constant buffer entry to this parameter.
-                parameter->LibraryID = pDevice->GetBackend()->GetConstantLibrary()->LookupConstantID(parameter->Name);
+                parameter->LibraryID = pDevice->GetConstantLibrary()->LookupConstantID(parameter->Name);
                 parameter->LibraryValueChanged = (parameter->LibraryID != OpenGLES2ConstantLibrary::ConstantIndexInvalid);
             }
             break;

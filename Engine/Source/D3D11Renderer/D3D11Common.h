@@ -28,7 +28,6 @@ class D3D11GPUDepthTexture;
 class D3D11GPUDepthTextureArray;
 class D3D11GPUDevice;
 class D3D11SamplerState;
-class D3D11RenderBackend;
 
 #include "D3D11Renderer/D3D11Defines.h"
 #include "D3D11Renderer/D3D11CVars.h"

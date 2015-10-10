@@ -31,7 +31,7 @@ public:
     typedef GPUTexture *TextureUnitBinding;
 
 public:
-    OpenGLES2GPUContext(OpenGLES2RenderBackend *pBackend, OpenGLES2GPUDevice *pDevice, SDL_GLContext pSDLGLContext, OpenGLES2GPUOutputBuffer *pOutputBuffer);
+    OpenGLES2GPUContext(OpenGLES2GPUDevice *pDevice, SDL_GLContext pSDLGLContext, OpenGLES2GPUOutputBuffer *pOutputBuffer);
     ~OpenGLES2GPUContext();
 
     // Start of frame
@@ -196,7 +196,6 @@ public:
     void UpdateVSyncState(RENDERER_VSYNC_TYPE vsyncType);
 
 private:
-    OpenGLES2RenderBackend *m_pBackend;
     OpenGLES2GPUDevice *m_pDevice;
 
     SDL_GLContext m_pSDLGLContext;

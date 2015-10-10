@@ -60,7 +60,6 @@
     <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUTexture.h" />
     <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUDevice.h" />
     <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2GPUOutputBuffer.h" />
-    <ClInclude Include="Source\OpenGLES2Renderer\OpenGLES2RenderBackend.h" />
     <ClInclude Include="Source\OpenGLES2Renderer\PrecompiledHeader.h" />
   </ItemGroup>
   <ItemGroup>

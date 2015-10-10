@@ -1,33 +1,11 @@
 #include "OpenGLES2Renderer/PrecompiledHeader.h"
-#include "OpenGLES2Renderer/OpenGLES2RenderBackend.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUContext.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUBuffer.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUOutputBuffer.h"
 #include "OpenGLES2Renderer/OpenGLES2GPUDevice.h"
-#include "OpenGLES2Renderer/OpenGLES2ConstantLibrary.h"
 #include "Engine/EngineCVars.h"
 #include "Engine/SDLHeaders.h"
 Log_SetChannel(OpenGLES2RenderBackend);
-
-OpenGLES2RenderBackend *OpenGLES2RenderBackend::m_pInstance = nullptr;
-
-OpenGLES2RenderBackend::OpenGLES2RenderBackend()
-    : m_featureLevel(RENDERER_FEATURE_LEVEL_COUNT)
-    , m_texturePlatform(NUM_TEXTURE_PLATFORMS)
-    , m_outputBackBufferFormat(PIXEL_FORMAT_UNKNOWN)
-    , m_outputDepthStencilFormat(PIXEL_FORMAT_UNKNOWN)
-    , m_pGPUDevice(nullptr)
-    , m_pGPUContext(nullptr)
-{
-    DebugAssert(m_pInstance == nullptr);
-    m_pInstance = this;
-}
-
-OpenGLES2RenderBackend::~OpenGLES2RenderBackend()
-{
-    DebugAssert(m_pInstance == this);
-    m_pInstance = nullptr;
-}
 
 static bool SetSDLGLColorAttributes(PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilBufferFormat)
 {
@@ -106,21 +84,21 @@ static bool InitializeGLAD()
     return true;
 }
 
-bool OpenGLES2RenderBackend::Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer)
+bool OpenGLES2RenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, GPUDevice **ppDevice, GPUContext **ppImmediateContext, GPUOutputBuffer **ppOutputBuffer)
 {
     // select formats
-    m_outputBackBufferFormat = pCreateParameters->BackBufferFormat;
-    m_outputDepthStencilFormat = pCreateParameters->DepthStencilBufferFormat;
+    PIXEL_FORMAT outputBackBufferFormat = pCreateParameters->BackBufferFormat;
+    PIXEL_FORMAT outputDepthStencilFormat = pCreateParameters->DepthStencilBufferFormat;
 
     // if the backbuffer format is unspecified, use the best for the platform
-    if (m_outputBackBufferFormat == PIXEL_FORMAT_UNKNOWN)
+    if (outputBackBufferFormat == PIXEL_FORMAT_UNKNOWN)
     {
         // by default this is rgba8
-        m_outputBackBufferFormat = PIXEL_FORMAT_R8G8B8A8_UNORM;
+        outputBackBufferFormat = PIXEL_FORMAT_R8G8B8A8_UNORM;
     }
 
     // initialize colour attributes
-    if (!SetSDLGLColorAttributes(m_outputBackBufferFormat, m_outputDepthStencilFormat))
+    if (!SetSDLGLColorAttributes(outputBackBufferFormat, outputDepthStencilFormat))
     {
         Log_ErrorPrintf("OpenGLES2RenderBackend::Create: Failed to set opengl window system parameters.");
         return false;
@@ -154,13 +132,13 @@ bool OpenGLES2RenderBackend::Create(const RendererInitializationParameters *pCre
     }
 
     // set context settings
-    m_featureLevel = RENDERER_FEATURE_LEVEL_ES2;
-    m_texturePlatform = TEXTURE_PLATFORM_ES2_DXTC;
+    RENDERER_FEATURE_LEVEL featureLevel = RENDERER_FEATURE_LEVEL_ES2;
+    TEXTURE_PLATFORM texturePlatform = TEXTURE_PLATFORM_ES2_DXTC;
 
     // log some info
     {
-        Log_InfoPrintf("OpenGL ES2 Renderer Feature Level: %s", NameTable_GetNameString(NameTables::RendererFeatureLevelFullName, m_featureLevel));
-        Log_InfoPrintf("Texture Platform: %s", NameTable_GetNameString(NameTables::TexturePlatform, m_texturePlatform));
+        Log_InfoPrintf("OpenGL ES2 Renderer Feature Level: %s", NameTable_GetNameString(NameTables::RendererFeatureLevelFullName, featureLevel));
+        Log_InfoPrintf("Texture Platform: %s", NameTable_GetNameString(NameTables::TexturePlatform, texturePlatform));
 
         // log vendor info
         Log_InfoPrintf("GL_VENDOR: %s", (glGetString(GL_VENDOR) != NULL) ? glGetString(GL_VENDOR) : (const GLubyte *)"NULL");
@@ -193,112 +171,24 @@ bool OpenGLES2RenderBackend::Create(const RendererInitializationParameters *pCre
     Log_DevPrintf("glGetIntegerv(GL_MAX_VERTEX_ATTRIBS): %u", maxVertexAttributes);
 
     // create output buffer
-    OpenGLES2GPUOutputBuffer *pOutputBuffer = new OpenGLES2GPUOutputBuffer(pSDLWindow, m_outputBackBufferFormat, m_outputDepthStencilFormat, pCreateParameters->ImplicitSwapChainVSyncType, false);
-
-    // create constant library
-    m_pConstantLibrary = new OpenGLES2ConstantLibrary(m_featureLevel);
+    OpenGLES2GPUOutputBuffer *pOutputBuffer = new OpenGLES2GPUOutputBuffer(pSDLWindow, outputBackBufferFormat, outputDepthStencilFormat, pCreateParameters->ImplicitSwapChainVSyncType, false);
 
     // create device and context
-    m_pGPUDevice = new OpenGLES2GPUDevice(this, pSDLGLContext, m_outputBackBufferFormat, m_outputDepthStencilFormat);
-    m_pGPUContext = new OpenGLES2GPUContext(this, m_pGPUDevice, pSDLGLContext, pOutputBuffer);
-    if (!m_pGPUContext->Create())
+    OpenGLES2GPUDevice *pGPUDevice = new OpenGLES2GPUDevice(pSDLGLContext, featureLevel, texturePlatform, outputBackBufferFormat, outputDepthStencilFormat);
+    OpenGLES2GPUContext *pGPUContext = new OpenGLES2GPUContext(pGPUDevice, pSDLGLContext, pOutputBuffer);
+    if (!pGPUContext->Create())
     {
         Log_ErrorPrintf("OpenGLRenderBackend::Create: Could not create device context.");
+        pGPUContext->Release();
+        pGPUDevice->Release();
         return false;
     }
-
-    // add references for returned pointers
-    m_pGPUDevice->AddRef();
-    m_pGPUContext->AddRef();
 
     // set pointers
-    *ppBackend = this;
-    *ppDevice = m_pGPUDevice;
-    *ppContext = m_pGPUContext;
+    *ppDevice = pGPUDevice;
+    *ppImmediateContext = pGPUContext;
     *ppOutputBuffer = pOutputBuffer;
 
-    Log_InfoPrint("OpenGLRenderBackend::Create: Creation successful.");
+    Log_InfoPrint("OpenGL ES 2.0 render backend creation successful.");
     return true;
 }
-
-void OpenGLES2RenderBackend::Shutdown()
-{
-    // cleanup our objects
-    SAFE_RELEASE(m_pGPUContext);
-    SAFE_RELEASE(m_pGPUDevice);
-
-    // done
-    delete this;
-}
-
-bool OpenGLES2RenderBackend::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat /*= NULL*/) const
-{
-    // @TODO
-    return true;
-}
-
-RENDERER_PLATFORM OpenGLES2RenderBackend::GetPlatform() const
-{
-    return RENDERER_PLATFORM_OPENGLES2;
-}
-
-RENDERER_FEATURE_LEVEL OpenGLES2RenderBackend::GetFeatureLevel() const
-{
-    return m_featureLevel;
-}
-
-TEXTURE_PLATFORM OpenGLES2RenderBackend::GetTexturePlatform() const
-{
-    return m_texturePlatform;
-}
-
-void OpenGLES2RenderBackend::GetCapabilities(RendererCapabilities *pCapabilities) const
-{
-    DebugAssert(GetGPUDevice() != nullptr);
-
-    // run glget calls
-    uint32 maxTextureAnisotropy = 0;
-    uint32 maxVertexAttributes = 0;
-    uint32 maxTextureUnits = 0;
-    glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, reinterpret_cast<GLint *>(&maxTextureAnisotropy));
-    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, reinterpret_cast<GLint *>(&maxVertexAttributes));
-    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, reinterpret_cast<GLint *>(&maxTextureUnits));
-
-    pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
-    pCapabilities->MaximumVertexBuffers = maxVertexAttributes;
-    pCapabilities->MaximumConstantBuffers = 0;
-    pCapabilities->MaximumTextureUnits = maxTextureUnits;
-    pCapabilities->MaximumSamplers = maxTextureUnits;
-    pCapabilities->MaximumRenderTargets = 1;
-    pCapabilities->MaxTextureAnisotropy = maxTextureAnisotropy;
-    pCapabilities->SupportsCommandLists = false;
-    pCapabilities->SupportsMultithreadedResourceCreation = false;
-    pCapabilities->SupportsDrawBaseVertex = false;
-    pCapabilities->SupportsDepthTextures = true;
-    pCapabilities->SupportsTextureArrays = false;
-    pCapabilities->SupportsCubeMapTextureArrays = false;
-    pCapabilities->SupportsGeometryShaders = false;
-    pCapabilities->SupportsSinglePassCubeMaps = false;
-    pCapabilities->SupportsInstancing = false;
-}
-
-GPUDevice *OpenGLES2RenderBackend::CreateDeviceInterface()
-{
-    // D3D11 doesn't have to do anything special with multithread resource creation, so just return the same interface
-    //m_pGPUDevice->AddRef();
-    //return m_pGPUDevice;
-    return nullptr;
-}
-
-bool OpenGLES2RenderBackend_Create(const RendererInitializationParameters *pCreateParameters, SDL_Window *pSDLWindow, RenderBackend **ppBackend, GPUDevice **ppDevice, GPUContext **ppContext, GPUOutputBuffer **ppOutputBuffer)
-{
-    OpenGLES2RenderBackend *pBackend = new OpenGLES2RenderBackend();
-    if (!pBackend->Create(pCreateParameters, pSDLWindow, ppBackend, ppDevice, ppContext, ppOutputBuffer))
-    {
-        pBackend->Shutdown();
-        return false;
-    }
-
-    return true;
-}
-

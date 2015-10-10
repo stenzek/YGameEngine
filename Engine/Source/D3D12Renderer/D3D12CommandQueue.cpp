@@ -285,7 +285,7 @@ ID3D12CommandAllocator *D3D12CommandQueue::RequestCommandAllocator()
         Log_PerfPrintf("Allocating new command allocator.");
 
         // create allocator
-        HRESULT hResult = m_pD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&pReturnAllocator));
+        HRESULT hResult = m_pD3DDevice->CreateCommandAllocator(m_type, IID_PPV_ARGS(&pReturnAllocator));
         if (SUCCEEDED(hResult))
         {
             // return the new allocator

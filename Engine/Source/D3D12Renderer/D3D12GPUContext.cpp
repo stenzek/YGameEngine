@@ -249,6 +249,9 @@ void D3D12GPUContext::FlushCommandList(bool reopen, bool wait, bool refreshAlloc
     HRESULT hResult = m_pCommandList->Close();
     if (SUCCEEDED(hResult))
     {
+        // transition pending resources before execution.
+        m_pDevice->TransitionPendingResources(m_pGraphicsCommandQueue);
+
         // execute it
         m_pGraphicsCommandQueue->ExecuteCommandList(m_pCommandList);
 
@@ -2177,6 +2180,9 @@ bool D3D12GPUContext::CloseCommandList(GPUCommandList *pCommandList)
 void D3D12GPUContext::ExecuteCommandList(GPUCommandList *pCommandList)
 {
     D3D12GPUCommandList *pD3D12CommandList = reinterpret_cast<D3D12GPUCommandList *>(pCommandList);
+
+    // transition pending resources before execution.
+    m_pDevice->TransitionPendingResources(m_pGraphicsCommandQueue);
 
     // execute on our command queue
     m_pGraphicsCommandQueue->ExecuteCommandList(pD3D12CommandList->GetD3DCommandList());

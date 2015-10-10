@@ -145,8 +145,7 @@ void D3D12GPUDevice::GetCapabilities(RendererCapabilities *pCapabilities) const
     pCapabilities->MaximumSamplers = D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS;
     pCapabilities->MaximumRenderTargets = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
     pCapabilities->SupportsCommandLists = true;
-    //pCapabilities->SupportsMultithreadedResourceCreation = true;
-    pCapabilities->SupportsMultithreadedResourceCreation = false;
+    pCapabilities->SupportsMultithreadedResourceCreation = true;
     pCapabilities->SupportsDrawBaseVertex = true;
     pCapabilities->SupportsDepthTextures = true;
     pCapabilities->SupportsTextureArrays = (m_D3DFeatureLevel >= D3D_FEATURE_LEVEL_10_0);
@@ -249,28 +248,29 @@ void D3D12GPUDevice::EndResourceBatchUpload()
 
 void D3D12GPUDevice::ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState)
 {
-    DebugAssert(s_pCurrentThreadCopyCommandQueue == nullptr);
-
-    D3D12_RESOURCE_BARRIER resourceBarrier =
+    // On graphics thread?
+    if (s_pCurrentThreadCopyCommandQueue == nullptr)
     {
-        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE,
-        { pResource, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, beforeState, afterState }
-    };
+        // Issue as normal.
+        D3D12_RESOURCE_BARRIER resourceBarrier =
+        {
+            D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE,
+            { pResource, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, beforeState, afterState }
+        };
 
-    s_pCurrentThreadCopyCommandList->ResourceBarrier(1, &resourceBarrier);
-}
-
-void D3D12GPUDevice::ResourceBarrier(ID3D12Resource *pResource, uint32 subResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState)
-{
-    DebugAssert(s_pCurrentThreadCopyCommandQueue == nullptr);
-
-    D3D12_RESOURCE_BARRIER resourceBarrier =
+        DebugAssert(s_pCurrentThreadCopyCommandList != nullptr);
+        s_pCurrentThreadCopyCommandList->ResourceBarrier(1, &resourceBarrier);
+    }
+    else
     {
-        D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE,
-        { pResource, subResource, beforeState, afterState }
-    };
-
-    s_pCurrentThreadCopyCommandList->ResourceBarrier(1, &resourceBarrier);
+        // Queue transition.
+        // @TODO: Handle cases where the resources is released better. Destruction *should* be queued until
+        // the next fence, which will have passed by the time the transition has happened, anyway.
+        PendingResourceTransition transition = { pResource, beforeState, afterState };
+        m_pendingResourceTransitionLock.Lock();
+        m_pendingResourceTransitions.Add(transition);
+        m_pendingResourceTransitionLock.Unlock();
+    }
 }
 
 void D3D12GPUDevice::ScheduleResourceForDeletion(ID3D12Pageable *pResource)
@@ -323,8 +323,11 @@ void D3D12GPUDevice::GetFreeCopyCommandQueue()
     }
 
     // failed, so just use the first one
-    pCommandQueue = &m_copyCommandQueues[0];
-    pCommandQueue->Lock.Lock();
+    if (pCommandQueue == nullptr)
+    {
+        pCommandQueue = &m_copyCommandQueues[0];
+        pCommandQueue->Lock.Lock();
+    }
 
     // create a command list
     DebugAssert(pCommandQueue->pCommandAllocator == nullptr && pCommandQueue->pCommandList == nullptr);
@@ -369,19 +372,64 @@ void D3D12GPUDevice::ReleaseCopyCommandQueue()
     s_pCurrentThreadCopyCommandQueue = nullptr;
     pCopyQueue->pCommandAllocator = nullptr;
     pCopyQueue->pCommandList = nullptr;
+    pCopyQueue->Lock.Unlock();
+}
 
-    // release to list
-    for (CopyCommandQueue &queue : m_copyCommandQueues)
+void D3D12GPUDevice::TransitionPendingResources(D3D12CommandQueue *pCommandQueue)
+{
+    // get out as quickly as possible if there's no pending transitions.
+    m_pendingResourceTransitionLock.Lock();
+    if (m_pendingResourceTransitions.IsEmpty())
     {
-        if (&queue == s_pCurrentThreadCopyCommandQueue)
-        {
-            queue.Lock.Unlock();
-            return;
-        }
+        m_pendingResourceTransitionLock.Unlock();
+        return;
     }
 
-    // should not hit here
-    Panic("Removing untracked copy command queue");
+    // get a command allocator and list
+    ID3D12CommandAllocator *pCommandAllocator = pCommandQueue->RequestCommandAllocator();
+    ID3D12GraphicsCommandList *pCommandList = pCommandQueue->RequestAndOpenCommandList(pCommandAllocator);
+    Log_DevPrintf("D3D12RenderBackend: Transitioning %u pending resources.", m_pendingResourceTransitions.GetSize());
+
+    // pass through to d3d. unfortunately this will be a period of contention, when 
+    // resources have to be transitioned, command list execution halts on all threads.
+    D3D12_RESOURCE_BARRIER *pResourceBarriers = (D3D12_RESOURCE_BARRIER *)alloca(sizeof(D3D12_RESOURCE_BARRIER) * Min(m_pendingResourceTransitions.GetSize(), (uint32)256));
+    for (uint32 startIndex = 0; startIndex < m_pendingResourceTransitions.GetSize(); )
+    {
+        uint32 nResourceBarriers = Min(m_pendingResourceTransitions.GetSize() - startIndex, (uint32)256);
+        for (uint32 i = 0; i < nResourceBarriers; i++)
+        {
+            const PendingResourceTransition *pPendingTransition = &m_pendingResourceTransitions[startIndex + i];
+            D3D12_RESOURCE_BARRIER *pResourceBarrier = &pResourceBarriers[i];
+            pResourceBarrier->Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            pResourceBarrier->Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            pResourceBarrier->Transition.pResource = pPendingTransition->pResource;
+            pResourceBarrier->Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            pResourceBarrier->Transition.StateBefore = pPendingTransition->BeforeState;
+            pResourceBarrier->Transition.StateAfter = pPendingTransition->AfterState;
+        }
+        pCommandList->ResourceBarrier(nResourceBarriers, pResourceBarriers);
+        startIndex += nResourceBarriers;
+    }
+
+    // allow re-queuing again. this will become an issue later on with multiple compute issuer threads though.
+    m_pendingResourceTransitions.Clear();
+    m_pendingResourceTransitionLock.Unlock();
+
+    // execute commands.
+    HRESULT hResult = pCommandList->Close();
+    if (SUCCEEDED(hResult))
+    {
+        pCommandQueue->ExecuteCommandList(pCommandList);
+        pCommandQueue->ReleaseCommandList(pCommandList);
+    }
+    else
+    {
+        Log_ErrorPrintf("Failed to close/execute command list. Resources will be left in an undefined state.");
+        pCommandQueue->ReleaseFailedCommandList(pCommandList);
+    }
+
+    // release command allocator back.
+    pCommandQueue->ReleaseCommandAllocator(pCommandAllocator);
 }
 
 ID3D12GraphicsCommandList *D3D12GPUDevice::GetCurrentCopyCommandList()

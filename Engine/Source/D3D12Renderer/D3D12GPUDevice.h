@@ -172,7 +172,6 @@ public:
 
     // create a resource barrier on the current command list. NOTE: doesn't flush the copy command list, assumes batching
     void ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
-    void ResourceBarrier(ID3D12Resource *pResource, uint32 subResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
 
     // resource freeing - done on graphics queue
     void ScheduleResourceForDeletion(ID3D12Pageable *pResource);
@@ -183,6 +182,9 @@ public:
     void ScheduleCopyResourceForDeletion(ID3D12Pageable *pResource);
     void GetFreeCopyCommandQueue();
     void ReleaseCopyCommandQueue();
+
+    // clean up after resources are created off-thread
+    void TransitionPendingResources(D3D12CommandQueue *pCommandQueue);
     
 private:
     bool CreateCommandQueues(uint32 copyCommandQueueCount);
@@ -233,4 +235,14 @@ private:
     };
     MemArray<ConstantBufferStorage> m_constantBufferStorage;
     ID3D12Heap *m_pConstantBufferStorageHeap;
+
+    // resources pending transition
+    struct PendingResourceTransition
+    {
+        ID3D12Resource *pResource;
+        D3D12_RESOURCE_STATES BeforeState;
+        D3D12_RESOURCE_STATES AfterState;
+    };
+    MemArray<PendingResourceTransition> m_pendingResourceTransitions;
+    Mutex m_pendingResourceTransitionLock;
 };

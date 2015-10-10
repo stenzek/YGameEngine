@@ -71,6 +71,7 @@ WorldRenderer::Options::Options()
     , RenderModeNormals(false)
     , RenderModeLightingOnly(false)
     , EmulateMobile(false)
+    , EnableMultithreadedRendering(false)
     , RenderWidth(640)
     , RenderHeight(480)
     , OcclusionCullingObjectsPerBatch(1)
@@ -146,6 +147,7 @@ void WorldRenderer::Options::InitFromCVars()
     RenderModeFullbright = CVars::r_fullbright.GetBool();
     RenderModeNormals = CVars::r_debug_normals.GetBool();
     EmulateMobile = CVars::r_emulate_mobile.GetBool();
+    EnableMultithreadedRendering = CVars::r_multithreaded_rendering.GetBool();
 }
 
 void WorldRenderer::Options::SetRenderResolution(uint32 width, uint32 height)
@@ -166,6 +168,8 @@ void WorldRenderer::Options::DisableUnsupportedFeatures()
             EnableOcclusionPredication = false;
         }
     }
+
+    EnableMultithreadedRendering &= g_pRenderer->GetCapabilities().SupportsCommandLists;
 }
 
 WorldRenderer::ViewParameters::ViewParameters()
@@ -392,74 +396,74 @@ ShaderProgram *WorldRenderer::GetShaderProgram(const ShaderComponentTypeInfo *pB
     return g_pRenderer->GetShaderProgram(globalShaderFlags, pBaseShaderTypeInfo, baseShaderFlags, g_pRenderer->GetFixedResources()->GetFullScreenQuadVertexAttributes(), g_pRenderer->GetFixedResources()->GetFullScreenQuadVertexAttributeCount(), nullptr, 0);
 }
 
-void WorldRenderer::SetBlendingModeForMaterial(GPUContext *pGPUDevice, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry)
+void WorldRenderer::SetBlendingModeForMaterial(GPUCommandList *pCommandList, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry)
 {
     switch (pQueueEntry->pMaterial->GetShader()->GetBlendMode())
     {
     case MATERIAL_BLENDING_MODE_ADDITIVE:
-        pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAdditive(), float4::One);
+        pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAdditive(), float4::One);
         break;
 
     case MATERIAL_BLENDING_MODE_STRAIGHT:
-        pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlending(), float4::One);
+        pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlending(), float4::One);
         break;
 
     case MATERIAL_BLENDING_MODE_PREMULTIPLIED:
-        pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStatePremultipliedAlpha(), float4::One);
+        pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStatePremultipliedAlpha(), float4::One);
         break;
 
     case MATERIAL_BLENDING_MODE_SOFTMASKED:
-        pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlending(), float4::One);
+        pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlending(), float4::One);
         break;
 
     default:
         {
             if ((pQueueEntry->RenderPassMask & RENDER_PASS_TINT) && (pQueueEntry->TintColor >> 24) != 0xFF)
-                pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlending(), float4::One);
+                pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlending(), float4::One);
             else
-                pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending(), float4::One);
+                pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending(), float4::One);
         }
         break;
     }
 
     // set blending colour
     if (pQueueEntry->RenderPassMask & RENDER_PASS_TINT)
-        pGPUDevice->GetConstants()->SetMaterialTintColor(PixelFormatHelpers::ConvertRGBAToFloat4(pQueueEntry->TintColor), true);
+        pCommandList->GetConstants()->SetMaterialTintColor(PixelFormatHelpers::ConvertRGBAToFloat4(pQueueEntry->TintColor), true);
 }
 
-void WorldRenderer::SetAdditiveBlendingModeForMaterial(GPUContext *pGPUDevice, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry)
+void WorldRenderer::SetAdditiveBlendingModeForMaterial(GPUCommandList *pCommandList, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry)
 {
     switch (pQueueEntry->pMaterial->GetShader()->GetBlendMode())
     {
     case MATERIAL_BLENDING_MODE_ADDITIVE:
-        pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAdditive(), float4::One);
+        pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAdditive(), float4::One);
         break;
 
     case MATERIAL_BLENDING_MODE_STRAIGHT:
-        pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlendingAdditive(), float4::One);
+        pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlendingAdditive(), float4::One);
         break;
 
     case MATERIAL_BLENDING_MODE_PREMULTIPLIED:
-        pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStatePremultipliedAlphaAdditive(), float4::One);
+        pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStatePremultipliedAlphaAdditive(), float4::One);
         break;
 
     case MATERIAL_BLENDING_MODE_SOFTMASKED:
-        pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlendingAdditive(), float4::One);
+        pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlendingAdditive(), float4::One);
         break;
 
     default:
         {
             if ((pQueueEntry->RenderPassMask & RENDER_PASS_TINT) && (pQueueEntry->TintColor >> 24) != 0xFF)
-                pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlendingAdditive(), float4::One);
+                pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlendingAdditive(), float4::One);
             else
-                pGPUDevice->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAdditive(), float4::One);
+                pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAdditive(), float4::One);
         }
         break;
     }
 
     // set blending colour
     if (pQueueEntry->RenderPassMask & RENDER_PASS_TINT)
-        pGPUDevice->GetConstants()->SetMaterialTintColor(PixelFormatHelpers::ConvertRGBAToFloat4(pQueueEntry->TintColor), true);
+        pCommandList->GetConstants()->SetMaterialTintColor(PixelFormatHelpers::ConvertRGBAToFloat4(pQueueEntry->TintColor), true);
 }
 
 void WorldRenderer::FillRenderQueue(const Camera *pCamera, const RenderWorld *pRenderWorld)
@@ -509,14 +513,14 @@ void WorldRenderer::DrawDebugInfo(const Camera *pCamera)
     m_pGUIContext->PopManualFlush();
 }
 
-void WorldRenderer::DrawWireframeOverlay(const Camera *pCamera, const RenderQueue::RenderableArray *pRenderables)
+void WorldRenderer::DrawWireframeOverlay(GPUCommandList *pCommandList, const Camera *pCamera, const RenderQueue::RenderableArray *pRenderables)
 {
     MICROPROFILE_SCOPEI("WorldRenderer", "DrawWireframeOverlay", MAKE_COLOR_R8G8B8_UNORM(20, 185, 185));
 
     // set common state
-    m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_WIREFRAME, RENDERER_CULL_BACK, true, false, false));
-    m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(true, false, GPU_COMPARISON_FUNC_LESS_EQUAL), 0);
-    m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
+    pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_WIREFRAME, RENDERER_CULL_BACK, true, false, false));
+    pCommandList->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(true, false, GPU_COMPARISON_FUNC_LESS_EQUAL), 0);
+    pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
 
     // init shader selector, we want one color shader
     ShaderProgramSelector shaderSelector(m_globalShaderFlags);
@@ -554,37 +558,38 @@ void WorldRenderer::DrawWireframeOverlay(const Camera *pCamera, const RenderQueu
         shaderSelector.SetMaterial(pQueueEntry->pMaterial);
 
         // draw it
-        ShaderProgram *pShaderProgram = shaderSelector.MakeActive(m_pGPUContext);
+        ShaderProgram *pShaderProgram = shaderSelector.MakeActive(pCommandList);
         if (pShaderProgram == nullptr)
             continue;
 
-        OneColorShader::SetColor(m_pGPUContext, pShaderProgram, drawColor);
-        pQueueEntry->pRenderProxy->SetupForDraw(pCamera, pQueueEntry, m_pGPUContext, pShaderProgram);
-        pQueueEntry->pRenderProxy->DrawQueueEntry(pCamera, pQueueEntry, m_pGPUContext);
+        OneColorShader::SetColor(pCommandList, pShaderProgram, drawColor);
+        pQueueEntry->pRenderProxy->SetupForDraw(pCamera, pQueueEntry, pCommandList, pShaderProgram);
+        pQueueEntry->pRenderProxy->DrawQueueEntry(pCamera, pQueueEntry, pCommandList);
     }
 }
 
-void WorldRenderer::DrawOcclusionCullingProxies(const Camera *pCamera)
+void WorldRenderer::DrawOcclusionCullingProxies(GPUCommandList *pCommandList, const Camera *pCamera)
 {
     MICROPROFILE_SCOPEI("WorldRenderer", "DrawOcclusionCullingProxies", MAKE_COLOR_R8G8B8_UNORM(20, 20, 185));
+    Panic("Fixme for map!");
 
     // Everything here uses the normal rasterizer state, so set that up here.
-    m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_NONE));
-    m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(true, false, GPU_COMPARISON_FUNC_LESS_EQUAL), 0);
-    m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoColorWrites());
+    pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_NONE));
+    pCommandList->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(true, false, GPU_COMPARISON_FUNC_LESS_EQUAL), 0);
+    pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoColorWrites());
 
     // Set identity world matrix.
-    m_pGPUContext->GetConstants()->SetLocalToWorldMatrix(float4x4::Identity, true);
+    pCommandList->GetConstants()->SetLocalToWorldMatrix(float4x4::Identity, true);
 
     // bind stuff
-    m_pGPUContext->SetShaderProgram(m_pOcclusionCullingProgram->GetGPUProgram());
+    pCommandList->SetShaderProgram(m_pOcclusionCullingProgram->GetGPUProgram());
 
     // Bind buffers
     uint32 bufferOffset = 0;
     uint32 bufferStride = sizeof(float3);
-    m_pGPUContext->SetVertexBuffers(0, 1, &m_pOcclusionCullingCubeVertexBuffer, &bufferOffset, &bufferStride);
-    m_pGPUContext->SetIndexBuffer(m_pOcclusionCullingCubeIndexBuffer, GPU_INDEX_FORMAT_UINT16, 0);
-    m_pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+    pCommandList->SetVertexBuffers(0, 1, &m_pOcclusionCullingCubeVertexBuffer, &bufferOffset, &bufferStride);
+    pCommandList->SetIndexBuffer(m_pOcclusionCullingCubeIndexBuffer, GPU_INDEX_FORMAT_UINT16, 0);
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
 
     // Get camera eye position.
     void *pBufferMappedPointer = nullptr;
@@ -667,9 +672,9 @@ void WorldRenderer::DrawOcclusionCullingProxies(const Camera *pCamera)
                 GPUQuery *pCurrentQuery = m_occlusionCullingPendingQueries[baseIndex + i].pQuery;
                 
                 // draw it
-                m_pGPUContext->BeginQuery(pCurrentQuery);
-                m_pGPUContext->DrawIndexed(0, 36, i * 8);
-                m_pGPUContext->EndQuery(pCurrentQuery);
+                pCommandList->BeginQuery(pCurrentQuery);
+                pCommandList->DrawIndexed(0, 36, i * 8);
+                pCommandList->EndQuery(pCurrentQuery);
             }
 
             // reset count
@@ -692,9 +697,9 @@ void WorldRenderer::DrawOcclusionCullingProxies(const Camera *pCamera)
             GPUQuery *pCurrentQuery = m_occlusionCullingPendingQueries[baseIndex + i].pQuery;
 
             // draw it
-            m_pGPUContext->BeginQuery(pCurrentQuery);
-            m_pGPUContext->DrawIndexed(0, 36, i * 8);
-            m_pGPUContext->EndQuery(pCurrentQuery);
+            pCommandList->BeginQuery(pCurrentQuery);
+            pCommandList->DrawIndexed(0, 36, i * 8);
+            pCommandList->EndQuery(pCurrentQuery);
         }
     }
 }
@@ -766,14 +771,14 @@ void WorldRenderer::BindOcclusionQueriesToQueueEntries()
     m_occlusionCullingPendingQueries.Clear();
 }
 
-void WorldRenderer::ScaleTexture(GPUTexture2D *pSourceTexture, GPURenderTargetView *pDestinationRTV, bool restoreViewport /* = true */, bool restoreTargets /* = true */)
+void WorldRenderer::ScaleTexture(GPUCommandList *pCommandList, GPUTexture2D *pSourceTexture, GPURenderTargetView *pDestinationRTV, bool restoreViewport /* = true */, bool restoreTargets /* = true */)
 {
     DebugAssert(pDestinationRTV->GetTargetTexture()->GetResourceType() == GPU_RESOURCE_TYPE_TEXTURE2D);
 
     // old viewport
     RENDERER_VIEWPORT oldViewport;
     if (restoreViewport)
-        Y_memcpy(&oldViewport, m_pGPUContext->GetViewport(), sizeof(oldViewport));
+        Y_memcpy(&oldViewport, pCommandList->GetViewport(), sizeof(oldViewport));
 
     // old render targets
     GPURenderTargetView *pOldRTVs[8];
@@ -782,7 +787,7 @@ void WorldRenderer::ScaleTexture(GPUTexture2D *pSourceTexture, GPURenderTargetVi
     if (restoreTargets)
     {
         // read from context
-        nOldRTVs = m_pGPUContext->GetRenderTargets(countof(pOldRTVs), pOldRTVs, &pOldDSV);
+        nOldRTVs = pCommandList->GetRenderTargets(countof(pOldRTVs), pOldRTVs, &pOldDSV);
     }
     else
     {
@@ -802,20 +807,20 @@ void WorldRenderer::ScaleTexture(GPUTexture2D *pSourceTexture, GPURenderTargetVi
 
     // save the old viewport, and set a new viewport covering the destination texture
     RENDERER_VIEWPORT downsampleViewport(0, 0, destTextureWidth, destTextureHeight, 0.0f, 1.0f);
-    m_pGPUContext->SetViewport(&downsampleViewport);
+    pCommandList->SetViewport(&downsampleViewport);
 
     // use texture blit shader
-    m_pGPUContext->SetRenderTargets(1, &pDestinationRTV, nullptr);
-    m_pGPUContext->DiscardTargets(true, false, false);
-    g_pRenderer->BlitTextureUsingShader(m_pGPUContext, pSourceTexture, 0, 0, sourceTextureWidth, sourceTextureHeight, 0, 0, 0, destTextureWidth, destTextureHeight, RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER_LINEAR, RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE_NONE);
+    pCommandList->SetRenderTargets(1, &pDestinationRTV, nullptr);
+    pCommandList->DiscardTargets(true, false, false);
+    g_pRenderer->BlitTextureUsingShader(pCommandList, pSourceTexture, 0, 0, sourceTextureWidth, sourceTextureHeight, 0, 0, 0, destTextureWidth, destTextureHeight, RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER_LINEAR, RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE_NONE);
 
     // restore old targets
     if (restoreTargets)
-        m_pGPUContext->SetRenderTargets(nOldRTVs, pOldRTVs, pOldDSV);
+        pCommandList->SetRenderTargets(nOldRTVs, pOldRTVs, pOldDSV);
 
     // restore old viewport
     if (restoreViewport)
-        m_pGPUContext->SetViewport(&oldViewport);
+        pCommandList->SetViewport(&oldViewport);
 }
 
 WorldRenderer::IntermediateBuffer *WorldRenderer::RequestIntermediateBuffer(uint32 width, uint32 height, PIXEL_FORMAT pixelFormat, uint32 mipLevels)
@@ -1031,4 +1036,46 @@ void WorldRenderer::DrawIntermediateBuffers()
         // end batching
         m_pGUIContext->PopManualFlush();
     }
+}
+
+void WorldRenderer::ExecuteRenderPasses()
+{
+    if (!m_options.EnableMultithreadedRendering)
+        return;
+
+    m_commandListLock.Lock();
+
+    for (;;)
+    {
+        if (m_commandListsPending == 0)
+            break;
+
+        m_commandListLock.Unlock();
+        WaitForSingleObject(m_hQueueingCommandsSemaphore, INFINITE);
+        m_commandListLock.Lock();
+
+        // could be primary or secondary that woke us, so just execute as many secondaries as possible
+        while (!m_readySecondaryCommandLists.IsEmpty())
+        {
+            GPUCommandList *pCommandList = m_readySecondaryCommandLists.PopFront();
+            m_pGPUContext->ExecuteCommandList(pCommandList);
+            g_pRenderer->ReleaseCommandList(pCommandList);
+        }
+    }
+
+    // ensure the semaphore is zero
+    while (WaitForSingleObject(m_hQueueingCommandsSemaphore, 0) == WAIT_OBJECT_0);
+
+    // flush immediate context first
+    m_pGPUContext->Flush();
+
+    // execute primary command lists
+    while (!m_readyPrimaryCommandLists.IsEmpty())
+    {
+        GPUCommandList *pCommandList = m_readyPrimaryCommandLists.PopFront();
+        m_pGPUContext->ExecuteCommandList(pCommandList);
+        g_pRenderer->ReleaseCommandList(pCommandList);
+    }
+
+    m_commandListLock.Unlock();
 }

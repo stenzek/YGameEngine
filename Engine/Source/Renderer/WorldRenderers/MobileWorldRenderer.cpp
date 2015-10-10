@@ -151,7 +151,7 @@ void MobileWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewP
 
     // if occlusion culling is enabled, draw proxies
     if ((m_options.EnableOcclusionCulling | m_options.EnableOcclusionPredication) != 0)
-        DrawOcclusionCullingProxies(&pViewParameters->ViewCamera);
+        DrawOcclusionCullingProxies(m_pGPUContext, &pViewParameters->ViewCamera);
 
     // transparent objects
     DrawTranslucentObjects(pViewParameters);
@@ -625,7 +625,7 @@ void MobileWorldRenderer::DrawOpaqueObjects(const ViewParameters *pViewParameter
 
     // wireframe overlay
     if (m_options.ShowWireframeOverlay)
-        DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetOpaqueRenderables());
+        DrawWireframeOverlay(m_pGPUContext, &pViewParameters->ViewCamera, &m_renderQueue.GetOpaqueRenderables());
 }
 
 void MobileWorldRenderer::DrawTranslucentObjects(const ViewParameters *pViewParameters)
@@ -660,7 +660,7 @@ void MobileWorldRenderer::DrawTranslucentObjects(const ViewParameters *pViewPara
 
     // wireframe overlay
     if (m_options.ShowWireframeOverlay)
-        DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetTranslucentRenderables());
+        DrawWireframeOverlay(m_pGPUContext, &pViewParameters->ViewCamera, &m_renderQueue.GetTranslucentRenderables());
 }
 
 void MobileWorldRenderer::DrawFinalPass(const ViewParameters *pViewParameters, GPURenderTargetView *pOutputRTV)

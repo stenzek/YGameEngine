@@ -17,6 +17,7 @@ namespace CVars
     // Renderer cvars
     extern CVar r_platform;
     extern CVar r_use_render_thread;
+    extern CVar r_multithreaded_rendering;
     extern CVar r_gpu_latency;
     extern CVar r_fullscreen;
     extern CVar r_fullscreen_exclusive;

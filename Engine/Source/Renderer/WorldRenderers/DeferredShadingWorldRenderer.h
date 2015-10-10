@@ -47,40 +47,40 @@ private:
     bool DrawSpotShadowMap(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, RENDER_QUEUE_SPOT_LIGHT_ENTRY *pLight);
 
     // set shader program parameters for queue entry
-    void SetCommonShaderProgramParameters(const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, ShaderProgram *pShaderProgram);
+    void SetCommonShaderProgramParameters(GPUCommandList *pCommandList, const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, ShaderProgram *pShaderProgram);
 
     // draw base pass for an object (emissive/lightmap/ambient light/main directional light)
-    uint32 DrawBasePassForObject(const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, bool depthWrites, GPU_COMPARISON_FUNC depthFunc);
+    uint32 DrawBasePassForObject(GPUCommandList *pCommandList, const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, bool depthWrites, GPU_COMPARISON_FUNC depthFunc);
 
     // draw forward light passes for an object
-    uint32 DrawForwardLightPassesForObject(const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, bool useAdditiveBlending, bool depthWrites, GPU_COMPARISON_FUNC depthFunc);
+    uint32 DrawForwardLightPassesForObject(GPUCommandList *pCommandList, const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, bool useAdditiveBlending, bool depthWrites, GPU_COMPARISON_FUNC depthFunc);
 
     // draw a clear pass to set depth for an object
-    void DrawEmptyPassForObject(const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry);
+    void DrawEmptyPassForObject(GPUCommandList *pCommandList, const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry);
 
     // draw z prepass (Overwrites render targets)
-    void DrawDepthPrepass(const ViewParameters *pViewParameters);
+    void DrawDepthPrepass(GPUCommandList *pCommandList, const ViewParameters *pViewParameters);
 
     // draw emissive objects (Overwrites render targets)
-    void DrawUnlitObjects(const ViewParameters *pViewParameters);
+    void DrawUnlitObjects(GPUCommandList *pCommandList, const ViewParameters *pViewParameters);
 
     // draw opaque objects (Overwrites render targets)
-    void DrawGBuffers(const ViewParameters *pViewParameters);
+    void DrawGBuffers(GPUCommandList *pCommandList, const ViewParameters *pViewParameters);
 
     // draw lights (Overwrites render targets)
-    void DrawLights(const ViewParameters *pViewParameters);
-    void DrawLights_DirectionalLights(const ViewParameters *pViewParameters);
-    void DrawLights_PointLights_ByLightVolumes(const ViewParameters *pViewParameters);
-    void DrawLights_PointLights_Tiled(const ViewParameters *pViewParameters);
+    void DrawLights(GPUCommandList *pCommandList, const ViewParameters *pViewParameters);
+    void DrawLights_DirectionalLights(GPUCommandList *pCommandList, const ViewParameters *pViewParameters);
+    void DrawLights_PointLights_ByLightVolumes(GPUCommandList *pCommandList, const ViewParameters *pViewParameters);
+    void DrawLights_PointLights_Tiled(GPUCommandList *pCommandList, const ViewParameters *pViewParameters);
 
     // build ambient occlusion terms (Overwrites render targets)
-    void ApplyAmbientOcclusion(const ViewParameters *pViewParameters);
+    void ApplyAmbientOcclusion(GPUCommandList *pCommandList, const ViewParameters *pViewParameters);
 
     // apply fog post-process
-    void ApplyFog(const ViewParameters *pViewParameters);
+    void ApplyFog(GPUCommandList *pCommandList, const ViewParameters *pViewParameters);
 
     // draw post process passes (Overwrites render targets)
-    void DrawPostProcessAndTranslucentObjects(const ViewParameters *pViewParameters);
+    void DrawPostProcessAndTranslucentObjects(GPUCommandList *pCommandList, const ViewParameters *pViewParameters);
 
     // draw any object debug info
     void DrawDebugInfo(const Camera *pCamera);

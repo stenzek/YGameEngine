@@ -74,6 +74,7 @@ static const RENDERER_PLATFORM_FACTORY_FUNCTION s_renderSystemDeclarations[] =
 Renderer *g_pRenderer = NULL;
 Thread::ThreadIdType Renderer::s_renderThreadId = static_cast<Thread::ThreadIdType>(0);
 TaskQueue Renderer::s_renderCommandQueue;
+TaskQueue Renderer::s_renderWorkerCommandQueue;
 
 //----------------------------------------------------- Output Window Class ----------------------------------------------------------------------------------------------------------
 
@@ -410,6 +411,15 @@ bool Renderer::Create(const RendererInitializationParameters *pCreateParameters)
         StopRenderThread();
         return false;
     }
+
+    // create render workers
+    if (!s_renderWorkerCommandQueue.Initialize(TaskQueue::DefaultQueueSize, 4))
+    {
+        Log_ErrorPrintf(" Can't create render worker threads.");
+        Shutdown();
+        return false;
+    }
+
 
     Log_InfoPrint("-----------------------------------");
     return true;
@@ -1076,14 +1086,14 @@ bool Renderer::InternalDrawPlain(GPUContext *pGPUDevice, const PlainVertexFactor
     return true;
 }
 
-void Renderer::DrawFullScreenQuad(GPUContext *pContext)
+void Renderer::DrawFullScreenQuad(GPUCommandList *pCommandList)
 {
-    pContext->SetVertexBuffer(0, m_fixedResources.GetFullScreenQuadVertexBuffer(), 0, sizeof(FixedResources::ScreenQuadVertex));
-    pContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_STRIP);
-    pContext->Draw(0, 4);
+    pCommandList->SetVertexBuffer(0, m_fixedResources.GetFullScreenQuadVertexBuffer(), 0, sizeof(FixedResources::ScreenQuadVertex));
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_STRIP);
+    pCommandList->Draw(0, 4);
 }
 
-void Renderer::BlitTextureUsingShader(GPUContext *pContext, GPUTexture2D *pSourceTexture, uint32 sourceX, uint32 sourceY, uint32 sourceWidth, uint32 sourceHeight, int32 sourceLevel, uint32 destX, uint32 destY, uint32 destWidth, uint32 destHeight, RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER resizeFilter /* = RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER_NEAREST */, RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE blendMode /* = RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE_NONE */)
+void Renderer::BlitTextureUsingShader(GPUCommandList *pCommandList, GPUTexture2D *pSourceTexture, uint32 sourceX, uint32 sourceY, uint32 sourceWidth, uint32 sourceHeight, int32 sourceLevel, uint32 destX, uint32 destY, uint32 destWidth, uint32 destHeight, RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER resizeFilter /* = RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER_NEAREST */, RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE blendMode /* = RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE_NONE */)
 {
     // calculate source size and offset in texels
     uint32 sourceTextureWidth = pSourceTexture->GetDesc()->Width;
@@ -1112,11 +1122,11 @@ void Renderer::BlitTextureUsingShader(GPUContext *pContext, GPUTexture2D *pSourc
     DebugAssert(pShaderProgram != nullptr);
 
     // set state
-    pContext->SetRasterizerState(m_fixedResources.GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false, false));
-    pContext->SetDepthStencilState(m_fixedResources.GetDepthStencilState(false, false), 0);
-    pContext->SetBlendState(pBlendState);
-    pContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-    TextureBlitShader::SetProgramParameters(pContext, pShaderProgram, pSourceTexture, pSamplerState, sourceLevel);
+    pCommandList->SetRasterizerState(m_fixedResources.GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false, false));
+    pCommandList->SetDepthStencilState(m_fixedResources.GetDepthStencilState(false, false), 0);
+    pCommandList->SetBlendState(pBlendState);
+    pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+    TextureBlitShader::SetProgramParameters(pCommandList, pShaderProgram, pSourceTexture, pSamplerState, sourceLevel);
 
     // create vertices
     FixedResources::ScreenQuadVertex vertices[4];
@@ -1126,8 +1136,8 @@ void Renderer::BlitTextureUsingShader(GPUContext *pContext, GPUTexture2D *pSourc
     vertices[3].Set((float)(destX + destWidth), (float)(destY + destHeight), sourceOffset.x + sourceSize.x, sourceOffset.y + sourceSize.y);
 
     // draw the quad
-    pContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_STRIP);
-    pContext->DrawUserPointer(vertices, sizeof(vertices[0]), countof(vertices));
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_STRIP);
+    pCommandList->DrawUserPointer(vertices, sizeof(vertices[0]), countof(vertices));
 }
 
 // void Renderer::DrawTextureMips(GPUContext *pContext, GPUTexture2D *pTexture, int32 maxLevel /* = -1 */)

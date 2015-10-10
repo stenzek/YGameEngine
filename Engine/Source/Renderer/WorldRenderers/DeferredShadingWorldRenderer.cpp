@@ -162,69 +162,63 @@ void DeferredShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, co
     // draw shadow maps
     DrawShadowMaps(pRenderWorld, pViewParameters);
 
-    // clear render targets
-    {
-        MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "Prepare", MAKE_COLOR_R8G8B8_UNORM(100, 150, 75));
-
-        // need a seperate viewport, skip color clear it'll be done when gbuffers are combined
-        RENDERER_VIEWPORT bufferViewport(0, 0, m_options.RenderWidth, m_options.RenderHeight, 0.0f, 1.0f);
-        m_pGPUContext->SetRenderTargets(0, nullptr, m_pSceneDepthBuffer->pDSV);
-        m_pGPUContext->SetViewport(&bufferViewport);
-        m_pGPUContext->ClearTargets(false, true, true);
-
-        // set up view-dependent constants
-        GPUContextConstants *pConstants = m_pGPUContext->GetConstants();
-        pConstants->SetFromCamera(pViewParameters->ViewCamera, false);
-        pConstants->SetWorldTime(pViewParameters->WorldTime, false);
-        pConstants->CommitChanges();
-    }
-
-//     // handle override cameras
-//     if (pRenderProfiler != nullptr && pRenderProfiler->HasCameraOverride())
-//     {
-//         // clone view parameters
-//         ViewParameters *viewParametersCopy = (ViewParameters *)alloca(sizeof(ViewParameters));
-//         Y_memcpy(viewParametersCopy, pViewParameters, sizeof(ViewParameters));
-//         viewParametersCopy->ViewCamera = *pRenderProfiler->GetCameraOverrideCamera();
-//         pViewParameters = viewParametersCopy;
-// 
-//         // reissue renderable query with new camera
-//         FillRenderQueue(&viewParametersCopy->ViewCamera, pRenderWorld);
-//     }
-
     // pull occlusion results back from gpu
     if (m_options.EnableOcclusionCulling)
         CollectOcclusionCullingResults();
     else if (m_options.EnableOcclusionPredication)
         BindOcclusionQueriesToQueueEntries();
 
-    // depth prepass
-    if (m_options.EnableDepthPrepass)
-        DrawDepthPrepass(pViewParameters);
+    // draw main passes
+    QueuePrimaryRenderPass([this, pRenderWorld, pViewParameters](GPUCommandList *pCommandList)
+    {
+        MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "MainRenderPass", MAKE_COLOR_R8G8B8_UNORM(100, 150, 75));
 
-    // gbuffer
-    DrawGBuffers(pViewParameters);
+        // clear render targets
+        {
+            // need a seperate viewport, skip color clear it'll be done when gbuffers are combined
+            RENDERER_VIEWPORT bufferViewport(0, 0, m_options.RenderWidth, m_options.RenderHeight, 0.0f, 1.0f);
+            pCommandList->SetRenderTargets(0, nullptr, m_pSceneDepthBuffer->pDSV);
+            pCommandList->SetViewport(&bufferViewport);
+            pCommandList->ClearTargets(false, true, true);
 
-    // if occlusion culling is enabled, draw proxies
-    if ((m_options.EnableOcclusionCulling | m_options.EnableOcclusionPredication) != 0)
-        DrawOcclusionCullingProxies(&pViewParameters->ViewCamera);
+            // set up view-dependent constants
+            GPUContextConstants *pConstants = pCommandList->GetConstants();
+            pConstants->SetFromCamera(pViewParameters->ViewCamera, false);
+            pConstants->SetWorldTime(pViewParameters->WorldTime, false);
+            pConstants->CommitChanges();
+        }
 
-    // draw lights
-    DrawLights(pViewParameters);
+        // depth prepass
+        if (m_options.EnableDepthPrepass)
+            DrawDepthPrepass(pCommandList, pViewParameters);
 
-    // unlit objects
-    //DrawUnlitObjects(pViewParameters);
+        // gbuffer
+        DrawGBuffers(pCommandList, pViewParameters);
 
-    // apply AO
-    if (m_options.EnableSSAO)
-        ApplyAmbientOcclusion(pViewParameters);
+        // if occlusion culling is enabled, draw proxies
+        if ((m_options.EnableOcclusionCulling | m_options.EnableOcclusionPredication) != 0)
+            DrawOcclusionCullingProxies(pCommandList, &pViewParameters->ViewCamera);
 
-    // apply fog
-    if (pViewParameters->FogMode != RENDERER_FOG_MODE_NONE)
-        ApplyFog(pViewParameters);
+        // draw lights
+        DrawLights(pCommandList, pViewParameters);
 
-    // transparent objects
-    DrawPostProcessAndTranslucentObjects(pViewParameters);
+        // unlit objects
+        //DrawUnlitObjects(pCommandList, pViewParameters);
+
+        // apply AO
+        if (m_options.EnableSSAO)
+            ApplyAmbientOcclusion(pCommandList, pViewParameters);
+
+        // apply fog
+        if (pViewParameters->FogMode != RENDERER_FOG_MODE_NONE)
+            ApplyFog(pCommandList, pViewParameters);
+
+        // transparent objects
+        DrawPostProcessAndTranslucentObjects(pCommandList, pViewParameters);
+    });
+
+    // complete all passes and queue to device
+    ExecuteRenderPasses();
 
     // tonemap to present buffer
     ApplyFinalCompositePostProcess(pViewParameters, m_pSceneColorBuffer->pTexture, pRenderTargetView);
@@ -347,7 +341,9 @@ bool DeferredShadingWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *p
     pLight->ShadowMapIndex = shadowMapIndex;
 
     // pass on to the sm renderer
-    m_pDirectionalShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight);
+    QueueSecondaryRenderPass([this, pRenderWorld, pViewParameters, pLight, pShadowMapData](GPUCommandList *pCommandList) {
+        m_pDirectionalShadowMapRenderer->DrawShadowMap(pCommandList, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight);
+    });
 
     // ok
     return true;
@@ -385,7 +381,9 @@ bool DeferredShadingWorldRenderer::DrawPointShadowMap(const RenderWorld *pRender
     pLight->ShadowMapIndex = shadowMapIndex;
 
     // pass on to the sm renderer
-    m_pPointShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight);
+    QueueSecondaryRenderPass([this, pRenderWorld, pViewParameters, pLight, pShadowMapData](GPUCommandList *pCommandList) {
+        m_pPointShadowMapRenderer->DrawShadowMap(pCommandList, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight);
+    });
 
     // ok
     return true;
@@ -396,10 +394,10 @@ bool DeferredShadingWorldRenderer::DrawSpotShadowMap(const RenderWorld *pRenderW
     return false;
 }
 
-void DeferredShadingWorldRenderer::SetCommonShaderProgramParameters(const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, ShaderProgram *pShaderProgram)
+void DeferredShadingWorldRenderer::SetCommonShaderProgramParameters(GPUCommandList *pCommandList, const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, ShaderProgram *pShaderProgram)
 {
-    pQueueEntry->pMaterial->BindDeviceResources(m_pGPUContext, pShaderProgram);
-    pQueueEntry->pRenderProxy->SetupForDraw(&pViewParameters->ViewCamera, pQueueEntry, m_pGPUContext, pShaderProgram);
+    pQueueEntry->pMaterial->BindDeviceResources(pCommandList, pShaderProgram);
+    pQueueEntry->pRenderProxy->SetupForDraw(&pViewParameters->ViewCamera, pQueueEntry, pCommandList, pShaderProgram);
 
     // post process material?
     const MaterialShader *pMaterialShader = pQueueEntry->pMaterial->GetShader();
@@ -408,12 +406,12 @@ void DeferredShadingWorldRenderer::SetCommonShaderProgramParameters(const ViewPa
         // set post process textures
         DebugAssert(m_pSceneColorBufferCopy != nullptr && m_pSceneDepthBufferCopy != nullptr);
         const uint32 BASE_INDEX = pMaterialShader->GetTextureParameterCount();
-        pShaderProgram->SetMaterialParameterTexture(m_pGPUContext, BASE_INDEX + 0, m_pSceneColorBufferCopy->pTexture, nullptr);
-        pShaderProgram->SetMaterialParameterTexture(m_pGPUContext, BASE_INDEX + 1, m_pSceneDepthBufferCopy->pTexture, nullptr);
+        pShaderProgram->SetMaterialParameterTexture(pCommandList, BASE_INDEX + 0, m_pSceneColorBufferCopy->pTexture, nullptr);
+        pShaderProgram->SetMaterialParameterTexture(pCommandList, BASE_INDEX + 1, m_pSceneDepthBufferCopy->pTexture, nullptr);
     }
 }
 
-uint32 DeferredShadingWorldRenderer::DrawBasePassForObject(const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, bool depthWrites, GPU_COMPARISON_FUNC depthFunc)
+uint32 DeferredShadingWorldRenderer::DrawBasePassForObject(GPUCommandList *pCommandList, const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, bool depthWrites, GPU_COMPARISON_FUNC depthFunc)
 {
     const MaterialShader *pMaterialShader = pQueueEntry->pMaterial->GetShader();
     uint32 renderPassMask = pQueueEntry->RenderPassMask;
@@ -441,23 +439,23 @@ uint32 DeferredShadingWorldRenderer::DrawBasePassForObject(const ViewParameters 
     if (pShaderProgram != nullptr)
     {
         // set states
-        m_pGPUContext->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false));
-        m_pGPUContext->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, depthWrites, depthFunc), 0);
+        pCommandList->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false));
+        pCommandList->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, depthWrites, depthFunc), 0);
 
         // bind shader
-        m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-        SetBlendingModeForMaterial(m_pGPUContext, pQueueEntry);
-        SetCommonShaderProgramParameters(pViewParameters, pQueueEntry, pShaderProgram);
+        pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+        SetBlendingModeForMaterial(pCommandList, pQueueEntry);
+        SetCommonShaderProgramParameters(pCommandList, pViewParameters, pQueueEntry, pShaderProgram);
 
         // draw away
-        pQueueEntry->pRenderProxy->DrawQueueEntry(&pViewParameters->ViewCamera, pQueueEntry, m_pGPUContext);
+        pQueueEntry->pRenderProxy->DrawQueueEntry(&pViewParameters->ViewCamera, pQueueEntry, pCommandList);
     }
 
     // done
     return 1;
 }
 
-void DeferredShadingWorldRenderer::DrawEmptyPassForObject(const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry)
+void DeferredShadingWorldRenderer::DrawEmptyPassForObject(GPUCommandList *pCommandList, const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry)
 {
     const MaterialShader *pMaterialShader = pQueueEntry->pMaterial->GetShader();
 
@@ -466,20 +464,20 @@ void DeferredShadingWorldRenderer::DrawEmptyPassForObject(const ViewParameters *
     if (pShaderProgram != nullptr)
     {
         // set initial states
-        m_pGPUContext->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false));
-        m_pGPUContext->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, true, GPU_COMPARISON_FUNC_LESS), 0);
+        pCommandList->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false));
+        pCommandList->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, true, GPU_COMPARISON_FUNC_LESS), 0);
 
         // bind shader
-        m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-        SetBlendingModeForMaterial(m_pGPUContext, pQueueEntry);
-        SetCommonShaderProgramParameters(pViewParameters, pQueueEntry, pShaderProgram);
+        pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+        SetBlendingModeForMaterial(pCommandList, pQueueEntry);
+        SetCommonShaderProgramParameters(pCommandList, pViewParameters, pQueueEntry, pShaderProgram);
 
         // draw it
-        pQueueEntry->pRenderProxy->DrawQueueEntry(&pViewParameters->ViewCamera, pQueueEntry, m_pGPUContext);
+        pQueueEntry->pRenderProxy->DrawQueueEntry(&pViewParameters->ViewCamera, pQueueEntry, pCommandList);
     }
 }
 
-uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, bool useAdditiveBlending, bool depthWrites, GPU_COMPARISON_FUNC depthFunc)
+uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(GPUCommandList *pCommandList, const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, bool useAdditiveBlending, bool depthWrites, GPU_COMPARISON_FUNC depthFunc)
 {
     const MaterialShader *pMaterialShader = pQueueEntry->pMaterial->GetShader();
     const bool staticLightMask = ((pQueueEntry->RenderPassMask & RENDER_PASS_STATIC_LIGHTING) != 0);
@@ -491,22 +489,22 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewP
 #define DRAW_LIGHT() MULTI_STATEMENT_MACRO_BEGIN \
         if (drawnLights == 0) \
         { \
-            m_pGPUContext->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false)); \
-            m_pGPUContext->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, depthWrites, depthFunc), 0); \
+            pCommandList->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false)); \
+            pCommandList->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, depthWrites, depthFunc), 0); \
             if (useAdditiveBlending) \
-                SetAdditiveBlendingModeForMaterial(m_pGPUContext, pQueueEntry); \
+                SetAdditiveBlendingModeForMaterial(pCommandList, pQueueEntry); \
             else \
-                SetBlendingModeForMaterial(m_pGPUContext, pQueueEntry); \
+                SetBlendingModeForMaterial(pCommandList, pQueueEntry); \
         } \
         else if (drawnLights == 1) \
         { \
             if (!useAdditiveBlending) \
-                SetAdditiveBlendingModeForMaterial(m_pGPUContext, pQueueEntry); \
+                SetAdditiveBlendingModeForMaterial(pCommandList, pQueueEntry); \
             if (depthWrites) \
-                m_pGPUContext->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, false, GPU_COMPARISON_FUNC_EQUAL), 0); \
+                pCommandList->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, false, GPU_COMPARISON_FUNC_EQUAL), 0); \
         } \
-        SetCommonShaderProgramParameters(pViewParameters, pQueueEntry, pShaderProgram); \
-        pQueueEntry->pRenderProxy->DrawQueueEntry(&pViewParameters->ViewCamera, pQueueEntry, m_pGPUContext); \
+        SetCommonShaderProgramParameters(pCommandList, pViewParameters, pQueueEntry, pShaderProgram); \
+        pQueueEntry->pRenderProxy->DrawQueueEntry(&pViewParameters->ViewCamera, pQueueEntry, pCommandList); \
         drawnLights++; \
         MULTI_STATEMENT_MACRO_END
 
@@ -531,7 +529,7 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewP
             continue;
 
         // bind shader and set parameters
-        m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
+        pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
 
         // using shadow map? note: we need the shadow map data to set the constant buffer up, even if this object does not use it
         const DirectionalShadowMapRenderer::ShadowMapData *pShadowMapData = (pLight->ShadowMapIndex >= 0) ? &m_directionalShadowMaps[pLight->ShadowMapIndex] : nullptr;
@@ -539,13 +537,13 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewP
         // set constant buffer parameters
         if (m_lastDirectionalLightIndex != lightIndex)
         {
-            DirectionalLightShader::SetLightParameters(m_pGPUContext, pLight, pShadowMapData);
+            DirectionalLightShader::SetLightParameters(pCommandList, pLight, pShadowMapData);
             m_lastDirectionalLightIndex = lightIndex;
         }
 
         // and the shadow map textures
         if (pShadowMapData)
-            DirectionalLightShader::SetProgramParameters(m_pGPUContext, pShaderProgram, pLight, pShadowMapData);
+            DirectionalLightShader::SetProgramParameters(pCommandList, pShaderProgram, pLight, pShadowMapData);
 
         // draw light
         DRAW_LIGHT();
@@ -576,15 +574,15 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewP
                 if ((pShaderProgram = GetShaderProgram(OBJECT_TYPEINFO(PointLightListShader), 0, pQueueEntry)) != nullptr)
                 {
                     // bind shader
-                    m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
+                    pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
 
                     // initialize light pointers
                     for (uint32 queuedLightIndex = 0; queuedLightIndex < queuedLightCount; queuedLightIndex++)
-                        PointLightListShader::SetLightParameters(m_pGPUContext, queuedLightIndex, queuedLights[queuedLightIndex]);
+                        PointLightListShader::SetLightParameters(pCommandList, queuedLightIndex, queuedLights[queuedLightIndex]);
 
                     // commit parameters, and draw
-                    PointLightListShader::SetActiveLightCount(m_pGPUContext, queuedLightCount);
-                    PointLightListShader::CommitParameters(m_pGPUContext);
+                    PointLightListShader::SetActiveLightCount(pCommandList, queuedLightCount);
+                    PointLightListShader::CommitParameters(pCommandList);
                     DRAW_LIGHT();
                 }
 
@@ -606,7 +604,7 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewP
             continue;
 
         // bind shader
-        m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
+        pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
 
         // using shadow map? note: we need the shadow map data to set the constant buffer up, even if this object does not use it
         const PointShadowMapRenderer::ShadowMapData *pShadowMapData = (pLight->ShadowMapIndex >= 0) ? &m_pointShadowMaps[pLight->ShadowMapIndex] : nullptr;
@@ -614,12 +612,12 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewP
         // set constant buffer parameters
         if (m_lastPointLightIndex != lightIndex)
         {
-            PointLightShader::SetLightParameters(m_pGPUContext, pLight, pShadowMapData);
+            PointLightShader::SetLightParameters(pCommandList, pLight, pShadowMapData);
             m_lastPointLightIndex = lightIndex;
         }
         
         // set program parameters
-        PointLightShader::SetProgramParameters(m_pGPUContext, pShaderProgram, pLight, pShadowMapData);
+        PointLightShader::SetProgramParameters(pCommandList, pShaderProgram, pLight, pShadowMapData);
 
         // draw light
         DRAW_LIGHT();
@@ -630,8 +628,8 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewP
     {
         if ((pShaderProgram = GetShaderProgram(OBJECT_TYPEINFO(PointLightShader), 0, pQueueEntry)) != nullptr)
         {
-            m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-            PointLightShader::SetLightParameters(m_pGPUContext, queuedLights[0], nullptr);
+            pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+            PointLightShader::SetLightParameters(pCommandList, queuedLights[0], nullptr);
             DRAW_LIGHT();
         }
     }
@@ -640,15 +638,15 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewP
         if ((pShaderProgram = GetShaderProgram(OBJECT_TYPEINFO(PointLightListShader), 0, pQueueEntry)) != nullptr)
         {
             // bind shader
-            m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
+            pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
 
             // initialize light pointers
             for (uint32 queuedLightIndex = 0; queuedLightIndex < queuedLightCount; queuedLightIndex++)
-                PointLightListShader::SetLightParameters(m_pGPUContext, queuedLightIndex, queuedLights[queuedLightIndex]);
+                PointLightListShader::SetLightParameters(pCommandList, queuedLightIndex, queuedLights[queuedLightIndex]);
 
             // commit parameters, and draw
-            PointLightListShader::SetActiveLightCount(m_pGPUContext, queuedLightCount);
-            PointLightListShader::CommitParameters(m_pGPUContext);
+            PointLightListShader::SetActiveLightCount(pCommandList, queuedLightCount);
+            PointLightListShader::CommitParameters(pCommandList);
             DRAW_LIGHT();
         }
     }        
@@ -674,17 +672,17 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewP
             continue;
 
         // bind shader
-        m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
+        pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
 
         // and parameters
         if (m_lastVolumetricLightIndex != lightIndex)
         {
-            VolumetricLightShader::SetLightParameters(m_pGPUContext, pLight);
+            VolumetricLightShader::SetLightParameters(pCommandList, pLight);
             m_lastVolumetricLightIndex = lightIndex;
         }
 
         // set program parameters
-        VolumetricLightShader::SetProgramParameters(m_pGPUContext, pShaderProgram, pLight);
+        VolumetricLightShader::SetProgramParameters(pCommandList, pShaderProgram, pLight);
 
         // draw light
         DRAW_LIGHT();
@@ -695,7 +693,7 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewP
     return drawnLights;
 }
 
-void DeferredShadingWorldRenderer::DrawDepthPrepass(const ViewParameters *pViewParameters)
+void DeferredShadingWorldRenderer::DrawDepthPrepass(GPUCommandList *pCommandList, const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawDepthPrepass", MAKE_COLOR_R8G8B8_UNORM(255, 100, 100));
 
@@ -703,8 +701,8 @@ void DeferredShadingWorldRenderer::DrawDepthPrepass(const ViewParameters *pViewP
     shaderSelector.SetBaseShader(OBJECT_TYPEINFO(DepthOnlyShader), 0);
 
     // Everything here uses the normal rasterizer state, so set that up here.
-    m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoColorWrites());
-    m_pGPUContext->SetRenderTargets(0, nullptr, m_pSceneDepthBuffer->pDSV);
+    pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoColorWrites());
+    pCommandList->SetRenderTargets(0, nullptr, m_pSceneDepthBuffer->pDSV);
 
     // Iterate over renderables
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetOpaqueRenderables().GetBasePointer();
@@ -722,33 +720,33 @@ void DeferredShadingWorldRenderer::DrawDepthPrepass(const ViewParameters *pViewP
             continue;
 
         // set states
-        m_pGPUContext->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false));
-        m_pGPUContext->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, true, GPU_COMPARISON_FUNC_LESS), 0);
+        pCommandList->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false));
+        pCommandList->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, true, GPU_COMPARISON_FUNC_LESS), 0);
 
         // For now, only masked materials are drawn with clipping
         shaderSelector.SetVertexFactory(pQueueEntry->pVertexFactoryTypeInfo, pQueueEntry->VertexFactoryFlags);
         shaderSelector.SetMaterial((pQueueEntry->pMaterial->GetShader()->GetBlendMode() == MATERIAL_BLENDING_MODE_MASKED) ? pQueueEntry->pMaterial : nullptr);
 
         // only continue with shader
-        ShaderProgram *pShaderProgram = shaderSelector.MakeActive(m_pGPUContext);
+        ShaderProgram *pShaderProgram = shaderSelector.MakeActive(pCommandList);
         if (pShaderProgram != nullptr)
         {
-            m_pGPUContext->SetPredication(pQueueEntry->pPredicate);
-            pQueueEntry->pRenderProxy->SetupForDraw(&pViewParameters->ViewCamera, pQueueEntry, m_pGPUContext, pShaderProgram);
-            pQueueEntry->pRenderProxy->DrawQueueEntry(&pViewParameters->ViewCamera, pQueueEntry, m_pGPUContext);
+            pCommandList->SetPredication(pQueueEntry->pPredicate);
+            pQueueEntry->pRenderProxy->SetupForDraw(&pViewParameters->ViewCamera, pQueueEntry, pCommandList, pShaderProgram);
+            pQueueEntry->pRenderProxy->DrawQueueEntry(&pViewParameters->ViewCamera, pQueueEntry, pCommandList);
         }
     }
 
     // clear predication
-    m_pGPUContext->SetPredication(nullptr);
+    pCommandList->SetPredication(nullptr);
 }
 
-void DeferredShadingWorldRenderer::DrawUnlitObjects(const ViewParameters *pViewParameters)
+void DeferredShadingWorldRenderer::DrawUnlitObjects(GPUCommandList *pCommandList, const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawUnlitObjects", MAKE_COLOR_R8G8B8_UNORM(255, 20, 255));
 
     // Bind light buffer and depth buffer.
-    m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, m_pSceneDepthBuffer->pDSV);
+    pCommandList->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, m_pSceneDepthBuffer->pDSV);
     
     // Iterate over renderables.
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetOpaqueRenderables().GetBasePointer();
@@ -757,17 +755,17 @@ void DeferredShadingWorldRenderer::DrawUnlitObjects(const ViewParameters *pViewP
     {
         if (pQueueEntry->RenderPassMask & (RENDER_PASS_EMISSIVE | RENDER_PASS_LIGHTMAP))
         {
-            m_pGPUContext->SetPredication(pQueueEntry->pPredicate);
-            if (DrawBasePassForObject(pViewParameters, pQueueEntry, !m_options.EnableDepthPrepass, (CVars::r_depth_prepass.GetBool()) ? GPU_COMPARISON_FUNC_LESS_EQUAL : GPU_COMPARISON_FUNC_LESS) > 0)
+            pCommandList->SetPredication(pQueueEntry->pPredicate);
+            if (DrawBasePassForObject(pCommandList, pViewParameters, pQueueEntry, !m_options.EnableDepthPrepass, (CVars::r_depth_prepass.GetBool()) ? GPU_COMPARISON_FUNC_LESS_EQUAL : GPU_COMPARISON_FUNC_LESS) > 0)
                 continue;
         }
     }
 
     // clear predication
-    m_pGPUContext->SetPredication(nullptr);
+    pCommandList->SetPredication(nullptr);
 }
 
-void DeferredShadingWorldRenderer::DrawGBuffers(const ViewParameters *pViewParameters)
+void DeferredShadingWorldRenderer::DrawGBuffers(GPUCommandList *pCommandList, const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawGBuffers", MAKE_COLOR_R8G8B8_UNORM(50, 150, 255));
 
@@ -776,13 +774,13 @@ void DeferredShadingWorldRenderer::DrawGBuffers(const ViewParameters *pViewParam
     ShaderProgramSelector shaderSelector(m_globalShaderFlags);
 
     // Bind the light buffer and clear it with the fog colour
-    m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
-    m_pGPUContext->ClearTargets(true, false, false, PixelFormatHelpers::ConvertSRGBToLinear(pViewParameters->FogColor));
+    pCommandList->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
+    pCommandList->ClearTargets(true, false, false, PixelFormatHelpers::ConvertSRGBToLinear(pViewParameters->FogColor));
 
     // Switch to only the gbuffers.
     GPURenderTargetView *pGBufferRenderTargets[] = { m_pGBuffer0->pRTV, m_pGBuffer1->pRTV, m_pGBuffer2->pRTV };
-    m_pGPUContext->SetRenderTargets(countof(pGBufferRenderTargets), pGBufferRenderTargets, m_pSceneDepthBuffer->pDSV);
-    m_pGPUContext->ClearTargets(true, false, false, float4::Zero);
+    pCommandList->SetRenderTargets(countof(pGBufferRenderTargets), pGBufferRenderTargets, m_pSceneDepthBuffer->pDSV);
+    pCommandList->ClearTargets(true, false, false, float4::Zero);
 
     // Iterate over renderables.
     /*pQueueEntry = m_renderQueue.GetOpaqueRenderables().GetBasePointer();
@@ -802,21 +800,21 @@ void DeferredShadingWorldRenderer::DrawGBuffers(const ViewParameters *pViewParam
                 const MaterialShader *pMaterialShader = pQueueEntry->pMaterial->GetShader();
 
                 // set states
-                m_pGPUContext->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, false, false));
-                m_pGPUContext->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, !CVars::r_depth_prepass.GetBool(), (CVars::r_depth_prepass.GetBool()) ? GPU_COMPARISON_FUNC_LESS_EQUAL : GPU_COMPARISON_FUNC_LESS), 0);
+                pCommandList->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, false, false));
+                pCommandList->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, !CVars::r_depth_prepass.GetBool(), (CVars::r_depth_prepass.GetBool()) ? GPU_COMPARISON_FUNC_LESS_EQUAL : GPU_COMPARISON_FUNC_LESS), 0);
 
                 // bind/draw
-                m_pGPUContext->SetShaderProgram(pShaderProgram);
-                SetBlendingModeForMaterial(m_pGPUContext, pQueueEntry);
-                SetCommonShaderProgramParameters(pViewParameters, pQueueEntry, pShaderProgram);
-                pQueueEntry->pRenderProxy->DrawQueueEntry(pViewParameters, pQueueEntry, m_pGPUContext);
+                pCommandList->SetShaderProgram(pShaderProgram);
+                SetBlendingModeForMaterial(pCommandList, pQueueEntry);
+                SetCommonShaderProgramParameters(pCommandList, pViewParameters, pQueueEntry, pShaderProgram);
+                pQueueEntry->pRenderProxy->DrawQueueEntry(pViewParameters, pQueueEntry, pCommandList);
             }
         }
     }*/
 
     // Switch render targets to include the light buffer, for drawing emissive and lightmapped objects
     GPURenderTargetView *pLightBufferGBufferRenderTargets[] = { m_pGBuffer0->pRTV, m_pGBuffer1->pRTV, m_pGBuffer2->pRTV, m_pSceneColorBuffer->pRTV };
-    m_pGPUContext->SetRenderTargets(countof(pLightBufferGBufferRenderTargets), pLightBufferGBufferRenderTargets, m_pSceneDepthBuffer->pDSV);
+    pCommandList->SetRenderTargets(countof(pLightBufferGBufferRenderTargets), pLightBufferGBufferRenderTargets, m_pSceneDepthBuffer->pDSV);
     pQueueEntry = m_renderQueue.GetOpaqueRenderables().GetBasePointer();
     pQueueEntryEnd = m_renderQueue.GetOpaqueRenderables().GetBasePointer() + m_renderQueue.GetOpaqueRenderables().GetSize();
     for (; pQueueEntry != pQueueEntryEnd; pQueueEntry++)
@@ -834,29 +832,29 @@ void DeferredShadingWorldRenderer::DrawGBuffers(const ViewParameters *pViewParam
         shaderSelector.SetQueueEntry(pQueueEntry);
 
         // get shader
-        ShaderProgram *pShaderProgram = shaderSelector.MakeActive(m_pGPUContext);
+        ShaderProgram *pShaderProgram = shaderSelector.MakeActive(pCommandList);
         if (pShaderProgram != nullptr)
         {
             const MaterialShader *pMaterialShader = pQueueEntry->pMaterial->GetShader();
 
             // set states
-            m_pGPUContext->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false));
-            m_pGPUContext->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, !CVars::r_depth_prepass.GetBool(), (CVars::r_depth_prepass.GetBool()) ? GPU_COMPARISON_FUNC_LESS_EQUAL : GPU_COMPARISON_FUNC_LESS), 0);
+            pCommandList->SetRasterizerState(pMaterialShader->SelectRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false));
+            pCommandList->SetDepthStencilState(pMaterialShader->SelectDepthStencilState(true, !CVars::r_depth_prepass.GetBool(), (CVars::r_depth_prepass.GetBool()) ? GPU_COMPARISON_FUNC_LESS_EQUAL : GPU_COMPARISON_FUNC_LESS), 0);
 
             // bind
-            SetBlendingModeForMaterial(m_pGPUContext, pQueueEntry);
-            pQueueEntry->pRenderProxy->SetupForDraw(&pViewParameters->ViewCamera, pQueueEntry, m_pGPUContext, pShaderProgram);
+            SetBlendingModeForMaterial(pCommandList, pQueueEntry);
+            pQueueEntry->pRenderProxy->SetupForDraw(&pViewParameters->ViewCamera, pQueueEntry, pCommandList, pShaderProgram);
 
             // set predication as the last step to avoid duplicate calls
-            m_pGPUContext->SetPredication(pQueueEntry->pPredicate);
+            pCommandList->SetPredication(pQueueEntry->pPredicate);
 
             // draw
-            pQueueEntry->pRenderProxy->DrawQueueEntry(&pViewParameters->ViewCamera, pQueueEntry, m_pGPUContext);
+            pQueueEntry->pRenderProxy->DrawQueueEntry(&pViewParameters->ViewCamera, pQueueEntry, pCommandList);
         }
     }
 
     // clear predication
-    m_pGPUContext->SetPredication(nullptr);
+    pCommandList->SetPredication(nullptr);
 
     // add them for debugging
     AddDebugBufferView(m_pGBuffer0, "GBuffer0", false);
@@ -864,7 +862,7 @@ void DeferredShadingWorldRenderer::DrawGBuffers(const ViewParameters *pViewParam
     AddDebugBufferView(m_pGBuffer2, "GBuffer2", false);
 }
 
-void DeferredShadingWorldRenderer::ApplyAmbientOcclusion(const ViewParameters *pViewParameters)
+void DeferredShadingWorldRenderer::ApplyAmbientOcclusion(GPUCommandList *pCommandList, const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "SSAO", MAKE_COLOR_R8G8B8_UNORM(75, 20, 150));
 
@@ -883,98 +881,98 @@ void DeferredShadingWorldRenderer::ApplyAmbientOcclusion(const ViewParameters *p
     {
         MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "Generate SSAO", MAKE_COLOR_R8G8B8_UNORM(75, 20, 150));
 
-        m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
-        m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
-        m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
-        m_pGPUContext->SetRenderTargets(1, &pSSAOBuffer->pRTV, nullptr);
-        m_pGPUContext->SetShaderProgram(m_pSSAOProgram->GetGPUProgram());
-        SSAOShader::SetProgramParameters(m_pGPUContext, m_pSSAOProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer1->pTexture);
-        g_pRenderer->DrawFullScreenQuad(m_pGPUContext);
+        pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
+        pCommandList->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
+        pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
+        pCommandList->SetRenderTargets(1, &pSSAOBuffer->pRTV, nullptr);
+        pCommandList->SetShaderProgram(m_pSSAOProgram->GetGPUProgram());
+        SSAOShader::SetProgramParameters(pCommandList, m_pSSAOProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer1->pTexture);
+        g_pRenderer->DrawFullScreenQuad(pCommandList);
     }
 
     // downsample the AO buffer
     {
         MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "Downsample SSAO", MAKE_COLOR_R8G8B8_UNORM(20, 75, 150));
-        ScaleTexture(pSSAOBuffer->pTexture, pDownscaledSSAOBuffer->pRTV, true, false);
+        ScaleTexture(pCommandList, pSSAOBuffer->pTexture, pDownscaledSSAOBuffer->pRTV, true, false);
     }
 
     // unbind source/dest from state
-    m_pGPUContext->ClearState(true, false, false, true);
+    pCommandList->ClearState(true, false, false, true);
 
     // draw/blend to light buffer
     {
         MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "Apply SSAO", MAKE_COLOR_R8G8B8_UNORM(20, 150, 75));
 
-        m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
-        m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
-        m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStatePremultipliedAlpha());
-        m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
-        m_pGPUContext->SetShaderProgram(m_pSSAOApplyProgram->GetGPUProgram());
-        SSAOApplyShader::SetProgramParameters(m_pGPUContext, m_pSSAOApplyProgram, pDownscaledSSAOBuffer->pTexture);
-        g_pRenderer->DrawFullScreenQuad(m_pGPUContext);
+        pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
+        pCommandList->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
+        pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStatePremultipliedAlpha());
+        pCommandList->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
+        pCommandList->SetShaderProgram(m_pSSAOApplyProgram->GetGPUProgram());
+        SSAOApplyShader::SetProgramParameters(pCommandList, m_pSSAOApplyProgram, pDownscaledSSAOBuffer->pTexture);
+        g_pRenderer->DrawFullScreenQuad(pCommandList);
     }
 
     // clear shader resources out
-    m_pGPUContext->ClearState(true, false, false, false);
+    pCommandList->ClearState(true, false, false, false);
 
     // release downsampled buffer
     AddDebugBufferView(pDownscaledSSAOBuffer, "SSAO", true);
     ReleaseIntermediateBuffer(pSSAOBuffer);
 }
 
-void DeferredShadingWorldRenderer::ApplyFog(const ViewParameters *pViewParameters)
+void DeferredShadingWorldRenderer::ApplyFog(GPUCommandList *pCommandList, const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "ApplyFog", MAKE_COLOR_R8G8B8_UNORM(50, 42, 150));
 
     // draw/blend to light buffer
-    m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
-    m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
-    m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlending());
-    m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
+    pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
+    pCommandList->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
+    pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAlphaBlending());
+    pCommandList->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
 
     // blend ao
     ShaderProgram *pShaderProgram = g_pRenderer->GetShaderProgram(0, OBJECT_TYPEINFO(DeferredFogShader), DeferredFogShader::GetFlagsForMode(pViewParameters->FogMode), g_pRenderer->GetFixedResources()->GetFullScreenQuadVertexAttributes(), g_pRenderer->GetFixedResources()->GetFullScreenQuadVertexAttributeCount(), nullptr, 0);
     if (pShaderProgram != nullptr)
     {
-        m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-        DeferredFogShader::SetProgramParameters(m_pGPUContext, pShaderProgram, pViewParameters, m_pSceneDepthBuffer->pTexture);
-        g_pRenderer->DrawFullScreenQuad(m_pGPUContext);
+        pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+        DeferredFogShader::SetProgramParameters(pCommandList, pShaderProgram, pViewParameters, m_pSceneDepthBuffer->pTexture);
+        g_pRenderer->DrawFullScreenQuad(pCommandList);
     }
 
     // clear shader resources out
-    m_pGPUContext->ClearState(true, false, false, false);
+    pCommandList->ClearState(true, false, false, false);
 }
 
-void DeferredShadingWorldRenderer::DrawLights(const ViewParameters *pViewParameters)
+void DeferredShadingWorldRenderer::DrawLights(GPUCommandList *pCommandList, const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawLights", MAKE_COLOR_R8G8B8_UNORM(42, 100, 25));
 
     // bind the light buffer without any depth buffer, and clear it
-    m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
+    pCommandList->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
 
     // use light volumes
-    DrawLights_DirectionalLights(pViewParameters);
-    DrawLights_PointLights_ByLightVolumes(pViewParameters);
-    //DrawLights_PointLights_Tiled(pViewParameters);
+    DrawLights_DirectionalLights(pCommandList, pViewParameters);
+    DrawLights_PointLights_ByLightVolumes(pCommandList, pViewParameters);
+    //DrawLights_PointLights_Tiled(pCommandList, pViewParameters);
 
     // draw wireframe overlay
     if (m_options.ShowWireframeOverlay)
     {
-        m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, m_pSceneDepthBuffer->pDSV);
-        DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetOpaqueRenderables());
+        pCommandList->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, m_pSceneDepthBuffer->pDSV);
+        DrawWireframeOverlay(pCommandList, &pViewParameters->ViewCamera, &m_renderQueue.GetOpaqueRenderables());
     }
 }
 
-void DeferredShadingWorldRenderer::DrawLights_DirectionalLights(const ViewParameters *pViewParameters)
+void DeferredShadingWorldRenderer::DrawLights_DirectionalLights(GPUCommandList *pCommandList, const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawLights_DirectionalLights", MAKE_COLOR_R8G8B8_UNORM(42, 25, 100));
 
     // setup state for directional lights -- possibly use stencil buffer for pixels that have to be shaded??
-    m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false, false));
-    m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false, GPU_COMPARISON_FUNC_ALWAYS), 0);
-    m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAdditive());
-    m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
-    m_pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_STRIP);
+    pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false, false));
+    pCommandList->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false, GPU_COMPARISON_FUNC_ALWAYS), 0);
+    pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAdditive());
+    pCommandList->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_STRIP);
 
     // draw directional lights
     for (const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY &currentLight : m_renderQueue.GetDirectionalLightArray())
@@ -990,33 +988,33 @@ void DeferredShadingWorldRenderer::DrawLights_DirectionalLights(const ViewParame
             continue;
 
         // apply shader parameters
-        m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-        DeferredDirectionalLightShader::SetBufferParameters(m_pGPUContext, pShaderProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer0->pTexture, m_pGBuffer1->pTexture, m_pGBuffer2->pTexture);
-        DeferredDirectionalLightShader::SetLightParameters(m_pGPUContext, pShaderProgram, pViewParameters, &currentLight);
+        pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+        DeferredDirectionalLightShader::SetBufferParameters(pCommandList, pShaderProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer0->pTexture, m_pGBuffer1->pTexture, m_pGBuffer2->pTexture);
+        DeferredDirectionalLightShader::SetLightParameters(pCommandList, pShaderProgram, pViewParameters, &currentLight);
         if (currentLight.ShadowMapIndex >= 0)
-            DeferredDirectionalLightShader::SetShadowParameters(m_pGPUContext, pShaderProgram, &m_directionalShadowMaps[currentLight.ShadowMapIndex]);
+            DeferredDirectionalLightShader::SetShadowParameters(pCommandList, pShaderProgram, &m_directionalShadowMaps[currentLight.ShadowMapIndex]);
 
-        DeferredDirectionalLightShader::CommitParameters(m_pGPUContext, pShaderProgram);
+        DeferredDirectionalLightShader::CommitParameters(pCommandList, pShaderProgram);
 
         // draw a fullscreen quad
         //m_pGPUContext->Draw(0, 4);
-        g_pRenderer->DrawFullScreenQuad(m_pGPUContext);
+        g_pRenderer->DrawFullScreenQuad(pCommandList);
     }
 
     // clear the shader state, ensuring the buffers are unbound from input
-    m_pGPUContext->ClearState(true, false, false, false);
+    pCommandList->ClearState(true, false, false, false);
 }
 
-void DeferredShadingWorldRenderer::DrawLights_PointLights_ByLightVolumes(const ViewParameters *pViewParameters)
+void DeferredShadingWorldRenderer::DrawLights_PointLights_ByLightVolumes(GPUCommandList *pCommandList, const ViewParameters *pViewParameters)
 {
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawLights_PointLights_ByLightVolumes", MAKE_COLOR_R8G8B8_UNORM(25, 90, 100));
 
-    m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false, false));
-    m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false, GPU_COMPARISON_FUNC_ALWAYS), 0);
-    m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAdditive());
-    m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
-    m_pGPUContext->SetVertexBuffer(0, m_pPointLightVolumeVertexBuffer, 0, sizeof(float3));
-    m_pGPUContext->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
+    pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK, false, false, false));
+    pCommandList->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false, GPU_COMPARISON_FUNC_ALWAYS), 0);
+    pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateAdditive());
+    pCommandList->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, nullptr);
+    pCommandList->SetVertexBuffer(0, m_pPointLightVolumeVertexBuffer, 0, sizeof(float3));
+    pCommandList->SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
 
     // light queue
     ShaderProgram *pShaderProgram;
@@ -1036,19 +1034,19 @@ void DeferredShadingWorldRenderer::DrawLights_PointLights_ByLightVolumes(const V
             if (queuedLightCount[insideLightVolume] == DeferredPointLightListShader::MAX_LIGHTS)
             {
                 // use front-face culling if inside light volume, otherwise back-face culling
-                m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, (insideLightVolume) ? RENDERER_CULL_FRONT : RENDERER_CULL_BACK, false, false, false));
+                pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, (insideLightVolume) ? RENDERER_CULL_FRONT : RENDERER_CULL_BACK, false, false, false));
 
                 // get shader
                 pShaderProgram = g_pRenderer->GetShaderProgram(0, OBJECT_TYPEINFO(DeferredPointLightListShader), 0, g_pRenderer->GetFixedResources()->GetPositionOnlyVertexAttributes(), g_pRenderer->GetFixedResources()->GetPositionOnlyVertexAttributeCount(), nullptr, 0);
                 if (pShaderProgram != nullptr)
                 {
-                    m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-                    DeferredPointLightListShader::SetBufferParameters(m_pGPUContext, pShaderProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer0->pTexture, m_pGBuffer1->pTexture, m_pGBuffer2->pTexture);
+                    pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+                    DeferredPointLightListShader::SetBufferParameters(pCommandList, pShaderProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer0->pTexture, m_pGBuffer1->pTexture, m_pGBuffer2->pTexture);
                     for (uint32 i = 0; i < DeferredPointLightListShader::MAX_LIGHTS; i++)
-                        DeferredPointLightListShader::SetLightParameters(m_pGPUContext, pShaderProgram, pViewParameters, i, queuedLights[insideLightVolume][i]);
+                        DeferredPointLightListShader::SetLightParameters(pCommandList, pShaderProgram, pViewParameters, i, queuedLights[insideLightVolume][i]);
 
                     // draw the light volume
-                    m_pGPUContext->DrawInstanced(0, m_pointLightVolumeVertexCount, DeferredPointLightListShader::MAX_LIGHTS);
+                    pCommandList->DrawInstanced(0, m_pointLightVolumeVertexCount, DeferredPointLightListShader::MAX_LIGHTS);
                 }
 
                 // done
@@ -1062,7 +1060,7 @@ void DeferredShadingWorldRenderer::DrawLights_PointLights_ByLightVolumes(const V
 
 
         // use front-face culling if inside light volume, otherwise back-face culling
-        m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, (insideLightVolume) ? RENDERER_CULL_FRONT : RENDERER_CULL_BACK, false, false, false));
+        pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, (insideLightVolume) ? RENDERER_CULL_FRONT : RENDERER_CULL_BACK, false, false, false));
 
         // apply shadow flags
         uint32 shaderFlags = DeferredPointLightShader::CalculateShadowFlags(m_options.EnableShadows, m_options.EnableHardwareShadowFiltering);
@@ -1073,13 +1071,13 @@ void DeferredShadingWorldRenderer::DrawLights_PointLights_ByLightVolumes(const V
             continue;
 
         // set program parameters
-        m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-        DeferredPointLightShader::SetBufferParameters(m_pGPUContext, pShaderProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer0->pTexture, m_pGBuffer1->pTexture, m_pGBuffer2->pTexture);
-        DeferredPointLightShader::SetLightParameters(m_pGPUContext, pShaderProgram, pViewParameters, &currentLight);
-        DeferredPointLightShader::SetShadowParameters(m_pGPUContext, pShaderProgram, &m_pointShadowMaps[currentLight.ShadowMapIndex]);
+        pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+        DeferredPointLightShader::SetBufferParameters(pCommandList, pShaderProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer0->pTexture, m_pGBuffer1->pTexture, m_pGBuffer2->pTexture);
+        DeferredPointLightShader::SetLightParameters(pCommandList, pShaderProgram, pViewParameters, &currentLight);
+        DeferredPointLightShader::SetShadowParameters(pCommandList, pShaderProgram, &m_pointShadowMaps[currentLight.ShadowMapIndex]);
 
         // draw the light volume
-        m_pGPUContext->Draw(0, m_pointLightVolumeVertexCount);
+        pCommandList->Draw(0, m_pointLightVolumeVertexCount);
     }
 
     // flush the queues
@@ -1090,28 +1088,29 @@ void DeferredShadingWorldRenderer::DrawLights_PointLights_ByLightVolumes(const V
             continue;
 
         // use front-face culling if inside light volume, otherwise back-face culling
-        m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, (queueIndex) ? RENDERER_CULL_FRONT : RENDERER_CULL_BACK, false, false, false));
+        pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, (queueIndex) ? RENDERER_CULL_FRONT : RENDERER_CULL_BACK, false, false, false));
 
         // get shader
         pShaderProgram = g_pRenderer->GetShaderProgram(0, OBJECT_TYPEINFO(DeferredPointLightListShader), 0, g_pRenderer->GetFixedResources()->GetPositionOnlyVertexAttributes(), g_pRenderer->GetFixedResources()->GetPositionOnlyVertexAttributeCount(), nullptr, 0);
         if (pShaderProgram != nullptr)
         {
-            m_pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-            DeferredPointLightListShader::SetBufferParameters(m_pGPUContext, pShaderProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer0->pTexture, m_pGBuffer1->pTexture, m_pGBuffer2->pTexture);
+            pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+            DeferredPointLightListShader::SetBufferParameters(pCommandList, pShaderProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer0->pTexture, m_pGBuffer1->pTexture, m_pGBuffer2->pTexture);
             for (uint32 i = 0; i < lightCount; i++)
-                DeferredPointLightListShader::SetLightParameters(m_pGPUContext, pShaderProgram, pViewParameters, i, queuedLights[queueIndex][i]);
+                DeferredPointLightListShader::SetLightParameters(pCommandList, pShaderProgram, pViewParameters, i, queuedLights[queueIndex][i]);
 
             // draw the light volume
-            m_pGPUContext->DrawInstanced(0, m_pointLightVolumeVertexCount, lightCount);
+            pCommandList->DrawInstanced(0, m_pointLightVolumeVertexCount, lightCount);
         }
     }
 
     // clear the shader state, ensuring the buffers are unbound from input
-    m_pGPUContext->ClearState(true, false, false, false);
+    pCommandList->ClearState(true, false, false, false);
 }
 
-void DeferredShadingWorldRenderer::DrawLights_PointLights_Tiled(const ViewParameters *pViewParameters)
+void DeferredShadingWorldRenderer::DrawLights_PointLights_Tiled(GPUCommandList *pCommandList, const ViewParameters *pViewParameters)
 {
+#if 0
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawLights_PointLights_Tiled", MAKE_COLOR_R8G8B8_UNORM(25, 90, 100));
 
     // setup for drawing volumes
@@ -1212,16 +1211,17 @@ void DeferredShadingWorldRenderer::DrawLights_PointLights_Tiled(const ViewParame
 
     // clear state, since the output buffer is bound as a uav this'll cause issues when we next bind it as a render target
     m_pGPUContext->ClearState(true, false, false, true);
+#endif
 }
 
-void DeferredShadingWorldRenderer::DrawPostProcessAndTranslucentObjects(const ViewParameters *pViewParameters)
+void DeferredShadingWorldRenderer::DrawPostProcessAndTranslucentObjects(GPUCommandList *pCommandList, const ViewParameters *pViewParameters)
 {
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry;
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd;
     MICROPROFILE_SCOPEI("DeferredShadingWorldRenderer", "DrawPostProcessAndTranslucentObjects", MAKE_COLOR_R8G8B8_UNORM(90, 25, 80));
 
     // set render target to the light buffer
-    m_pGPUContext->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, m_pSceneDepthBuffer->pDSV);
+    pCommandList->SetRenderTargets(1, &m_pSceneColorBuffer->pRTV, m_pSceneDepthBuffer->pDSV);
 
     // Draw post process objects before translucent
     if (m_renderQueue.GetPostProcessRenderables().GetSize() > 0)
@@ -1229,8 +1229,8 @@ void DeferredShadingWorldRenderer::DrawPostProcessAndTranslucentObjects(const Vi
         // acquire copy of scene colour + depth
         m_pSceneColorBufferCopy = RequestIntermediateBufferMatching(m_pSceneColorBuffer);
         m_pSceneDepthBufferCopy = RequestIntermediateBufferMatching(m_pSceneDepthBuffer);
-        m_pGPUContext->CopyTexture(m_pSceneColorBuffer->pTexture, m_pSceneColorBufferCopy->pTexture);
-        m_pGPUContext->CopyTexture(m_pSceneDepthBuffer->pTexture, m_pSceneDepthBufferCopy->pTexture);
+        pCommandList->CopyTexture(m_pSceneColorBuffer->pTexture, m_pSceneColorBufferCopy->pTexture);
+        pCommandList->CopyTexture(m_pSceneDepthBuffer->pTexture, m_pSceneDepthBufferCopy->pTexture);
 
         // Draw objects
         pQueueEntry = m_renderQueue.GetPostProcessRenderables().GetBasePointer();
@@ -1246,15 +1246,15 @@ void DeferredShadingWorldRenderer::DrawPostProcessAndTranslucentObjects(const Vi
 
             // draw base pass?
             if (renderPassMask & (RENDER_PASS_EMISSIVE | RENDER_PASS_LIGHTMAP | RENDER_PASS_STATIC_LIGHTING | RENDER_PASS_DYNAMIC_LIGHTING | RENDER_PASS_SHADOWED_LIGHTING))
-                drawCount = DrawBasePassForObject(pViewParameters, pQueueEntry, false, GPU_COMPARISON_FUNC_LESS_EQUAL);
+                drawCount = DrawBasePassForObject(pCommandList, pViewParameters, pQueueEntry, false, GPU_COMPARISON_FUNC_LESS_EQUAL);
 
             // draw light passes?
             if (renderPassMask & (RENDER_PASS_STATIC_LIGHTING | RENDER_PASS_DYNAMIC_LIGHTING | RENDER_PASS_SHADOWED_LIGHTING))
-                drawCount += DrawForwardLightPassesForObject(pViewParameters, pQueueEntry, (drawCount != 0), false, GPU_COMPARISON_FUNC_LESS_EQUAL);
+                drawCount += DrawForwardLightPassesForObject(pCommandList, pViewParameters, pQueueEntry, (drawCount != 0), false, GPU_COMPARISON_FUNC_LESS_EQUAL);
 
             // draw blank pass if there is no draw calls for this object
             if (drawCount == 0)
-                DrawEmptyPassForObject(pViewParameters, pQueueEntry);
+                DrawEmptyPassForObject(pCommandList, pViewParameters, pQueueEntry);
         }
 
         // release intermediate buffers
@@ -1265,7 +1265,7 @@ void DeferredShadingWorldRenderer::DrawPostProcessAndTranslucentObjects(const Vi
 
         // draw wireframe overlay
         if (m_options.ShowWireframeOverlay)
-            DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetPostProcessRenderables());
+            DrawWireframeOverlay(pCommandList, &pViewParameters->ViewCamera, &m_renderQueue.GetPostProcessRenderables());
     }
 
     // Draw translucent objects
@@ -1282,20 +1282,20 @@ void DeferredShadingWorldRenderer::DrawPostProcessAndTranslucentObjects(const Vi
 
         // draw base pass?
         if (renderPassMask & (RENDER_PASS_EMISSIVE | RENDER_PASS_LIGHTMAP | RENDER_PASS_STATIC_LIGHTING | RENDER_PASS_DYNAMIC_LIGHTING | RENDER_PASS_SHADOWED_LIGHTING))
-            drawCount = DrawBasePassForObject(pViewParameters, pQueueEntry, false, GPU_COMPARISON_FUNC_LESS_EQUAL);
+            drawCount = DrawBasePassForObject(pCommandList, pViewParameters, pQueueEntry, false, GPU_COMPARISON_FUNC_LESS_EQUAL);
 
         // draw light passes?
         if (renderPassMask & (RENDER_PASS_STATIC_LIGHTING | RENDER_PASS_DYNAMIC_LIGHTING | RENDER_PASS_SHADOWED_LIGHTING))
-            drawCount += DrawForwardLightPassesForObject(pViewParameters, pQueueEntry, (drawCount != 0), false, GPU_COMPARISON_FUNC_LESS_EQUAL);
+            drawCount += DrawForwardLightPassesForObject(pCommandList, pViewParameters, pQueueEntry, (drawCount != 0), false, GPU_COMPARISON_FUNC_LESS_EQUAL);
 
         // draw blank pass if there is no draw calls for this object
         if (drawCount == 0)
-            DrawEmptyPassForObject(pViewParameters, pQueueEntry);
+            DrawEmptyPassForObject(pCommandList, pViewParameters, pQueueEntry);
     }
 
     // draw wireframe overlay
     if (m_options.ShowWireframeOverlay)
-        DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetTranslucentRenderables());
+        DrawWireframeOverlay(pCommandList, &pViewParameters->ViewCamera, &m_renderQueue.GetTranslucentRenderables());
 }
 
 void DeferredShadingWorldRenderer::DrawDebugInfo(const Camera *pCamera)

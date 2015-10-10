@@ -19,7 +19,7 @@ class GaussianBlurShader : public ShaderComponent
 public:
     GaussianBlurShader(const ShaderComponentTypeInfo *pTypeInfo = &s_TypeInfo) : BaseClass(pTypeInfo) { }
 
-    static void SetProgramParameters(GPUContext *pContext, ShaderProgram *pProgram, GPUTexture2D *pSourceTexture, const float2 &blurDirection, float blurSigma);
+    static void SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pProgram, GPUTexture2D *pSourceTexture, const float2 &blurDirection, float blurSigma);
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
     static bool FillShaderCompilerParameters(uint32 globalShaderFlags, uint32 baseShaderFlags, uint32 vertexFactoryFlags, ShaderCompilerParameters *pParameters);
 };
@@ -31,11 +31,11 @@ BEGIN_SHADER_COMPONENT_PARAMETERS(GaussianBlurShader)
     DEFINE_SHADER_COMPONENT_PARAMETER("BlurSigma", SHADER_PARAMETER_TYPE_FLOAT)
 END_SHADER_COMPONENT_PARAMETERS()
 
-void GaussianBlurShader::SetProgramParameters(GPUContext *pContext, ShaderProgram *pProgram, GPUTexture2D *pSourceTexture, const float2 &blurDirection, float blurSigma)
+void GaussianBlurShader::SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pProgram, GPUTexture2D *pSourceTexture, const float2 &blurDirection, float blurSigma)
 {
-    pProgram->SetBaseShaderParameterTexture(pContext, 0, pSourceTexture, g_pRenderer->GetFixedResources()->GetPointSamplerState());
-    pProgram->SetBaseShaderParameterValue(pContext, 1, SHADER_PARAMETER_TYPE_FLOAT2, &blurDirection);
-    pProgram->SetBaseShaderParameterValue(pContext, 2, SHADER_PARAMETER_TYPE_FLOAT, &blurSigma);
+    pProgram->SetBaseShaderParameterTexture(pCommandList, 0, pSourceTexture, g_pRenderer->GetFixedResources()->GetPointSamplerState());
+    pProgram->SetBaseShaderParameterValue(pCommandList, 1, SHADER_PARAMETER_TYPE_FLOAT2, &blurDirection);
+    pProgram->SetBaseShaderParameterValue(pCommandList, 2, SHADER_PARAMETER_TYPE_FLOAT, &blurSigma);
 }
 
 bool GaussianBlurShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
@@ -62,7 +62,7 @@ class ExtractLuminanceShader : public ShaderComponent
 public:
     ExtractLuminanceShader(const ShaderComponentTypeInfo *pTypeInfo = &s_TypeInfo) : BaseClass(pTypeInfo) { }
 
-    static void SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pSceneTexture);
+    static void SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pSceneTexture);
 
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
     static bool FillShaderCompilerParameters(uint32 globalShaderFlags, uint32 baseShaderFlags, uint32 vertexFactoryFlags, ShaderCompilerParameters *pParameters);
@@ -73,9 +73,9 @@ BEGIN_SHADER_COMPONENT_PARAMETERS(ExtractLuminanceShader)
     DEFINE_SHADER_COMPONENT_PARAMETER("SceneTexture", SHADER_PARAMETER_TYPE_TEXTURE2D)
 END_SHADER_COMPONENT_PARAMETERS()
 
-void ExtractLuminanceShader::SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pSceneTexture)
+void ExtractLuminanceShader::SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pSceneTexture)
 {
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 0, pSceneTexture, g_pRenderer->GetFixedResources()->GetPointSamplerState());
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 0, pSceneTexture, g_pRenderer->GetFixedResources()->GetPointSamplerState());
 }
 
 bool ExtractLuminanceShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
@@ -107,7 +107,7 @@ class BloomShader : public ShaderComponent
 public:
     BloomShader(const ShaderComponentTypeInfo *pTypeInfo = &s_TypeInfo) : BaseClass(pTypeInfo) { }
 
-    static void SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pSceneTexture, float bloomThreshold = 0.3f);
+    static void SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pSceneTexture, float bloomThreshold = 0.3f);
 
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
     static bool FillShaderCompilerParameters(uint32 globalShaderFlags, uint32 baseShaderFlags, uint32 vertexFactoryFlags, ShaderCompilerParameters *pParameters);
@@ -119,10 +119,10 @@ BEGIN_SHADER_COMPONENT_PARAMETERS(BloomShader)
     DEFINE_SHADER_COMPONENT_PARAMETER("BloomThreshold", SHADER_PARAMETER_TYPE_FLOAT)
 END_SHADER_COMPONENT_PARAMETERS()
 
-void BloomShader::SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pSceneTexture, float bloomThreshold /* = 0.3f */)
+void BloomShader::SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pSceneTexture, float bloomThreshold /* = 0.3f */)
 {
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 0, pSceneTexture, g_pRenderer->GetFixedResources()->GetPointSamplerState());
-    pShaderProgram->SetBaseShaderParameterValue(pContext, 1, SHADER_PARAMETER_TYPE_FLOAT, &bloomThreshold);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 0, pSceneTexture, g_pRenderer->GetFixedResources()->GetPointSamplerState());
+    pShaderProgram->SetBaseShaderParameterValue(pCommandList, 1, SHADER_PARAMETER_TYPE_FLOAT, &bloomThreshold);
 }
 
 bool BloomShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
@@ -272,7 +272,7 @@ void CompositingWorldRenderer::DrawDebugInfo(const Camera *pCamera)
     WorldRenderer::DrawDebugInfo(pCamera);
 }
 
-void CompositingWorldRenderer::BlurTexture(GPUTexture2D *pBlurTexture, GPURenderTargetView *pBlurTextureRTV, float blurSigma /* = 0.8f */, bool restoreViewport /* = true */)
+void CompositingWorldRenderer::BlurTexture(GPUCommandList *pCommandList, GPUTexture2D *pBlurTexture, GPURenderTargetView *pBlurTextureRTV, float blurSigma /* = 0.8f */, bool restoreViewport /* = true */)
 {
     // request matching intermediate buffer
     IntermediateBuffer *pTempBuffer = RequestIntermediateBuffer(pBlurTexture->GetDesc()->Width, pBlurTexture->GetDesc()->Height, pBlurTexture->GetDesc()->Format, pBlurTexture->GetDesc()->MipLevels);
@@ -282,33 +282,33 @@ void CompositingWorldRenderer::BlurTexture(GPUTexture2D *pBlurTexture, GPURender
     // save old viewport
     RENDERER_VIEWPORT oldViewport;
     if (restoreViewport)
-        Y_memcpy(&oldViewport, m_pGPUContext->GetViewport(), sizeof(oldViewport));
+        Y_memcpy(&oldViewport, pCommandList->GetViewport(), sizeof(oldViewport));
 
     // setup common stuff
-    m_pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
-    m_pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
-    m_pGPUContext->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
-    m_pGPUContext->SetFullViewport(pBlurTexture);
-    m_pGPUContext->SetShaderProgram(m_pGaussianBlurProgram->GetGPUProgram());
+    pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
+    pCommandList->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(false, false), 0);
+    pCommandList->SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
+    pCommandList->SetFullViewport(pBlurTexture);
+    pCommandList->SetShaderProgram(m_pGaussianBlurProgram->GetGPUProgram());
 
     // horizontal blur
-    m_pGPUContext->SetRenderTargets(1, &pTempBuffer->pRTV, nullptr);
-    m_pGPUContext->DiscardTargets(true, false, false);
-    GaussianBlurShader::SetProgramParameters(m_pGPUContext, m_pGaussianBlurProgram, pBlurTexture, float2::UnitX, blurSigma);
-    g_pRenderer->DrawFullScreenQuad(m_pGPUContext);
+    pCommandList->SetRenderTargets(1, &pTempBuffer->pRTV, nullptr);
+    pCommandList->DiscardTargets(true, false, false);
+    GaussianBlurShader::SetProgramParameters(pCommandList, m_pGaussianBlurProgram, pBlurTexture, float2::UnitX, blurSigma);
+    g_pRenderer->DrawFullScreenQuad(pCommandList);
 
     // necessary since the textures will be swapped for inputs/outputs
-    m_pGPUContext->ClearState(false, false, false, true);
+    pCommandList->ClearState(false, false, false, true);
 
     // vertical blur
-    GaussianBlurShader::SetProgramParameters(m_pGPUContext, m_pGaussianBlurProgram, pTempBuffer->pTexture, float2::UnitY, blurSigma);
-    m_pGPUContext->SetRenderTargets(1, &pBlurTextureRTV, nullptr);
-    m_pGPUContext->DiscardTargets(true, false, false);
-    g_pRenderer->DrawFullScreenQuad(m_pGPUContext);
+    GaussianBlurShader::SetProgramParameters(pCommandList, m_pGaussianBlurProgram, pTempBuffer->pTexture, float2::UnitY, blurSigma);
+    pCommandList->SetRenderTargets(1, &pBlurTextureRTV, nullptr);
+    pCommandList->DiscardTargets(true, false, false);
+    g_pRenderer->DrawFullScreenQuad(pCommandList);
 
     // restore viewport
     if (restoreViewport)
-        m_pGPUContext->SetViewport(&oldViewport);
+        pCommandList->SetViewport(&oldViewport);
 
     // release int buffer
     ReleaseIntermediateBuffer(pTempBuffer);
@@ -375,17 +375,17 @@ void CompositingWorldRenderer::ApplyFinalCompositePostProcess(const ViewParamete
         }
 
         // downsample to /8
-        ScaleTexture(pBloomBuffer->pTexture, pDownsampledBloomBuffer2->pRTV, false, false);
-        ScaleTexture(pDownsampledBloomBuffer2->pTexture, pDownsampledBloomBuffer4->pRTV, false, false);
-        ScaleTexture(pDownsampledBloomBuffer4->pTexture, pDownsampledBloomBuffer8->pRTV, false, false);
+        ScaleTexture(m_pGPUContext, pBloomBuffer->pTexture, pDownsampledBloomBuffer2->pRTV, false, false);
+        ScaleTexture(m_pGPUContext, pDownsampledBloomBuffer2->pTexture, pDownsampledBloomBuffer4->pRTV, false, false);
+        ScaleTexture(m_pGPUContext, pDownsampledBloomBuffer4->pTexture, pDownsampledBloomBuffer8->pRTV, false, false);
 
         // run blur passes
-        BlurTexture(pDownsampledBloomBuffer8->pTexture, pDownsampledBloomBuffer8->pRTV, 0.8f, false);
+        BlurTexture(m_pGPUContext, pDownsampledBloomBuffer8->pTexture, pDownsampledBloomBuffer8->pRTV, 0.8f, false);
 
         // upscale back to full size
-        ScaleTexture(pDownsampledBloomBuffer8->pTexture, pDownsampledBloomBuffer4->pRTV, false, false);
-        ScaleTexture(pDownsampledBloomBuffer4->pTexture, pDownsampledBloomBuffer2->pRTV, false, false);
-        ScaleTexture(pDownsampledBloomBuffer2->pTexture, pBloomBuffer->pRTV, false, false);
+        ScaleTexture(m_pGPUContext, pDownsampledBloomBuffer8->pTexture, pDownsampledBloomBuffer4->pRTV, false, false);
+        ScaleTexture(m_pGPUContext, pDownsampledBloomBuffer4->pTexture, pDownsampledBloomBuffer2->pRTV, false, false);
+        ScaleTexture(m_pGPUContext, pDownsampledBloomBuffer2->pTexture, pBloomBuffer->pRTV, false, false);
 
         // release temporary downsampling buffers
         ReleaseIntermediateBuffer(pDownsampledBloomBuffer8);

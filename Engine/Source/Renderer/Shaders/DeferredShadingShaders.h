@@ -48,10 +48,10 @@ public:
     static uint32 CalculateShadowFlags(bool enableShadows, bool useHardwareShadowFiltering, RENDERER_SHADOW_FILTER shadowFilter, bool showCascades);
 
     // light params
-    static void SetLightParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight);
-    static void SetShadowParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData);
-    static void SetBufferParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2);
-    static void CommitParameters(GPUContext *pContext, ShaderProgram *pShaderProgram);
+    static void SetLightParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight);
+    static void SetShadowParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData);
+    static void SetBufferParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2);
+    static void CommitParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram);
 
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
     static bool FillShaderCompilerParameters(uint32 globalShaderFlags, uint32 baseShaderFlags, uint32 vertexFactoryFlags, ShaderCompilerParameters *pParameters);
@@ -79,9 +79,9 @@ public:
     static uint32 CalculateShadowFlags(bool enableShadows, bool useHardwareShadowFiltering);
 
     // light params
-    static void SetLightParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight);
-    static void SetShadowParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData);
-    static void SetBufferParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2);
+    static void SetLightParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight);
+    static void SetShadowParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData);
+    static void SetBufferParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2);
 
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
     static bool FillShaderCompilerParameters(uint32 globalShaderFlags, uint32 baseShaderFlags, uint32 vertexFactoryFlags, ShaderCompilerParameters *pParameters);
@@ -99,8 +99,8 @@ public:
 public:
     DeferredPointLightListShader(const ShaderComponentTypeInfo *pTypeInfo = &s_TypeInfo) : BaseClass(pTypeInfo) { }
 
-    static void SetLightParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, uint32 lightIndex, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight);
-    static void SetBufferParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2);
+    static void SetLightParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, uint32 lightIndex, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight);
+    static void SetBufferParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2);
 
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
     static bool FillShaderCompilerParameters(uint32 globalShaderFlags, uint32 baseShaderFlags, uint32 vertexFactoryFlags, ShaderCompilerParameters *pParameters);
@@ -131,10 +131,10 @@ public:
     DeferredTiledPointLightShader(const ShaderComponentTypeInfo *pTypeInfo = &s_TypeInfo) : BaseClass(pTypeInfo) { }
 
     // light params
-    static void SetLights(GPUContext *pContext, ShaderProgram *pShaderProgram, const Light *pLights, uint32 nLights);
-    static void SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, uint32 tileCountX, uint32 tileCountY);
-    static void SetBufferParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2, GPUTexture2D *pLightBuffer);
-    static void CommitParameters(GPUContext *pContext, ShaderProgram *pShaderProgram);
+    static void SetLights(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const Light *pLights, uint32 nLights);
+    static void SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, uint32 tileCountX, uint32 tileCountY);
+    static void SetBufferParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2, GPUTexture2D *pLightBuffer);
+    static void CommitParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram);
 
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
     static bool FillShaderCompilerParameters(uint32 globalShaderFlags, uint32 baseShaderFlags, uint32 vertexFactoryFlags, ShaderCompilerParameters *pParameters);
@@ -158,7 +158,7 @@ public:
 
     static uint32 GetFlagsForMode(RENDERER_FOG_MODE mode);
 
-    static void SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, GPUTexture2D *pDepthBuffer);
+    static void SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, GPUTexture2D *pDepthBuffer);
 
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
     static bool FillShaderCompilerParameters(uint32 globalShaderFlags, uint32 baseShaderFlags, uint32 vertexFactoryFlags, ShaderCompilerParameters *pParameters);

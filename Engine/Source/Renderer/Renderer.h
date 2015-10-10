@@ -911,10 +911,10 @@ public:
     static void Shutdown();
 
     // draw a fullscreen quad
-    void DrawFullScreenQuad(GPUContext *pContext);
+    void DrawFullScreenQuad(GPUCommandList *pCommandList);
 
     // copy a texture using a shader
-    void BlitTextureUsingShader(GPUContext *pContext, GPUTexture2D *pSourceTexture, uint32 sourceX, uint32 sourceY, uint32 sourceWidth, uint32 sourceHeight, int32 sourceLevel, uint32 destX, uint32 destY, uint32 destWidth, uint32 destHeight, RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER resizeFilter = RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER_NEAREST, RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE blendMode = RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE_NONE);
+    void BlitTextureUsingShader(GPUCommandList *pCommandList, GPUTexture2D *pSourceTexture, uint32 sourceX, uint32 sourceY, uint32 sourceWidth, uint32 sourceHeight, int32 sourceLevel, uint32 destX, uint32 destY, uint32 destWidth, uint32 destHeight, RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER resizeFilter = RENDERER_FRAMEBUFFER_BLIT_RESIZE_FILTER_NEAREST, RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE blendMode = RENDERER_FRAMEBUFFER_BLIT_BLEND_MODE_NONE);
 
     // helper for creating an index buffer. buffer is freed with Y_free.
     static void BuildIndexBufferContents(uint32 sourceVertexCount, const uint32 *pSourceIndices, uint32 nIndicesPerPrimitive, uint32 nPrimitives, uint32 sourceIndicesStride, void **ppOutBuffer, GPU_INDEX_FORMAT *pOutIndexFormat, uint32 *pOutIndexCount);

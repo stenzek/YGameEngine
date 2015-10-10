@@ -96,39 +96,39 @@ uint32 DeferredDirectionalLightShader::CalculateShadowFlags(bool enableShadows, 
     return flags;
 }
 
-void DeferredDirectionalLightShader::SetLightParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
+void DeferredDirectionalLightShader::SetLightParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
 {
     // TODO convert direction to viewspace
-    //cbDeferredDirectionalLightParameters.SetFieldFloat3(pContext, 0, pLight->Direction, false);
-    cbDeferredDirectionalLightParameters.SetFieldFloat3(pContext, 0, pViewParameters->ViewCamera.GetViewMatrix().TransformNormal(pLight->Direction), false);
-    cbDeferredDirectionalLightParameters.SetFieldFloat3(pContext, 1, pLight->LightColor, false);
-    cbDeferredDirectionalLightParameters.SetFieldFloat3(pContext, 2, pLight->AmbientColor, false);
+    //cbDeferredDirectionalLightParameters.SetFieldFloat3(pCommandList, 0, pLight->Direction, false);
+    cbDeferredDirectionalLightParameters.SetFieldFloat3(pCommandList, 0, pViewParameters->ViewCamera.GetViewMatrix().TransformNormal(pLight->Direction), false);
+    cbDeferredDirectionalLightParameters.SetFieldFloat3(pCommandList, 1, pLight->LightColor, false);
+    cbDeferredDirectionalLightParameters.SetFieldFloat3(pCommandList, 2, pLight->AmbientColor, false);
 }
 
-void DeferredDirectionalLightShader::SetShadowParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData)
+void DeferredDirectionalLightShader::SetShadowParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData)
 {
     uint32 shadowMapWidth = pShadowMapData->pShadowMapTexture->GetDesc()->Width;
     uint32 shadowMapHeight = pShadowMapData->pShadowMapTexture->GetDesc()->Height;
     float4 shadowMapSize((float)shadowMapWidth, (float)shadowMapHeight, 1.0f / (float)shadowMapWidth, 1.0f / (float)shadowMapHeight);
 
-    cbDeferredDirectionalLightParameters.SetFieldFloat4(pContext, 3, shadowMapSize, false);
-    cbDeferredDirectionalLightParameters.SetFieldFloat4x4Array(pContext, 4, 0, pShadowMapData->CascadeCount, pShadowMapData->ViewProjectionMatrices, false);
-    cbDeferredDirectionalLightParameters.SetFieldFloatArray(pContext, 5, 0, pShadowMapData->CascadeCount, pShadowMapData->CascadeFrustumEyeSpaceDepths, false);
+    cbDeferredDirectionalLightParameters.SetFieldFloat4(pCommandList, 3, shadowMapSize, false);
+    cbDeferredDirectionalLightParameters.SetFieldFloat4x4Array(pCommandList, 4, 0, pShadowMapData->CascadeCount, pShadowMapData->ViewProjectionMatrices, false);
+    cbDeferredDirectionalLightParameters.SetFieldFloatArray(pCommandList, 5, 0, pShadowMapData->CascadeCount, pShadowMapData->CascadeFrustumEyeSpaceDepths, false);
 
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 4, pShadowMapData->pShadowMapTexture, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 4, pShadowMapData->pShadowMapTexture, nullptr);
 }
 
-void DeferredDirectionalLightShader::SetBufferParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2)
+void DeferredDirectionalLightShader::SetBufferParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2)
 {
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 0, pDepthBuffer, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 1, pGBuffer0, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 2, pGBuffer1, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 3, pGBuffer2, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 0, pDepthBuffer, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 1, pGBuffer0, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 2, pGBuffer1, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 3, pGBuffer2, nullptr);
 }
 
-void DeferredDirectionalLightShader::CommitParameters(GPUContext *pContext, ShaderProgram *pShaderProgram)
+void DeferredDirectionalLightShader::CommitParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram)
 {
-    cbDeferredDirectionalLightParameters.CommitChanges(pContext);
+    cbDeferredDirectionalLightParameters.CommitChanges(pCommandList);
 }
 
 bool DeferredDirectionalLightShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
@@ -210,29 +210,29 @@ uint32 DeferredPointLightShader::CalculateShadowFlags(bool enableShadows, bool u
     return flags;
 }
 
-void DeferredPointLightShader::SetLightParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight)
+void DeferredPointLightShader::SetLightParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight)
 {
-    cbDeferredPointLightParameters.SetFieldFloat3(pContext, 0, pLight->LightColor, false);
-    cbDeferredPointLightParameters.SetFieldFloat3(pContext, 1, pLight->Position, false);
-    cbDeferredPointLightParameters.SetFieldFloat3(pContext, 2, pViewParameters->ViewCamera.GetViewMatrix().TransformPoint(pLight->Position), false);
-    cbDeferredPointLightParameters.SetFieldFloat(pContext, 3, pLight->Range, false);
-    cbDeferredPointLightParameters.SetFieldFloat(pContext, 4, pLight->InverseRange, false);
-    cbDeferredPointLightParameters.SetFieldFloat(pContext, 5, pLight->FalloffExponent, false);
+    cbDeferredPointLightParameters.SetFieldFloat3(pCommandList, 0, pLight->LightColor, false);
+    cbDeferredPointLightParameters.SetFieldFloat3(pCommandList, 1, pLight->Position, false);
+    cbDeferredPointLightParameters.SetFieldFloat3(pCommandList, 2, pViewParameters->ViewCamera.GetViewMatrix().TransformPoint(pLight->Position), false);
+    cbDeferredPointLightParameters.SetFieldFloat(pCommandList, 3, pLight->Range, false);
+    cbDeferredPointLightParameters.SetFieldFloat(pCommandList, 4, pLight->InverseRange, false);
+    cbDeferredPointLightParameters.SetFieldFloat(pCommandList, 5, pLight->FalloffExponent, false);
 
-    cbDeferredPointLightParameters.CommitChanges(pContext);
+    cbDeferredPointLightParameters.CommitChanges(pCommandList);
 }
 
-void DeferredPointLightShader::SetShadowParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData)
+void DeferredPointLightShader::SetShadowParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData)
 {
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 4, pShadowMapData->pShadowMapTexture, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 4, pShadowMapData->pShadowMapTexture, nullptr);
 }
 
-void DeferredPointLightShader::SetBufferParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2)
+void DeferredPointLightShader::SetBufferParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2)
 {
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 0, pDepthBuffer, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 1, pGBuffer0, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 2, pGBuffer1, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 3, pGBuffer2, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 0, pDepthBuffer, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 1, pGBuffer0, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 2, pGBuffer1, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 3, pGBuffer2, nullptr);
 }
 
 bool DeferredPointLightShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
@@ -285,20 +285,20 @@ struct _ShaderPointLight
     float FalloffExponent;
 };
 
-void DeferredPointLightListShader::SetLightParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, uint32 lightIndex, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight)
+void DeferredPointLightListShader::SetLightParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, uint32 lightIndex, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight)
 {
     DebugAssert(lightIndex < MAX_LIGHTS);
 
     _ShaderPointLight lightParams(pLight->Position, pLight->Range, pLight->LightColor, pLight->FalloffExponent);
-    pShaderProgram->SetBaseShaderParameterStructArray(pContext, 4, &lightParams, sizeof(lightParams), lightIndex, 1);
+    pShaderProgram->SetBaseShaderParameterStructArray(pCommandList, 4, &lightParams, sizeof(lightParams), lightIndex, 1);
 }
 
-void DeferredPointLightListShader::SetBufferParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2)
+void DeferredPointLightListShader::SetBufferParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2)
 {
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 0, pDepthBuffer, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 1, pGBuffer0, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 2, pGBuffer1, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 3, pGBuffer2, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 0, pDepthBuffer, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 1, pGBuffer0, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 2, pGBuffer1, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 3, pGBuffer2, nullptr);
 }
 
 bool DeferredPointLightListShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
@@ -337,30 +337,30 @@ END_SHADER_COMPONENT_PARAMETERS()
 
 DEFINE_RAW_SHADER_CONSTANT_BUFFER(cbDeferredTiledPointLightShaderLightBuffer, "DeferredTiledPointLightShaderLightBuffer", "", sizeof(DeferredTiledPointLightShader::Light) * DeferredTiledPointLightShader::MAX_LIGHTS_PER_DISPATCH, RENDERER_PLATFORM_COUNT, RENDERER_FEATURE_LEVEL_SM5, SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY_PER_PROGRAM)
     
-void DeferredTiledPointLightShader::SetLights(GPUContext *pContext, ShaderProgram *pShaderProgram, const Light *pLights, uint32 nLights)
+void DeferredTiledPointLightShader::SetLights(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const Light *pLights, uint32 nLights)
 {
-    cbDeferredTiledPointLightShaderLightBuffer.SetRawData(pContext, 0, sizeof(Light) * nLights, pLights, true);
-    pShaderProgram->SetBaseShaderParameterValue(pContext, 0, SHADER_PARAMETER_TYPE_UINT, &nLights);
+    cbDeferredTiledPointLightShaderLightBuffer.SetRawData(pCommandList, 0, sizeof(Light) * nLights, pLights, true);
+    pShaderProgram->SetBaseShaderParameterValue(pCommandList, 0, SHADER_PARAMETER_TYPE_UINT, &nLights);
 }
 
-void DeferredTiledPointLightShader::SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, uint32 tileCountX, uint32 tileCountY)
+void DeferredTiledPointLightShader::SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, uint32 tileCountX, uint32 tileCountY)
 {
-    pShaderProgram->SetBaseShaderParameterValue(pContext, 1, SHADER_PARAMETER_TYPE_UINT, &tileCountX);
-    pShaderProgram->SetBaseShaderParameterValue(pContext, 2, SHADER_PARAMETER_TYPE_UINT, &tileCountY);
+    pShaderProgram->SetBaseShaderParameterValue(pCommandList, 1, SHADER_PARAMETER_TYPE_UINT, &tileCountX);
+    pShaderProgram->SetBaseShaderParameterValue(pCommandList, 2, SHADER_PARAMETER_TYPE_UINT, &tileCountY);
 }
 
-void DeferredTiledPointLightShader::SetBufferParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2, GPUTexture2D *pLightBuffer)
+void DeferredTiledPointLightShader::SetBufferParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pGBuffer0, GPUTexture2D *pGBuffer1, GPUTexture2D *pGBuffer2, GPUTexture2D *pLightBuffer)
 {
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 3, pDepthBuffer, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 4, pGBuffer0, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 5, pGBuffer1, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 6, pGBuffer2, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 7, pLightBuffer, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 3, pDepthBuffer, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 4, pGBuffer0, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 5, pGBuffer1, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 6, pGBuffer2, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 7, pLightBuffer, nullptr);
 }
 
-void DeferredTiledPointLightShader::CommitParameters(GPUContext *pContext, ShaderProgram *pShaderProgram)
+void DeferredTiledPointLightShader::CommitParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram)
 {
-    cbDeferredTiledPointLightShaderLightBuffer.CommitChanges(pContext);
+    cbDeferredTiledPointLightShaderLightBuffer.CommitChanges(pCommandList);
 }
 
 bool DeferredTiledPointLightShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
@@ -406,19 +406,19 @@ uint32 DeferredFogShader::GetFlagsForMode(RENDERER_FOG_MODE mode)
     return 0;
 }
 
-void DeferredFogShader::SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, GPUTexture2D *pDepthBuffer)
+void DeferredFogShader::SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const WorldRenderer::ViewParameters *pViewParameters, GPUTexture2D *pDepthBuffer)
 {
     float fogDistance = pViewParameters->FogEndDistance - pViewParameters->FogStartDistance;
     float3 fogColor(PixelFormatHelpers::ConvertSRGBToLinear(pViewParameters->FogColor));
     float3 f2(PixelFormatHelpers::ConvertLinearToSRGB(fogColor));
 
     // set parameters
-    pShaderProgram->SetBaseShaderParameterValue(pContext, 0, SHADER_PARAMETER_TYPE_FLOAT, &pViewParameters->FogStartDistance);
-    pShaderProgram->SetBaseShaderParameterValue(pContext, 1, SHADER_PARAMETER_TYPE_FLOAT, &pViewParameters->FogEndDistance);
-    pShaderProgram->SetBaseShaderParameterValue(pContext, 2, SHADER_PARAMETER_TYPE_FLOAT, &fogDistance);
-    pShaderProgram->SetBaseShaderParameterValue(pContext, 3, SHADER_PARAMETER_TYPE_FLOAT, &pViewParameters->FogDensity);
-    pShaderProgram->SetBaseShaderParameterValue(pContext, 4, SHADER_PARAMETER_TYPE_FLOAT3, &fogColor);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 5, pDepthBuffer, nullptr);
+    pShaderProgram->SetBaseShaderParameterValue(pCommandList, 0, SHADER_PARAMETER_TYPE_FLOAT, &pViewParameters->FogStartDistance);
+    pShaderProgram->SetBaseShaderParameterValue(pCommandList, 1, SHADER_PARAMETER_TYPE_FLOAT, &pViewParameters->FogEndDistance);
+    pShaderProgram->SetBaseShaderParameterValue(pCommandList, 2, SHADER_PARAMETER_TYPE_FLOAT, &fogDistance);
+    pShaderProgram->SetBaseShaderParameterValue(pCommandList, 3, SHADER_PARAMETER_TYPE_FLOAT, &pViewParameters->FogDensity);
+    pShaderProgram->SetBaseShaderParameterValue(pCommandList, 4, SHADER_PARAMETER_TYPE_FLOAT3, &fogColor);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 5, pDepthBuffer, nullptr);
 }
 
 bool DeferredFogShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)

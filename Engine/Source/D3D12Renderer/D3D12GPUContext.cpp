@@ -2165,7 +2165,7 @@ void D3D12GPUContext::GenerateMips(GPUTexture *pTexture)
 GPUCommandList *D3D12GPUContext::CreateCommandList()
 {
     D3D12GPUCommandList *pCommandList = new D3D12GPUCommandList(m_pBackend, m_pD3DDevice);
-    if (!pCommandList->Create())
+    if (!pCommandList->Create(m_pGraphicsCommandQueue))
     {
         pCommandList->Release();
         return nullptr;

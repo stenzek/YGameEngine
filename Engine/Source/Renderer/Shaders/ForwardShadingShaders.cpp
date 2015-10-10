@@ -84,11 +84,11 @@ uint32 DirectionalLightShader::CalculateFlags(bool enableShadows, bool useHardwa
     return flags;
 }
 
-void DirectionalLightShader::SetLightParameters(GPUContext *pContext, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData)
+void DirectionalLightShader::SetLightParameters(GPUCommandList *pCommandList, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData)
 {
-    cbDirectionalLightParameters.SetFieldFloat3(pContext, 0, pLight->Direction, false);
-    cbDirectionalLightParameters.SetFieldFloat3(pContext, 1, pLight->LightColor, false);
-    cbDirectionalLightParameters.SetFieldFloat3(pContext, 2, pLight->AmbientColor, false);
+    cbDirectionalLightParameters.SetFieldFloat3(pCommandList, 0, pLight->Direction, false);
+    cbDirectionalLightParameters.SetFieldFloat3(pCommandList, 1, pLight->LightColor, false);
+    cbDirectionalLightParameters.SetFieldFloat3(pCommandList, 2, pLight->AmbientColor, false);
 
     if (pShadowMapData != nullptr)
     {
@@ -96,18 +96,18 @@ void DirectionalLightShader::SetLightParameters(GPUContext *pContext, const REND
         uint32 shadowMapHeight = pShadowMapData->pShadowMapTexture->GetDesc()->Height;
         float4 shadowMapSize((float)shadowMapWidth, (float)shadowMapHeight, 1.0f / (float)shadowMapWidth, 1.0f / (float)shadowMapHeight);
 
-        cbDirectionalLightParameters.SetFieldFloat4(pContext, 3, shadowMapSize, false);
-        cbDirectionalLightParameters.SetFieldFloat4x4Array(pContext, 4, 0, pShadowMapData->CascadeCount, pShadowMapData->ViewProjectionMatrices, false);
-        cbDirectionalLightParameters.SetFieldFloatArray(pContext, 5, 0, pShadowMapData->CascadeCount, pShadowMapData->CascadeFrustumEyeSpaceDepths, false);
+        cbDirectionalLightParameters.SetFieldFloat4(pCommandList, 3, shadowMapSize, false);
+        cbDirectionalLightParameters.SetFieldFloat4x4Array(pCommandList, 4, 0, pShadowMapData->CascadeCount, pShadowMapData->ViewProjectionMatrices, false);
+        cbDirectionalLightParameters.SetFieldFloatArray(pCommandList, 5, 0, pShadowMapData->CascadeCount, pShadowMapData->CascadeFrustumEyeSpaceDepths, false);
     }
 
-    cbDirectionalLightParameters.CommitChanges(pContext);
+    cbDirectionalLightParameters.CommitChanges(pCommandList);
 }
 
-void DirectionalLightShader::SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData)
+void DirectionalLightShader::SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData)
 {
     if (pShadowMapData != nullptr)
-        pShaderProgram->SetBaseShaderParameterTexture(pContext, 0, pShadowMapData->pShadowMapTexture, nullptr);
+        pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 0, pShadowMapData->pShadowMapTexture, nullptr);
 }
 
 bool DirectionalLightShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
@@ -203,21 +203,21 @@ uint32 PointLightShader::CalculateFlags(bool enableShadows, bool useHardwareShad
     return flags;
 }
 
-void PointLightShader::SetLightParameters(GPUContext *pContext, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData)
+void PointLightShader::SetLightParameters(GPUCommandList *pCommandList, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData)
 {
-    cbPointLightParameters.SetFieldFloat3(pContext, 0, pLight->LightColor, false);
-    cbPointLightParameters.SetFieldFloat3(pContext, 1, pLight->Position, false);
-    cbPointLightParameters.SetFieldFloat(pContext, 2, pLight->Range, false);
-    cbPointLightParameters.SetFieldFloat(pContext, 3, pLight->InverseRange, false);
-    cbPointLightParameters.SetFieldFloat(pContext, 4, pLight->FalloffExponent, false);
+    cbPointLightParameters.SetFieldFloat3(pCommandList, 0, pLight->LightColor, false);
+    cbPointLightParameters.SetFieldFloat3(pCommandList, 1, pLight->Position, false);
+    cbPointLightParameters.SetFieldFloat(pCommandList, 2, pLight->Range, false);
+    cbPointLightParameters.SetFieldFloat(pCommandList, 3, pLight->InverseRange, false);
+    cbPointLightParameters.SetFieldFloat(pCommandList, 4, pLight->FalloffExponent, false);
 
-    cbPointLightParameters.CommitChanges(pContext);
+    cbPointLightParameters.CommitChanges(pCommandList);
 }
 
-void PointLightShader::SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData)
+void PointLightShader::SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData)
 {
     if (pShadowMapData != nullptr)
-        pShaderProgram->SetBaseShaderParameterTexture(pContext, 0, pShadowMapData->pShadowMapTexture, nullptr);
+        pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 0, pShadowMapData->pShadowMapTexture, nullptr);
 }
 
 bool PointLightShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
@@ -289,25 +289,25 @@ BEGIN_SHADER_CONSTANT_BUFFER(cbPointLightListParameters, "PointLightListParamete
     SHADER_CONSTANT_BUFFER_FIELD("ActiveLightCount", SHADER_PARAMETER_TYPE_UINT, 1)
 END_SHADER_CONSTANT_BUFFER(cbPointLightListParameters)
 
-void PointLightListShader::SetLightParameters(GPUContext *pContext, uint32 lightIndex, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight)
+void PointLightListShader::SetLightParameters(GPUCommandList *pCommandList, uint32 lightIndex, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight)
 {
     uint32 baseIndex = lightIndex * 4;
     DebugAssert(lightIndex < MAX_LIGHTS);
 
-    cbPointLightListParameters.SetFieldFloat3(pContext, baseIndex + 0, pLight->Position, false);
-    cbPointLightListParameters.SetFieldFloat(pContext, baseIndex + 1, pLight->InverseRange, false);
-    cbPointLightListParameters.SetFieldFloat3(pContext, baseIndex + 2, pLight->LightColor, false);
-    cbPointLightListParameters.SetFieldFloat(pContext, baseIndex + 3, pLight->FalloffExponent, false);
+    cbPointLightListParameters.SetFieldFloat3(pCommandList, baseIndex + 0, pLight->Position, false);
+    cbPointLightListParameters.SetFieldFloat(pCommandList, baseIndex + 1, pLight->InverseRange, false);
+    cbPointLightListParameters.SetFieldFloat3(pCommandList, baseIndex + 2, pLight->LightColor, false);
+    cbPointLightListParameters.SetFieldFloat(pCommandList, baseIndex + 3, pLight->FalloffExponent, false);
 }
 
-void PointLightListShader::SetActiveLightCount(GPUContext *pContext, uint32 activeLightCount)
+void PointLightListShader::SetActiveLightCount(GPUCommandList *pCommandList, uint32 activeLightCount)
 {
-    cbPointLightListParameters.SetFieldUInt(pContext, 32, activeLightCount, false);
+    cbPointLightListParameters.SetFieldUInt(pCommandList, 32, activeLightCount, false);
 }
 
-void PointLightListShader::CommitParameters(GPUContext *pContext)
+void PointLightListShader::CommitParameters(GPUCommandList *pCommandList)
 {
-    cbPointLightListParameters.CommitChanges(pContext);
+    cbPointLightListParameters.CommitChanges(pCommandList);
 }
 
 bool PointLightListShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
@@ -358,18 +358,18 @@ uint32 VolumetricLightShader::GetTypeFlagsForPrimitive(VOLUMETRIC_LIGHT_PRIMITIV
     return 0;
 }
 
-void VolumetricLightShader::SetLightParameters(GPUContext *pContext, const RENDER_QUEUE_VOLUMETRIC_LIGHT_ENTRY *pLight)
+void VolumetricLightShader::SetLightParameters(GPUCommandList *pCommandList, const RENDER_QUEUE_VOLUMETRIC_LIGHT_ENTRY *pLight)
 {
-    cbVolumetricLightShader.SetFieldFloat3(pContext, 0, pLight->LightColor, false);
-    cbVolumetricLightShader.SetFieldFloat3(pContext, 1, pLight->Position, false);
-    cbVolumetricLightShader.SetFieldFloat(pContext, 2, pLight->FalloffRate, false);
-    cbVolumetricLightShader.SetFieldFloat3(pContext, 3, pLight->BoxExtents, false);
-    cbVolumetricLightShader.SetFieldFloat(pContext, 4, pLight->SphereRadius, false);
+    cbVolumetricLightShader.SetFieldFloat3(pCommandList, 0, pLight->LightColor, false);
+    cbVolumetricLightShader.SetFieldFloat3(pCommandList, 1, pLight->Position, false);
+    cbVolumetricLightShader.SetFieldFloat(pCommandList, 2, pLight->FalloffRate, false);
+    cbVolumetricLightShader.SetFieldFloat3(pCommandList, 3, pLight->BoxExtents, false);
+    cbVolumetricLightShader.SetFieldFloat(pCommandList, 4, pLight->SphereRadius, false);
 
-    cbVolumetricLightShader.CommitChanges(pContext);
+    cbVolumetricLightShader.CommitChanges(pCommandList);
 }
 
-void VolumetricLightShader::SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const RENDER_QUEUE_VOLUMETRIC_LIGHT_ENTRY *pLight)
+void VolumetricLightShader::SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const RENDER_QUEUE_VOLUMETRIC_LIGHT_ENTRY *pLight)
 {
 
 }

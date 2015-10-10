@@ -47,8 +47,8 @@ public:
     static uint32 CalculateFlags(bool enableShadows, bool useHardwareShadowFiltering, RENDERER_SHADOW_FILTER shadowFilter, bool showCascades);
 
     // light params
-    static void SetLightParameters(GPUContext *pContext, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData);
-    static void SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData);
+    static void SetLightParameters(GPUCommandList *pCommandList, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData);
+    static void SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight, const CSMShadowMapRenderer::ShadowMapData *pShadowMapData);
 
     // common functions
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
@@ -88,8 +88,8 @@ public:
 
     static uint32 CalculateFlags(bool enableShadows, bool useHardwareShadowFiltering);
 
-    static void SetLightParameters(GPUContext *pContext, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData);
-    static void SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData);
+    static void SetLightParameters(GPUCommandList *pCommandList, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData);
+    static void SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, const CubeMapShadowMapRenderer::ShadowMapData *pShadowMapData);
 
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
     static bool FillShaderCompilerParameters(uint32 globalShaderFlags, uint32 baseShaderFlags, uint32 vertexFactoryFlags, ShaderCompilerParameters *pParameters);
@@ -107,9 +107,9 @@ public:
 public:
     PointLightListShader(const ShaderComponentTypeInfo *pTypeInfo = &s_TypeInfo) : BaseClass(pTypeInfo) { }
 
-    static void SetLightParameters(GPUContext *pContext, uint32 lightIndex, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight);
-    static void SetActiveLightCount(GPUContext *pContext, uint32 activeLightCount);
-    static void CommitParameters(GPUContext *pContext);
+    static void SetLightParameters(GPUCommandList *pCommandList, uint32 lightIndex, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight);
+    static void SetActiveLightCount(GPUCommandList *pCommandList, uint32 activeLightCount);
+    static void CommitParameters(GPUCommandList *pCommandList);
 
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
     static bool FillShaderCompilerParameters(uint32 globalShaderFlags, uint32 baseShaderFlags, uint32 vertexFactoryFlags, ShaderCompilerParameters *pParameters);
@@ -133,8 +133,8 @@ public:
 
     static uint32 GetTypeFlagsForPrimitive(VOLUMETRIC_LIGHT_PRIMITIVE primitive);
 
-    static void SetLightParameters(GPUContext *pContext, const RENDER_QUEUE_VOLUMETRIC_LIGHT_ENTRY *pLight);
-    static void SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, const RENDER_QUEUE_VOLUMETRIC_LIGHT_ENTRY *pLight);
+    static void SetLightParameters(GPUCommandList *pCommandList, const RENDER_QUEUE_VOLUMETRIC_LIGHT_ENTRY *pLight);
+    static void SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, const RENDER_QUEUE_VOLUMETRIC_LIGHT_ENTRY *pLight);
 
     static bool IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags);
     static bool FillShaderCompilerParameters(uint32 globalShaderFlags, uint32 baseShaderFlags, uint32 vertexFactoryFlags, ShaderCompilerParameters *pParameters);

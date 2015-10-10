@@ -26,7 +26,7 @@ public:
     bool AllocateShadowMap(ShadowMapData *pShadowMapData);
     void FreeShadowMap(ShadowMapData *pShadowMapData);
 
-    void DrawShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight);
+    void DrawShadowMap(GPUCommandList *pCommandList, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight);
 
 private:
     static void BuildCubeMapCamera(Camera *pCamera, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight, CUBE_FACE face);

@@ -18,7 +18,7 @@ public:
    
 protected:
     // applies a guassian blur to a texture. uses intermediate buffer.
-    void BlurTexture(GPUTexture2D *pBlurTexture, GPURenderTargetView *pBlurTextureRTV, float blurSigma = 0.8f, bool restoreViewport = true);
+    void BlurTexture(GPUCommandList *pCommandList, GPUTexture2D *pBlurTexture, GPURenderTargetView *pBlurTextureRTV, float blurSigma = 0.8f, bool restoreViewport = true);
 
     // apply tone mapping. NOTE: Will overwrite the current viewport with the view parameters viewport, and render target.
     void ApplyFinalCompositePostProcess(const ViewParameters *pViewParameters, GPUTexture2D *pSceneColorTexture, GPURenderTargetView *pOutputRTV);

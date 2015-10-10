@@ -13,17 +13,17 @@ BEGIN_SHADER_COMPONENT_PARAMETERS(SSAOShader)
     DEFINE_SHADER_COMPONENT_PARAMETER("NormalsTexture", SHADER_PARAMETER_TYPE_TEXTURE2D)
 END_SHADER_COMPONENT_PARAMETERS()
 
-void SSAOShader::SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pNormalsTexture)
+void SSAOShader::SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pDepthBuffer, GPUTexture2D *pNormalsTexture)
 {
     // get random texture, and scale it
     const Texture2D *pRandomTexture = g_pRenderer->GetFixedResources()->GetRandomTexture();
-    float2 randomTextureScale((float)pContext->GetViewport()->Width / (float)pRandomTexture->GetWidth(), (float)pContext->GetViewport()->Height / (float)pRandomTexture->GetHeight());
+    float2 randomTextureScale((float)pCommandList->GetViewport()->Width / (float)pRandomTexture->GetWidth(), (float)pCommandList->GetViewport()->Height / (float)pRandomTexture->GetHeight());
 
     // set parameters
-    pShaderProgram->SetBaseShaderParameterValue(pContext, 0, SHADER_PARAMETER_TYPE_FLOAT2, &randomTextureScale);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 1, pRandomTexture->GetGPUTexture(), nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 2, pDepthBuffer, nullptr);
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 3, pNormalsTexture, nullptr);
+    pShaderProgram->SetBaseShaderParameterValue(pCommandList, 0, SHADER_PARAMETER_TYPE_FLOAT2, &randomTextureScale);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 1, pRandomTexture->GetGPUTexture(), nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 2, pDepthBuffer, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 3, pNormalsTexture, nullptr);
 }
 
 bool SSAOShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)
@@ -54,9 +54,9 @@ BEGIN_SHADER_COMPONENT_PARAMETERS(SSAOApplyShader)
     DEFINE_SHADER_COMPONENT_PARAMETER("AOTexture", SHADER_PARAMETER_TYPE_TEXTURE2D)
 END_SHADER_COMPONENT_PARAMETERS()
 
-void SSAOApplyShader::SetProgramParameters(GPUContext *pContext, ShaderProgram *pShaderProgram, GPUTexture2D *pAOTexture)
+void SSAOApplyShader::SetProgramParameters(GPUCommandList *pCommandList, ShaderProgram *pShaderProgram, GPUTexture2D *pAOTexture)
 {
-    pShaderProgram->SetBaseShaderParameterTexture(pContext, 0, pAOTexture, nullptr);
+    pShaderProgram->SetBaseShaderParameterTexture(pCommandList, 0, pAOTexture, nullptr);
 }
 
 bool SSAOApplyShader::IsValidPermutation(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialShaderFlags)

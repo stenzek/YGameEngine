@@ -109,14 +109,14 @@ void CubeMapShadowMapRenderer::FreeShadowMap(ShadowMapData *pShadowMapData)
     pShadowMapData->pShadowMapTexture->Release();
 }
 
-void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight)
+void CubeMapShadowMapRenderer::DrawShadowMap(GPUCommandList *pCommandList, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_POINT_LIGHT_ENTRY *pLight)
 {
     // get shadow distance
     shadowDistance = Min(shadowDistance, pViewCamera->GetFarPlaneDistance() - pViewCamera->GetNearPlaneDistance());
 
     // common device parameters
     RENDERER_VIEWPORT shadowMapViewport(0, 0, m_shadowMapResolution, m_shadowMapResolution, 0.0f, 1.0f);
-    pGPUContext->SetViewport(&shadowMapViewport);
+    pCommandList->SetViewport(&shadowMapViewport);
 
     // for each cube face
     for (uint32 cubeFaceIndex = 0; cubeFaceIndex < CUBE_FACE_COUNT; cubeFaceIndex++)
@@ -131,8 +131,8 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapD
         //RENDER_PROFILER_ADD_CAMERA(pRenderProfiler, &lightCamera, String::FromFormat("Point Shadow Camera Face %u", cubeFaceIndex));
 
         // set+clear the shadow map
-        pGPUContext->SetRenderTargets(0, nullptr, pShadowMapData->pShadowMapDSV[cubeFaceIndex]);
-        pGPUContext->ClearTargets(false, true, false, float4::Zero, 1.0f);
+        pCommandList->SetRenderTargets(0, nullptr, pShadowMapData->pShadowMapDSV[cubeFaceIndex]);
+        pCommandList->ClearTargets(false, true, false, float4::Zero, 1.0f);
 
         // clear render queue
         m_renderQueue.Clear();
@@ -154,11 +154,11 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapD
             continue;
 
         // set render targets, for pipelining we do this before sorting
-        pGPUContext->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
-        pGPUContext->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(true, true, GPU_COMPARISON_FUNC_LESS), 0);
+        pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
+        pCommandList->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(true, true, GPU_COMPARISON_FUNC_LESS), 0);
 
         // set up view-dependent constants
-        pGPUContext->GetConstants()->SetFromCamera(lightCamera, true);
+        pCommandList->GetConstants()->SetFromCamera(lightCamera, true);
 
         // sort renderables
         m_renderQueue.Sort();
@@ -178,10 +178,10 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapD
                     ShaderProgram *pShaderProgram = g_pRenderer->GetShaderProgram(0, OBJECT_TYPEINFO(ShadowMapShader), 0, pQueueEntry->pVertexFactoryTypeInfo, pQueueEntry->VertexFactoryFlags, pQueueEntry->pMaterial->GetShader(), pQueueEntry->pMaterial->GetShaderStaticSwitchMask());
                     if (pShaderProgram != nullptr)
                     {
-                        pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-                        pQueueEntry->pMaterial->BindDeviceResources(pGPUContext, pShaderProgram);
-                        pQueueEntry->pRenderProxy->SetupForDraw(&lightCamera, pQueueEntry, pGPUContext, pShaderProgram);
-                        pQueueEntry->pRenderProxy->DrawQueueEntry(&lightCamera, pQueueEntry, pGPUContext);
+                        pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+                        pQueueEntry->pMaterial->BindDeviceResources(pCommandList, pShaderProgram);
+                        pQueueEntry->pRenderProxy->SetupForDraw(&lightCamera, pQueueEntry, pCommandList, pShaderProgram);
+                        pQueueEntry->pRenderProxy->DrawQueueEntry(&lightCamera, pQueueEntry, pCommandList);
                     }
                 }
                 else
@@ -190,9 +190,9 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapD
                     ShaderProgram *pShaderProgram = g_pRenderer->GetShaderProgram(0, OBJECT_TYPEINFO(ShadowMapShader), 0, pQueueEntry->pVertexFactoryTypeInfo, pQueueEntry->VertexFactoryFlags, NULL, 0);
                     if (pShaderProgram != nullptr)
                     {
-                        pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-                        pQueueEntry->pRenderProxy->SetupForDraw(&lightCamera, pQueueEntry, pGPUContext, pShaderProgram);
-                        pQueueEntry->pRenderProxy->DrawQueueEntry(&lightCamera, pQueueEntry, pGPUContext);
+                        pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+                        pQueueEntry->pRenderProxy->SetupForDraw(&lightCamera, pQueueEntry, pCommandList, pShaderProgram);
+                        pQueueEntry->pRenderProxy->DrawQueueEntry(&lightCamera, pQueueEntry, pCommandList);
                     }
                 }
             }
@@ -212,9 +212,9 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUContext *pGPUContext, ShadowMapD
                     ShaderProgram *pShaderProgram = g_pRenderer->GetShaderProgram(0, OBJECT_TYPEINFO(ShadowMapShader), 0, pQueueEntry->pVertexFactoryTypeInfo, pQueueEntry->VertexFactoryFlags, NULL, 0);
                     if (pShaderProgram != nullptr)
                     {
-                        pGPUContext->SetShaderProgram(pShaderProgram->GetGPUProgram());
-                        pQueueEntry->pRenderProxy->SetupForDraw(&lightCamera, pQueueEntry, pGPUContext, pShaderProgram);
-                        pQueueEntry->pRenderProxy->DrawQueueEntry(&lightCamera, pQueueEntry, pGPUContext);
+                        pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
+                        pQueueEntry->pRenderProxy->SetupForDraw(&lightCamera, pQueueEntry, pCommandList, pShaderProgram);
+                        pQueueEntry->pRenderProxy->DrawQueueEntry(&lightCamera, pQueueEntry, pCommandList);
                     }
                 }
             }

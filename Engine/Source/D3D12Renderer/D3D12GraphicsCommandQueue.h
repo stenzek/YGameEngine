@@ -122,4 +122,6 @@ private:
     MemArray<LinearSamplerDescriptorHeapEntry> m_linearSamplerHeapPool;
     uint32 m_outstandingLinearSamplerHeaps;
 
+    // allocator lock
+    Mutex m_allocatorLock;
 };

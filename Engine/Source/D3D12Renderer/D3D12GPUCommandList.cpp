@@ -17,6 +17,7 @@ D3D12GPUCommandList::D3D12GPUCommandList(D3D12RenderBackend *pBackend, ID3D12Dev
     , m_pD3DDevice(pD3DDevice)
     , m_pConstants(nullptr)
     , m_pCommandList(nullptr)
+    , m_pCurrentCommandAllocator(nullptr)
     , m_pCurrentScratchBuffer(nullptr)
     , m_pCurrentScratchViewHeap(nullptr)
     , m_pCurrentScratchSamplerHeap(nullptr)
@@ -107,20 +108,36 @@ void D3D12GPUCommandList::ResourceBarrier(ID3D12Resource *pResource, uint32 subR
     m_pCommandList->ResourceBarrier(1, &resourceBarrier);
 }
 
-bool D3D12GPUCommandList::Create()
+bool D3D12GPUCommandList::Create(D3D12GraphicsCommandQueue *pCommandQueue)
 {   
     // allocate constants
     m_pConstants = new GPUContextConstants(this);
     CreateConstantBuffers();
 
+    // get a temporary allocator
+    ID3D12CommandAllocator *pTemporaryAllocator = pCommandQueue->RequestCommandAllocator();
+    DebugAssert(pTemporaryAllocator != nullptr);
+
     // create command list
-    HRESULT hResult = m_pD3DDevice->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCurrentCommandAllocator, nullptr, IID_PPV_ARGS(&m_pCommandList));
+    HRESULT hResult = m_pD3DDevice->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, pTemporaryAllocator, nullptr, IID_PPV_ARGS(&m_pCommandList));
     if (FAILED(hResult))
     {
         Log_ErrorPrintf("CreateCommandList failed with hResult %08X", hResult);
+        pCommandQueue->ReleaseCommandAllocator(pTemporaryAllocator, pCommandQueue->GetLastCompletedFenceValue());
         return false;
     }
 
+    // reset the command list (since it's expected to be in the closed state)
+    hResult = m_pCommandList->Close();
+    if (FAILED(hResult))
+    {
+        Log_ErrorPrintf("Close failed with hResult %02X", hResult);
+        pCommandQueue->ReleaseCommandAllocator(pTemporaryAllocator, pCommandQueue->GetLastCompletedFenceValue());
+        return false;
+    }
+
+    // release allocator
+    pCommandQueue->ReleaseCommandAllocator(pTemporaryAllocator, pCommandQueue->GetLastCompletedFenceValue());
     return true;
 }
 

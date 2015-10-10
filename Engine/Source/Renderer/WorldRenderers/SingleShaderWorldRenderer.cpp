@@ -65,7 +65,7 @@ void SingleShaderWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const
         PostDraw(pViewParameters);
 
         if (m_options.ShowWireframeOverlay)
-            DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetOpaqueRenderables());
+            DrawWireframeOverlay(m_pGPUContext, &pViewParameters->ViewCamera, &m_renderQueue.GetOpaqueRenderables());
     }
 
     // postprocess
@@ -104,7 +104,7 @@ void SingleShaderWorldRenderer::DrawOpqaueObjects(const ViewParameters *pViewPar
     }
 
     if (m_options.ShowWireframeOverlay)
-        DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetOpaqueRenderables());
+        DrawWireframeOverlay(m_pGPUContext, &pViewParameters->ViewCamera, &m_renderQueue.GetOpaqueRenderables());
 }
 
 void SingleShaderWorldRenderer::DrawPostProcessObjects(const ViewParameters *pViewParameters)
@@ -120,7 +120,7 @@ void SingleShaderWorldRenderer::DrawPostProcessObjects(const ViewParameters *pVi
     }
 
     if (m_options.ShowWireframeOverlay)
-        DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetPostProcessRenderables());
+        DrawWireframeOverlay(m_pGPUContext, &pViewParameters->ViewCamera, &m_renderQueue.GetPostProcessRenderables());
 }
 
 void SingleShaderWorldRenderer::DrawTranslucentObjects(const ViewParameters *pViewParameters)
@@ -136,7 +136,7 @@ void SingleShaderWorldRenderer::DrawTranslucentObjects(const ViewParameters *pVi
     }
 
     if (m_options.ShowWireframeOverlay)
-        DrawWireframeOverlay(&pViewParameters->ViewCamera, &m_renderQueue.GetTranslucentRenderables());
+        DrawWireframeOverlay(m_pGPUContext, &pViewParameters->ViewCamera, &m_renderQueue.GetTranslucentRenderables());
 }
 
 void SingleShaderWorldRenderer::SetCommonShaderProgramParameters(const ViewParameters *pViewParameters, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry, ShaderProgram *pShaderProgram)

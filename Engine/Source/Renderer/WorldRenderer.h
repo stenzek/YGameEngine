@@ -2,6 +2,7 @@
 #include "Renderer/Common.h"
 #include "Renderer/RendererTypes.h"
 #include "Renderer/RenderQueue.h"
+#include "Renderer/Renderer.h"
 #include "Engine/Camera.h"
 
 class Material;
@@ -48,6 +49,7 @@ public:
         uint32 RenderModeNormals : 1;
         uint32 RenderModeLightingOnly : 1;
         uint32 EmulateMobile : 1;
+        uint32 EnableMultithreadedRendering : 1;
 
         uint32 RenderWidth;
         uint32 RenderHeight;
@@ -165,8 +167,8 @@ protected:
     static ShaderProgram *GetShaderProgram(uint32 globalShaderFlags, const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const VertexFactoryTypeInfo *pVertexFactoryTypeInfo, uint32 vertexFactoryFlags, const MaterialShader *pMaterialShader, uint32 materialStaticSwitchMask);
     static ShaderProgram *GetShaderProgram(const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry);
     static ShaderProgram *GetShaderProgram(const ShaderComponentTypeInfo *pBaseShaderTypeInfo, uint32 baseShaderFlags);
-    static void SetBlendingModeForMaterial(GPUContext *pGPUDevice, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry);
-    static void SetAdditiveBlendingModeForMaterial(GPUContext *pGPUDevice, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry);
+    static void SetBlendingModeForMaterial(GPUCommandList *pCommandList, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry);
+    static void SetAdditiveBlendingModeForMaterial(GPUCommandList *pCommandList, const RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry);
 
     // queue filling + sorting
     void FillRenderQueue(const Camera *pCamera, const RenderWorld *pRenderWorld);
@@ -175,10 +177,10 @@ protected:
     void DrawDebugInfo(const Camera *pCamera);
 
     // wireframe overlay drawing
-    void DrawWireframeOverlay(const Camera *pCamera, const RenderQueue::RenderableArray *pRenderables);
+    void DrawWireframeOverlay(GPUCommandList *pCommandList, const Camera *pCamera, const RenderQueue::RenderableArray *pRenderables);
 
     // upscale/downsample one texture to another, using hardware bilinear filtering
-    void ScaleTexture(GPUTexture2D *pSourceTexture, GPURenderTargetView *pDestinationRTV, bool restoreViewport = true, bool restoreTargets = true);
+    void ScaleTexture(GPUCommandList *pCommandList, GPUTexture2D *pSourceTexture, GPURenderTargetView *pDestinationRTV, bool restoreViewport = true, bool restoreTargets = true);
 
     // intermediate buffer requests/releases
     IntermediateBuffer *RequestIntermediateBuffer(uint32 width, uint32 height, PIXEL_FORMAT pixelFormat, uint32 mipLevels);
@@ -186,7 +188,7 @@ protected:
     void ReleaseIntermediateBuffer(IntermediateBuffer *pIntermediateBuffer);
 
     // occlusion culling, draw method assumes depth buffer is bound
-    void DrawOcclusionCullingProxies(const Camera *pCamera);
+    void DrawOcclusionCullingProxies(GPUCommandList *pCommandList, const Camera *pCamera);
     void CollectOcclusionCullingResults();
     void BindOcclusionQueriesToQueueEntries();
 
@@ -217,4 +219,89 @@ protected:
     GPUBuffer *m_pOcclusionCullingCubeVertexBuffer;
     GPUBuffer *m_pOcclusionCullingCubeIndexBuffer;
     ShaderProgram *m_pOcclusionCullingProgram;
+
+    // multithreaded rendering
+    HANDLE m_hQueueingCommandsSemaphore;
+    PODArray<GPUCommandList *> m_readyPrimaryCommandLists;
+    PODArray<GPUCommandList *> m_readySecondaryCommandLists;
+    uint32 m_commandListsPending;
+    Mutex m_commandListLock;
+    bool m_multiThreadedRenderingEnabled;
+
+    // begin multithreaded rendering
+    template<class T>
+    void QueuePrimaryRenderPass(T callback)
+    {
+        // find a command queue
+        GPUCommandList *pCommandList = (m_options.EnableMultithreadedRendering) ? g_pRenderer->AllocateCommandList() : nullptr;
+        if (pCommandList == nullptr)
+        {
+            callback(m_pGPUContext);
+            return;
+        }
+
+        // open command list
+        if (!m_pGPUContext->OpenCommandList(pCommandList))
+        {
+            callback(m_pGPUContext);
+            return;
+        }
+
+        // queue it
+        m_commandListLock.Lock();
+        m_commandListsPending++;
+        m_commandListLock.Unlock();
+        QUEUE_RENDERER_WORKER_LAMBDA_COMMAND([this, pCommandList, callback]() {
+            callback(pCommandList);
+
+            bool closeResult = m_pGPUContext->CloseCommandList(pCommandList);
+            m_commandListLock.Lock();
+            m_commandListsPending--;
+            if (closeResult)
+                m_readyPrimaryCommandLists.Add(pCommandList);
+            else
+                g_pRenderer->ReleaseCommandList(pCommandList);
+
+            m_commandListLock.Unlock();
+            ReleaseSemaphore(m_hQueueingCommandsSemaphore, 1, nullptr);
+        });
+    }
+    template<class T>
+    void QueueSecondaryRenderPass(T callback)
+    {
+        // find a command queue
+        GPUCommandList *pCommandList = (m_options.EnableMultithreadedRendering) ? g_pRenderer->AllocateCommandList() : nullptr;
+        if (pCommandList == nullptr)
+        {
+            callback(m_pGPUContext);
+            return;
+        }
+
+        // open command list
+        if (!m_pGPUContext->OpenCommandList(pCommandList))
+        {
+            callback(m_pGPUContext);
+            return;
+        }
+
+        // queue it
+        m_commandListLock.Lock();
+        m_commandListsPending++;
+        m_commandListLock.Unlock();
+        QUEUE_RENDERER_WORKER_LAMBDA_COMMAND([this, pCommandList, callback]() {
+            callback(pCommandList);
+
+            bool closeResult = m_pGPUContext->CloseCommandList(pCommandList);
+            m_commandListLock.Lock();
+            m_commandListsPending--;
+            if (closeResult)
+                m_readySecondaryCommandLists.Add(pCommandList);
+            else
+                g_pRenderer->ReleaseCommandList(pCommandList);
+
+            m_commandListLock.Unlock();
+            ReleaseSemaphore(m_hQueueingCommandsSemaphore, 1, nullptr);
+        });
+    }
+    void ExecuteRenderPasses();
 };

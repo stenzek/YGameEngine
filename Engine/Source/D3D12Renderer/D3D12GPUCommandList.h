@@ -110,7 +110,7 @@ public:
     D3D12GPUShaderProgram *GetD3D12ShaderProgram() const { return m_pCurrentShaderProgram; }
 
     // create device
-    bool Create();
+    bool Create(D3D12GraphicsCommandQueue *pCommandQueue);
 
     // context interface
     bool Open(D3D12GraphicsCommandQueue *pCommandQueue, D3D12GPUOutputBuffer *pOutputBuffer);

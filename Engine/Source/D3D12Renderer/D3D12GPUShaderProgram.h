@@ -43,7 +43,7 @@ public:
     };
 
 public:
-    D3D12GPUShaderProgram();
+    D3D12GPUShaderProgram(D3D12GPUDevice *pDevice);
     virtual ~D3D12GPUShaderProgram();
 
     // resource virtuals
@@ -86,6 +86,9 @@ protected:
     // arrays
     typedef Array<ConstantBuffer> ConstantBufferArray;
     typedef Array<ShaderParameter> ParameterArray;
+
+    // device pointer
+    D3D12GPUDevice *m_pDevice;
 
     // compiled pipeline object
     struct PipelineState

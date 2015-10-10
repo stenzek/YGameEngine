@@ -3,7 +3,6 @@
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12GPUCommandList.h"
-#include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12Helpers.h"
 #include "D3D12Renderer/D3D12CVars.h"
 #include "Renderer/ShaderConstantBuffer.h"
@@ -39,8 +38,10 @@ static const DXGI_FORMAT s_GPUVertexElementTypeToDXGIFormat[GPU_VERTEX_ELEMENT_T
     DXGI_FORMAT_R8G8B8A8_UNORM,     // GPU_VERTEX_ELEMENT_TYPE_UNORM4
 };
 
-D3D12GPUShaderProgram::D3D12GPUShaderProgram()
+D3D12GPUShaderProgram::D3D12GPUShaderProgram(D3D12GPUDevice *pDevice)
+    : m_pDevice(pDevice)
 {
+    m_pDevice->AddRef();
     Y_memzero(m_pStageByteCode, sizeof(m_pStageByteCode));
 }
 
@@ -49,7 +50,7 @@ D3D12GPUShaderProgram::~D3D12GPUShaderProgram()
     for (uint32 i = 0; i < m_pipelineStates.GetSize(); i++)
     {
         if (m_pipelineStates[i].pPipelineState != nullptr)
-            D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(m_pipelineStates[i].pPipelineState);
+            m_pDevice->ScheduleResourceForDeletion(m_pipelineStates[i].pPipelineState);
     }
 
     for (uint32 i = 0; i < countof(m_pStageByteCode); i++)
@@ -57,6 +58,8 @@ D3D12GPUShaderProgram::~D3D12GPUShaderProgram()
         if (m_pStageByteCode[i] != nullptr)
             m_pStageByteCode[i]->Release();
     }
+
+    m_pDevice->Release();
 }
 
 
@@ -88,7 +91,7 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
     // fill new details
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineDesc;
     Y_memzero(&pipelineDesc, sizeof(pipelineDesc));
-    pipelineDesc.pRootSignature = D3D12RenderBackend::GetInstance()->GetLegacyGraphicsRootSignature();
+    pipelineDesc.pRootSignature = m_pDevice->GetLegacyGraphicsRootSignature();
 
     // stage bytecode
     if (m_pStageByteCode[SHADER_PROGRAM_STAGE_VERTEX_SHADER] != nullptr)
@@ -169,7 +172,7 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
 
     // create it
     ID3D12PipelineState *pPipelineState;
-    HRESULT hResult = D3D12RenderBackend::GetInstance()->GetD3DDevice()->CreateGraphicsPipelineState(&pipelineDesc, IID_PPV_ARGS(&pPipelineState));
+    HRESULT hResult = m_pDevice->GetD3DDevice()->CreateGraphicsPipelineState(&pipelineDesc, IID_PPV_ARGS(&pPipelineState));
     if (SUCCEEDED(hResult))
     {
         // set debug name
@@ -309,7 +312,7 @@ bool D3D12GPUShaderProgram::Create(D3D12GPUDevice *pDevice, const GPU_VERTEX_ELE
             pDstConstantBuffer->EngineConstantBufferIndex = 0;
         
             // lookup engine constant buffer
-            const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(pDstConstantBuffer->Name, RENDERER_PLATFORM_D3D11, D3D12RenderBackend::GetInstance()->GetFeatureLevel());
+            const ShaderConstantBuffer *pEngineConstantBuffer = ShaderConstantBuffer::GetShaderConstantBufferByName(pDstConstantBuffer->Name, RENDERER_PLATFORM_D3D11, m_pDevice->GetFeatureLevel());
             if (pEngineConstantBuffer == nullptr)
             {
                 Log_ErrorPrintf("D3D12ShaderProgram::Create: Shader is requesting unknown constant buffer named '%s'.", pDstConstantBuffer->Name);
@@ -374,7 +377,7 @@ bool D3D12GPUShaderProgram::Switch(D3D12GPUContext *pContext, ID3D12GraphicsComm
             if (parameter.BindPoint[stageIndex] < D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS)
             {
                 // bind to table
-                const D3D12DescriptorHandle *pHandle = D3D12RenderBackend::GetInstance()->GetConstantBufferDescriptor(constantBuffer.EngineConstantBufferIndex);
+                const D3D12DescriptorHandle *pHandle = m_pDevice->GetConstantBufferDescriptor(constantBuffer.EngineConstantBufferIndex);
                 if (pHandle != nullptr)
                     pContext->SetShaderConstantBuffers((SHADER_PROGRAM_STAGE)stageIndex, parameter.BindPoint[stageIndex], *pHandle);
             }
@@ -415,7 +418,7 @@ bool D3D12GPUShaderProgram::Switch(D3D12GPUCommandList *pCommandList, ID3D12Grap
             if (parameter.BindPoint[stageIndex] < D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS)
             {
                 // bind to table
-                const D3D12DescriptorHandle *pHandle = D3D12RenderBackend::GetInstance()->GetConstantBufferDescriptor(constantBuffer.EngineConstantBufferIndex);
+                const D3D12DescriptorHandle *pHandle = m_pDevice->GetConstantBufferDescriptor(constantBuffer.EngineConstantBufferIndex);
                 if (pHandle != nullptr)
                     pCommandList->SetShaderConstantBuffers((SHADER_PROGRAM_STAGE)stageIndex, parameter.BindPoint[stageIndex], *pHandle);
             }
@@ -748,7 +751,7 @@ void D3D12GPUShaderProgram::GetParameterInformation(uint32 index, const char **n
 
 GPUShaderProgram *D3D12GPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT_DESC *pVertexElements, uint32 nVertexElements, ByteStream *pByteCodeStream)
 {
-    D3D12GPUShaderProgram *pProgram = new D3D12GPUShaderProgram();
+    D3D12GPUShaderProgram *pProgram = new D3D12GPUShaderProgram(this);
     if (!pProgram->Create(this, pVertexElements, nVertexElements, pByteCodeStream))
     {
         pProgram->Release();
@@ -760,7 +763,7 @@ GPUShaderProgram *D3D12GPUDevice::CreateGraphicsProgram(const GPU_VERTEX_ELEMENT
 
 GPUShaderProgram *D3D12GPUDevice::CreateComputeProgram(ByteStream *pByteCodeStream)
 {
-    D3D12GPUShaderProgram *pProgram = new D3D12GPUShaderProgram();
+    D3D12GPUShaderProgram *pProgram = new D3D12GPUShaderProgram(this);
     if (!pProgram->Create(this, nullptr, 0, pByteCodeStream))
     {
         pProgram->Release();

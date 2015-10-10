@@ -6,25 +6,22 @@
 #include "D3D12Renderer/D3D12GPUBuffer.h"
 #include "D3D12Renderer/D3D12GPUTexture.h"
 #include "D3D12Renderer/D3D12GPUShaderProgram.h"
-#include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12GPUOutputBuffer.h"
 #include "D3D12Renderer/D3D12Helpers.h"
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(D3D12RenderBackend);
 
-D3D12GPUContext::D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice)
-    : m_pBackend(pBackend)
-    , m_pGraphicsCommandQueue(pBackend->GetGraphicsCommandQueue())
-    , m_pDevice(pDevice)
+D3D12GPUContext::D3D12GPUContext(D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice, D3D12CommandQueue *pGraphicsCommandQueue)
+    : m_pDevice(pDevice)
     , m_pD3DDevice(pD3DDevice)
+    , m_pGraphicsCommandQueue(pGraphicsCommandQueue)
     , m_pConstants(nullptr)
     , m_pCommandList(nullptr)
     , m_pCurrentScratchBuffer(nullptr)
     , m_pCurrentScratchViewHeap(nullptr)
     , m_pCurrentScratchSamplerHeap(nullptr)
 {
-    // add references
-    m_pDevice->SetGPUContext(this);
+    m_pDevice->AddRef();
 
     // null memory
     Y_memzero(&m_currentViewport, sizeof(m_currentViewport));
@@ -71,13 +68,13 @@ D3D12GPUContext::~D3D12GPUContext()
 {
     // execute all pending commands and wait until they're completed
     if (m_pCommandList != nullptr)
+    {
         FlushCommandList(false, true, false);
-
-    // release command list
-    SAFE_RELEASE(m_pCommandList);
+        m_pGraphicsCommandQueue->ReleaseCommandList(m_pCommandList);
+    }
 
     // release everything back to the queue (not done above because we don't want another one after this)
-    uint64 syncFence = m_pBackend->GetGraphicsCommandQueue()->CreateSynchronizationPoint();
+    uint64 syncFence = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
     if (m_pCurrentCommandAllocator != nullptr)
     {
         m_pGraphicsCommandQueue->ReleaseCommandAllocator(m_pCurrentCommandAllocator, syncFence);
@@ -142,7 +139,8 @@ D3D12GPUContext::~D3D12GPUContext()
     delete m_pConstants;
 
     SAFE_RELEASE(m_pCurrentSwapChain);
-    m_pDevice->SetGPUContext(nullptr);
+
+    m_pDevice->Release();
 }
 
 void D3D12GPUContext::ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState)
@@ -196,7 +194,7 @@ void D3D12GPUContext::CreateConstantBuffers()
             continue;
         if (declaration->GetPlatformRequirement() != RENDERER_PLATFORM_COUNT && declaration->GetPlatformRequirement() != RENDERER_PLATFORM_D3D12)
             continue;
-        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > D3D12RenderBackend::GetInstance()->GetFeatureLevel())
+        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > m_pDevice->GetFeatureLevel())
             continue;
 
         // set size so we know to allocate it later or on demand
@@ -212,23 +210,15 @@ void D3D12GPUContext::CreateConstantBuffers()
 
 bool D3D12GPUContext::CreateInternalCommandList()
 {
-    HRESULT hResult;
-
     // allocate everything
     m_pCurrentCommandAllocator = m_pGraphicsCommandQueue->RequestCommandAllocator();
     m_pCurrentScratchBuffer = m_pGraphicsCommandQueue->RequestLinearBufferHeap();
     m_pCurrentScratchViewHeap = m_pGraphicsCommandQueue->RequestLinearViewHeap();
     m_pCurrentScratchSamplerHeap = m_pGraphicsCommandQueue->RequestLinearSamplerHeap();
-    if (m_pCurrentCommandAllocator == nullptr || m_pCurrentScratchBuffer == nullptr || m_pCurrentScratchViewHeap == nullptr || m_pCurrentScratchSamplerHeap == nullptr)
-        return false;
+    m_pCommandList = m_pGraphicsCommandQueue->RequestAndOpenCommandList(m_pCurrentCommandAllocator);
 
-    // create command list
-    hResult = m_pD3DDevice->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCurrentCommandAllocator, nullptr, IID_PPV_ARGS(&m_pCommandList));
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("CreateCommandList failed with hResult %08X", hResult);
-        return false;
-    }
+    // issue copies on the graphics queue
+    m_pDevice->SetCopyCommandList(m_pCommandList);
 
     // set initial state
     ClearCommandListDependantState();
@@ -259,14 +249,17 @@ void D3D12GPUContext::FlushCommandList(bool reopen, bool wait, bool refreshAlloc
     HRESULT hResult = m_pCommandList->Close();
     if (SUCCEEDED(hResult))
     {
-        // execute it and create a synchronization point
-        uint64 fenceValue = m_pGraphicsCommandQueue->ExecuteCommandList(m_pCommandList);
+        // execute it
+        m_pGraphicsCommandQueue->ExecuteCommandList(m_pCommandList);
+
+        // create a synchronization point
+        uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
 
         // wait for the gpu to catch up
         if (wait)
         {
             // re-use the same allocators since the gpu has caught up
-            m_pBackend->GetGraphicsCommandQueue()->WaitForFence(fenceValue);
+            m_pGraphicsCommandQueue->WaitForFence(fenceValue);
             m_pCurrentScratchBuffer->Reset(true);
             m_pCurrentScratchViewHeap->Reset();
             m_pCurrentScratchSamplerHeap->Reset();
@@ -279,26 +272,14 @@ void D3D12GPUContext::FlushCommandList(bool reopen, bool wait, bool refreshAlloc
     }
     else
     {
-        Log_ErrorPrintf("ID3D12CommandList::Close failed with hResult %08X, some may commands may not be executed. Recreating command list.", hResult);
+        Log_ErrorPrintf("ID3D12CommandList::Close failed with hResult %08X, some commands may not be executed. Recreating command list.", hResult);
 
-        // create a new command list (documentation says that a command list that failed Close() will forever be in an error state)
-        ID3D12GraphicsCommandList *pNewCommandList;
-        hResult = m_pD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCurrentCommandAllocator, nullptr, IID_PPV_ARGS(&pNewCommandList));
-        if (SUCCEEDED(hResult))
-        {
-            hResult = pNewCommandList->Close();
-            if (FAILED(hResult))
-                Log_ErrorPrintf("ID3D12CommandList::Close on the new command list failed with hResult %08X. Something is seriously wrong.", hResult);
+        // mark command list as failed and get a new list
+        m_pGraphicsCommandQueue->ReleaseFailedCommandList(m_pCommandList);
+        m_pCommandList = m_pGraphicsCommandQueue->RequestAndOpenCommandList(m_pCurrentCommandAllocator);
 
-            // if close failed, the gpu won't be doing anything with it. right?
-            m_pCommandList->Release();
-            m_pCommandList = pNewCommandList;
-        }
-        else
-        {
-            // can't do much, leave the broken command list around, try next time..
-            Log_ErrorPrintf("ID3D12Device::CreateCommandList failed with hResult %08X. Something is seriously wrong.", hResult);
-        }
+        // issue copies on the graphics queue
+        m_pDevice->SetCopyCommandList(m_pCommandList);
 
         // since the command list was not executed, allocators can be re-used
         m_pCurrentScratchBuffer->Reset(true);
@@ -394,8 +375,8 @@ void D3D12GPUContext::UpdateShaderDescriptorHeaps()
 void D3D12GPUContext::ClearCommandListDependantState()
 {
     // graphics root
-    m_pCommandList->SetGraphicsRootSignature(m_pBackend->GetLegacyGraphicsRootSignature());
-    m_pCommandList->SetComputeRootSignature(m_pBackend->GetLegacyComputeRootSignature());
+    m_pCommandList->SetGraphicsRootSignature(m_pDevice->GetLegacyGraphicsRootSignature());
+    m_pCommandList->SetComputeRootSignature(m_pDevice->GetLegacyComputeRootSignature());
     UpdateShaderDescriptorHeaps();
 
     // pipeline state
@@ -430,8 +411,8 @@ void D3D12GPUContext::ClearCommandListDependantState()
 void D3D12GPUContext::RestoreCommandListDependantState()
 {
     // graphics root
-    m_pCommandList->SetGraphicsRootSignature(m_pBackend->GetLegacyGraphicsRootSignature());
-    m_pCommandList->SetComputeRootSignature(m_pBackend->GetLegacyComputeRootSignature());
+    m_pCommandList->SetGraphicsRootSignature(m_pDevice->GetLegacyGraphicsRootSignature());
+    m_pCommandList->SetComputeRootSignature(m_pDevice->GetLegacyComputeRootSignature());
     UpdateShaderDescriptorHeaps();
 
     // pipeline state
@@ -1496,7 +1477,7 @@ void D3D12GPUContext::CommitConstantBuffer(uint32 bufferIndex)
         Y_memcpy(pCPUPointer, cbInfo->pLocalMemory + cbInfo->DirtyLowerBounds, modifySize);
 
         // get constant buffer pointer
-        ID3D12Resource *pConstantBufferResource = m_pBackend->GetConstantBufferResource(bufferIndex);
+        ID3D12Resource *pConstantBufferResource = m_pDevice->GetConstantBufferResource(bufferIndex);
         DebugAssert(pConstantBufferResource != nullptr);
 
         // block predicates
@@ -1738,10 +1719,10 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
                 if (!state->ConstantBuffers[i].IsNull())
                     pCPUHandles[i] = state->ConstantBuffers[i];
                 else
-                    pCPUHandles[i] = m_pBackend->GetNullCBVDescriptorHandle();
+                    pCPUHandles[i] = m_pDevice->GetNullCBVDescriptorHandle();
             }
             for (uint32 i = state->ConstantBufferBindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS; i++)
-                pCPUHandles[i] = m_pBackend->GetNullCBVDescriptorHandle();
+                pCPUHandles[i] = m_pDevice->GetNullCBVDescriptorHandle();
 
             // allocate scratch descriptors and copy
             if (AllocateScratchView(D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS, &state->CBVTableCPUHandle, &state->CBVTableGPUHandle))
@@ -1763,10 +1744,10 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
                 if (!state->Resources[i].IsNull())
                     pCPUHandles[i] = state->Resources[i];
                 else
-                    pCPUHandles[i] = m_pBackend->GetNullSRVDescriptorHandle();
+                    pCPUHandles[i] = m_pDevice->GetNullSRVDescriptorHandle();
             }
             for (uint32 i = state->ResourceBindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS; i++)
-                pCPUHandles[i] = m_pBackend->GetNullSRVDescriptorHandle();
+                pCPUHandles[i] = m_pDevice->GetNullSRVDescriptorHandle();
 
             // allocate scratch descriptors and copy
             if (AllocateScratchView(D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS, &state->SRVTableCPUHandle, &state->SRVTableGPUHandle))
@@ -1788,10 +1769,10 @@ bool D3D12GPUContext::UpdatePipelineState(bool force)
                 if (!state->Samplers[i].IsNull())
                     pCPUHandles[i] = state->Samplers[i];
                 else
-                    pCPUHandles[i] = m_pBackend->GetNullSamplerHandle();
+                    pCPUHandles[i] = m_pDevice->GetNullSamplerHandle();
             }
             for (uint32 i = state->SamplerBindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS; i++)
-                pCPUHandles[i] = m_pBackend->GetNullSamplerHandle();
+                pCPUHandles[i] = m_pDevice->GetNullSamplerHandle();
 
             // allocate scratch descriptors and copy
             if (AllocateScratchSamplers(D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS, &state->SamplerTableCPUHandle, &state->SamplerTableGPUHandle))
@@ -2164,7 +2145,7 @@ void D3D12GPUContext::GenerateMips(GPUTexture *pTexture)
 
 GPUCommandList *D3D12GPUContext::CreateCommandList()
 {
-    D3D12GPUCommandList *pCommandList = new D3D12GPUCommandList(m_pBackend, m_pD3DDevice);
+    D3D12GPUCommandList *pCommandList = new D3D12GPUCommandList(m_pDevice, m_pD3DDevice);
     if (!pCommandList->Create(m_pGraphicsCommandQueue))
     {
         pCommandList->Release();
@@ -2198,8 +2179,8 @@ void D3D12GPUContext::ExecuteCommandList(GPUCommandList *pCommandList)
     D3D12GPUCommandList *pD3D12CommandList = reinterpret_cast<D3D12GPUCommandList *>(pCommandList);
 
     // execute on our command queue
-    uint64 fenceValue = m_pGraphicsCommandQueue->ExecuteCommandList(pD3D12CommandList->GetD3DCommandList());
+    m_pGraphicsCommandQueue->ExecuteCommandList(pD3D12CommandList->GetD3DCommandList());
     
     // release everything the command list used
-    pD3D12CommandList->ReleaseAllocators(fenceValue);
+    pD3D12CommandList->ReleaseAllocators(m_pGraphicsCommandQueue->GetNextFenceValue());
 }

@@ -34,7 +34,6 @@ class D3D12GPUSamplerState;
 class D3D12GPURenderTargetView;
 class D3D12GPUDepthStencilBufferView;
 class D3D12GPUComputeView;
-class D3D12RenderBackend;
 class D3D12DescriptorHeap;
 struct D3D12DescriptorHandle;
 

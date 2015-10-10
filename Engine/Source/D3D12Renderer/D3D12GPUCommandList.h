@@ -1,13 +1,13 @@
 #pragma once
 #include "D3D12Renderer/D3D12Common.h"
-#include "D3D12Renderer/D3D12GraphicsCommandQueue.h"
+#include "D3D12Renderer/D3D12CommandQueue.h"
 #include "D3D12Renderer/D3D12DescriptorHeap.h"
 #include "D3D12Renderer/D3D12LinearHeaps.h"
 
 class D3D12GPUCommandList : public GPUCommandList
 {
 public:
-    D3D12GPUCommandList(D3D12RenderBackend *pBackend, ID3D12Device *pD3DDevice);
+    D3D12GPUCommandList(D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice);
     ~D3D12GPUCommandList();
 
     // State clearing
@@ -110,10 +110,10 @@ public:
     D3D12GPUShaderProgram *GetD3D12ShaderProgram() const { return m_pCurrentShaderProgram; }
 
     // create device
-    bool Create(D3D12GraphicsCommandQueue *pCommandQueue);
+    bool Create(D3D12CommandQueue *pCommandQueue);
 
     // context interface
-    bool Open(D3D12GraphicsCommandQueue *pCommandQueue, D3D12GPUOutputBuffer *pOutputBuffer);
+    bool Open(D3D12CommandQueue *pCommandQueue, D3D12GPUOutputBuffer *pOutputBuffer);
     bool Close();
 
     // release allocators back to command queue
@@ -158,9 +158,9 @@ private:
     bool IsBoundAsUnorderedAccess(GPUResource *pResource);
     void UpdateScissorRect();
 
-    D3D12RenderBackend *m_pBackend;
-    D3D12GraphicsCommandQueue *m_pGraphicsCommandQueue;
+    D3D12GPUDevice *m_pDevice;
     ID3D12Device *m_pD3DDevice;
+    D3D12CommandQueue *m_pGraphicsCommandQueue;
 
     GPUContextConstants *m_pConstants;
 

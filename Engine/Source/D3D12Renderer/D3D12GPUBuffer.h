@@ -4,7 +4,7 @@
 class D3D12GPUBuffer : public GPUBuffer
 {
 public:
-    D3D12GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, ID3D12Resource *pD3DResource, D3D12_RESOURCE_STATES defaultResourceState);
+    D3D12GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, D3D12GPUDevice *pDevice, ID3D12Resource *pD3DResource, D3D12_RESOURCE_STATES defaultResourceState);
     virtual ~D3D12GPUBuffer();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
@@ -22,6 +22,7 @@ public:
     ID3D12Resource *CreateReadbackResource(ID3D12Device *pD3DDevice, uint32 size) const;
 
 private:
+    D3D12GPUDevice *m_pDevice;
     ID3D12Resource *m_pD3DResource;
     ID3D12Resource *m_pD3DMapResource;
     D3D12_RESOURCE_STATES m_defaultResourceState;

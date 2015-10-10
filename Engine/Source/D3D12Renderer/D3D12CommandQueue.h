@@ -3,13 +3,14 @@
 #include "D3D12Renderer/D3D12DescriptorHeap.h"
 #include "D3D12Renderer/D3D12LinearHeaps.h"
 
-class D3D12GraphicsCommandQueue
+class D3D12CommandQueue
 {
 public:
-    D3D12GraphicsCommandQueue(D3D12RenderBackend *pBackend, ID3D12Device *pDevice, uint32 linearBufferHeapSize, uint32 linearViewHeapSize, uint32 linearSamplerHeapSize);
-    ~D3D12GraphicsCommandQueue();
+    D3D12CommandQueue(D3D12GPUDevice *pGPUDevice, ID3D12Device *pD3DDevice, D3D12_COMMAND_LIST_TYPE type, uint32 linearBufferHeapSize, uint32 linearViewHeapSize, uint32 linearSamplerHeapSize);
+    ~D3D12CommandQueue();
 
     // accessors
+    const D3D12_COMMAND_LIST_TYPE GetType() const { return m_type; }
     const uint32 GetLinearBufferHeapSize() const { return m_linearBufferHeapSize; }
     const uint32 GetLinearViewHeapSize() const { return m_linearViewHeapSize; }
     const uint32 GetLinearSamplerHeapSize() const { return m_linearSamplerHeapSize; }
@@ -20,14 +21,17 @@ public:
     // initialization
     bool Initialize();
 
-    // cleanup any resources that have had the fence passed
-    void ReleaseStaleResources();
-
     // increment the fence value without executing anything
     uint64 CreateSynchronizationPoint();
 
-    // execute a command list. returns the fence value once it has finished on the gpu.
-    uint64 ExecuteCommandList(ID3D12CommandList *pCommandList);
+    // execute a command list.
+    void ExecuteCommandList(ID3D12CommandList *pCommandList);
+
+    // command list request, release
+    ID3D12GraphicsCommandList *RequestCommandList();
+    ID3D12GraphicsCommandList *RequestAndOpenCommandList(ID3D12CommandAllocator *pCommandAllocator);
+    void ReleaseCommandList(ID3D12GraphicsCommandList *pCommandList);
+    void ReleaseFailedCommandList(ID3D12GraphicsCommandList *pCommandList);
 
     // command allocator request, release
     ID3D12CommandAllocator *RequestCommandAllocator();
@@ -58,16 +62,20 @@ public:
     void ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle);
     void ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle, uint64 fenceValue);
 
+    // cleanup any resources that have had the fence passed
+    void ReleaseStaleResources();
+
 private:
     void UpdateLastCompletedFenceValue();
-    void DeletePendingResources(uint64 fenceValue);
     template<class T> T *SearchPool(MemArray<KeyValuePair<T *, uint64>> &pool);
     template<class T> T *SearchPoolAndWait(MemArray<KeyValuePair<T *, uint64>> &pool);
     template<class T> void InsertIntoPool(MemArray<KeyValuePair<T *, uint64>> &pool, T *pItem, uint64 fenceValue);
+    void DeletePendingResources(uint64 fenceValue);
 
     // parents
-    D3D12RenderBackend *m_pBackend;
+    D3D12GPUDevice *m_pGPUDevice;
     ID3D12Device *m_pD3DDevice;
+    D3D12_COMMAND_LIST_TYPE m_type;
     uint32 m_linearBufferHeapSize;
     uint32 m_linearViewHeapSize;
     uint32 m_linearSamplerHeapSize;
@@ -83,24 +91,9 @@ private:
     uint64 m_nextFenceValue;
     uint64 m_lastCompletedFenceValue;
 
-    // object scheduled for deletion
-    struct PendingDeletionResource
-    {
-        ID3D12Pageable *pResource;
-        uint64 FenceValue;
-    };
-    struct PendingDeletionDescriptor
-    {
-        D3D12DescriptorHandle Handle;
-        uint64 FenceValue;
-    };
-    MemArray<PendingDeletionResource> m_pendingDeletionResources;
-    MemArray<PendingDeletionDescriptor> m_pendingDeletionDescriptors;
-    Mutex m_pendingResourceLock;
-
-//     // command list pool
-//     typedef KeyValuePair<ID3D12CommandList *, uint64> CommandListEntry;
-//     MemArray<CommandListEntry> m_commandListPool;
+    // command list pool
+    PODArray<ID3D12GraphicsCommandList *> m_commandListPool;
+    uint32 m_outstandingCommandLists;
 
     // command allocator pool
     typedef KeyValuePair<ID3D12CommandAllocator *, uint64> CommandAllocatorEntry;
@@ -123,5 +116,21 @@ private:
     uint32 m_outstandingLinearSamplerHeaps;
 
     // allocator lock
-    Mutex m_allocatorLock;
+    RecursiveMutex m_allocatorLock;
+
+    // object scheduled for deletion
+    // this has a lock mainly for the main graphics queue, since it can be called from any thread
+    struct PendingDeletionResource
+    {
+        ID3D12Pageable *pResource;
+        uint64 FenceValue;
+    };
+    struct PendingDeletionDescriptor
+    {
+        D3D12DescriptorHandle Handle;
+        uint64 FenceValue;
+    };
+    MemArray<PendingDeletionResource> m_pendingDeletionResources;
+    MemArray<PendingDeletionDescriptor> m_pendingDeletionDescriptors;
+    Mutex m_pendingResourceLock;
 };

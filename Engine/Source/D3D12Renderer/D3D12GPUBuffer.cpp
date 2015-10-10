@@ -2,28 +2,28 @@
 #include "D3D12Renderer/D3D12GPUBuffer.h"
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUContext.h"
-#include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12Helpers.h"
 Log_SetChannel(D3D12RenderBackend);
 
-D3D12GPUBuffer::D3D12GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, ID3D12Resource *pD3DResource, D3D12_RESOURCE_STATES defaultResourceState)
+D3D12GPUBuffer::D3D12GPUBuffer(const GPU_BUFFER_DESC *pBufferDesc, D3D12GPUDevice *pDevice, ID3D12Resource *pD3DResource, D3D12_RESOURCE_STATES defaultResourceState)
     : GPUBuffer(pBufferDesc)
+    , m_pDevice(pDevice)
     , m_pD3DResource(pD3DResource)
     , m_pD3DMapResource(nullptr)
     , m_defaultResourceState(defaultResourceState)
     , m_mapType(GPU_MAP_TYPE_COUNT)
 {
-    // @TODO virtual call bad here, should just adjust the counter directly.
     g_pRenderer->GetCounters()->OnResourceCreated(this);
+    pDevice->AddRef();
 }
 
 D3D12GPUBuffer::~D3D12GPUBuffer()
 {
-    g_pRenderer->GetCounters()->OnResourceDeleted(this);
-
     DebugAssert(m_pD3DMapResource == nullptr);
-    
-    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(m_pD3DResource);
+
+    g_pRenderer->GetCounters()->OnResourceDeleted(this);    
+    m_pDevice->ScheduleResourceForDeletion(m_pD3DResource);
+    m_pDevice->Release();
 }
 
 void D3D12GPUBuffer::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -66,7 +66,7 @@ GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
     }
 
     // create instance
-    D3D12GPUBuffer *pBuffer = new D3D12GPUBuffer(pDesc, pResource, defaultResourceState);
+    D3D12GPUBuffer *pBuffer = new D3D12GPUBuffer(pDesc, this, pResource, defaultResourceState);
 
     // handle uploads
     if (pInitialData != nullptr)
@@ -79,8 +79,13 @@ GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
             return nullptr;
         }
 
-        // batch this stuff together when off-thread
-        BeginResourceBatchUpload();
+        // get a copy queue
+        CopyQueueReference queueReference(this);
+        if (!queueReference.HasContext())
+        {
+            pBuffer->Release();
+            return nullptr;
+        }
 
         // map the upload resource
         D3D12_RANGE readRange = { 0, 0 };
@@ -100,15 +105,13 @@ GPUBuffer *D3D12GPUDevice::CreateBuffer(const GPU_BUFFER_DESC *pDesc, const void
         pUploadResource->Unmap(0, D3D12_MAP_RANGE_PARAM(&writeRange));
 
         // copy from the upload buffer to the real buffer
-        GetCommandList()->CopyBufferRegion(pResource, 0, pUploadResource, 0, pDesc->Size);
+        GetCurrentCopyCommandList()->CopyBufferRegion(pResource, 0, pUploadResource, 0, pDesc->Size);
 
         // transition to the real resource state
         ResourceBarrier(pResource, D3D12_RESOURCE_STATE_COPY_DEST, defaultResourceState);
 
-        // flush copy queue
-        FlushCopyQueue();
-        ScheduleUploadResourceDeletion(pUploadResource);
-        EndResourceBatchUpload();
+        // free upload resource
+        ScheduleCopyResourceForDeletion(pUploadResource);
     }
 
     // done, return the pointer from before
@@ -240,7 +243,7 @@ bool D3D12GPUContext::WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint3
     ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
 
     // release the upload buffer later
-    m_pBackend->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(pUploadBuffer);
+    m_pDevice->ScheduleResourceForDeletion(pUploadBuffer);
     return true;
 }
 
@@ -332,7 +335,7 @@ void D3D12GPUContext::Unmapbuffer(GPUBuffer *pBuffer, void *pPointer)
         ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
 
         // have to wait until the gpu is finished with it before releasing the buffer
-        m_pBackend->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(pMapBuffer);
+        m_pDevice->ScheduleResourceForDeletion(pMapBuffer);
     }
     else
     {

@@ -58,10 +58,10 @@ static const RENDERER_PLATFORM_FACTORY_FUNCTION s_renderSystemDeclarations[] =
     { RENDERER_PLATFORM_D3D11,      D3D11RenderBackend_Create,      false   },
 #endif
 #if defined(WITH_RENDERER_D3D12)
-    //{ RENDERER_PLATFORM_D3D12,      D3D12RenderBackend_Create,      false   },
+    { RENDERER_PLATFORM_D3D12,      D3D12RenderBackend_Create,      false   },
 #endif
 #if defined(WITH_RENDERER_OPENGL)
-    //{ RENDERER_PLATFORM_OPENGL,     OpenGLRenderBackend_Create,     true    },
+    { RENDERER_PLATFORM_OPENGL,     OpenGLRenderBackend_Create,     true    },
 #endif
 #if defined(WITH_RENDERER_OPENGLES2)
     { RENDERER_PLATFORM_OPENGLES2,  OpenGLES2RenderBackend_Create,  true    },

@@ -2,7 +2,6 @@
 #include "D3D12Renderer/D3D12GPUTexture.h"
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUContext.h"
-#include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12Helpers.h"
 Log_SetChannel(D3D12RenderBackend);
 
@@ -216,25 +215,27 @@ bool D3D12GPUContext::WriteTexture(GPUTexture1DArray *pTexture, const void *pSou
     return false;
 }
 
-D3D12GPUTexture2D::D3D12GPUTexture2D(const GPU_TEXTURE2D_DESC *pDesc, ID3D12Resource *pD3DResource, const D3D12DescriptorHandle &srvHandle, const D3D12DescriptorHandle &samplerHandle, D3D12_RESOURCE_STATES defaultResourceState)
+D3D12GPUTexture2D::D3D12GPUTexture2D(const GPU_TEXTURE2D_DESC *pDesc, D3D12GPUDevice *pDevice, ID3D12Resource *pD3DResource, const D3D12DescriptorHandle &srvHandle, const D3D12DescriptorHandle &samplerHandle, D3D12_RESOURCE_STATES defaultResourceState)
     : GPUTexture2D(pDesc)
+    , m_pDevice(pDevice)
     , m_pD3DResource(pD3DResource)
     , m_srvHandle(srvHandle)
     , m_samplerHandle(samplerHandle)
     , m_defaultResourceState(defaultResourceState)
 {   
-
+    m_pDevice->AddRef();
 }
 
 D3D12GPUTexture2D::~D3D12GPUTexture2D()
 {
     if (!m_samplerHandle.IsNull())
-        D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_samplerHandle);
+        m_pDevice->ScheduleDescriptorForDeletion(m_samplerHandle);
 
     if (!m_srvHandle.IsNull())
-        D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_srvHandle);
+        m_pDevice->ScheduleDescriptorForDeletion(m_srvHandle);
 
-    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(m_pD3DResource);
+    m_pDevice->ScheduleResourceForDeletion(m_pD3DResource);
+    m_pDevice->Release();
 }
 
 void D3D12GPUTexture2D::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -306,7 +307,7 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
     if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_SHADER_BINDABLE)
     {
         // allocate a descriptor
-        if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Allocate(&srvHandle))
+        if (!GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Allocate(&srvHandle))
         {
             pD3DResource->Release();
             return false;
@@ -333,16 +334,16 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         if (!D3D12Helpers::FillD3D12SamplerStateDesc(pSamplerStateDesc, &samplerDesc))
         {
             Log_ErrorPrintf("Failed to convert sampler state description.");
-            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
             pD3DResource->Release();
             return false;
         }
 
         // allocate a descriptor
-        if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&samplerHandle))
+        if (!GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&samplerHandle))
         {
             Log_ErrorPrintf("Failed to allocator sampler descriptor.");
-            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
             pD3DResource->Release();
             return false;
         }
@@ -358,12 +359,12 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         BeginResourceBatchUpload();
 
         // upload the texture
-        ID3D12Resource *pUploadResource = UploadTextureData(m_pD3DDevice, GetCommandList(), pD3DResource, &resourceDesc, ppInitialData, pInitialDataPitch, nullptr);
+        ID3D12Resource *pUploadResource = UploadTextureData(m_pD3DDevice, GetCurrentCopyCommandList(), pD3DResource, &resourceDesc, ppInitialData, pInitialDataPitch, nullptr);
         if (pUploadResource == nullptr)
         {
             Log_ErrorPrintf("Failed to upload texture data", hResult);
-            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
-            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
+            GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
             pD3DResource->Release();
             return false;
         }
@@ -372,13 +373,12 @@ GPUTexture2D *D3D12GPUDevice::CreateTexture2D(const GPU_TEXTURE2D_DESC *pTexture
         ResourceBarrier(pD3DResource, D3D12_RESOURCE_STATE_COPY_DEST, defaultResourceState);
 
         // done with the upload, and free the buffer
-        FlushCopyQueue();
-        ScheduleUploadResourceDeletion(pUploadResource);
+        ScheduleCopyResourceForDeletion(pUploadResource);
         EndResourceBatchUpload();
     }
 
     // create class
-    return new D3D12GPUTexture2D(pTextureDesc, pD3DResource, srvHandle, samplerHandle, defaultResourceState);
+    return new D3D12GPUTexture2D(pTextureDesc, this, pD3DResource, srvHandle, samplerHandle, defaultResourceState);
 }
 
 bool D3D12GPUContext::ReadTexture(GPUTexture2D *pTexture, void *pDestination, uint32 destinationRowPitch, uint32 cbDestination, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY)
@@ -454,25 +454,27 @@ bool D3D12GPUContext::WriteTexture(GPUTexture2D *pTexture, const void *pSource, 
     return false;
 }
 
-D3D12GPUTexture2DArray::D3D12GPUTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pDesc, ID3D12Resource *pD3DResource, const D3D12DescriptorHandle &srvHandle, const D3D12DescriptorHandle &samplerHandle, D3D12_RESOURCE_STATES defaultResourceState)
+D3D12GPUTexture2DArray::D3D12GPUTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pDesc, D3D12GPUDevice *pDevice, ID3D12Resource *pD3DResource, const D3D12DescriptorHandle &srvHandle, const D3D12DescriptorHandle &samplerHandle, D3D12_RESOURCE_STATES defaultResourceState)
     : GPUTexture2DArray(pDesc)
+    , m_pDevice(pDevice)
     , m_pD3DResource(pD3DResource)
     , m_srvHandle(srvHandle)
     , m_samplerHandle(samplerHandle)
     , m_defaultResourceState(defaultResourceState)
 {   
-
+    pDevice->AddRef();
 }
 
 D3D12GPUTexture2DArray::~D3D12GPUTexture2DArray()
 {
     if (!m_samplerHandle.IsNull())
-        D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_samplerHandle);
+        m_pDevice->ScheduleDescriptorForDeletion(m_samplerHandle);
 
     if (!m_srvHandle.IsNull())
-        D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_srvHandle);
+        m_pDevice->ScheduleDescriptorForDeletion(m_srvHandle);
 
-    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(m_pD3DResource);
+    m_pDevice->ScheduleResourceForDeletion(m_pD3DResource);
+    m_pDevice->Release();
 }
 
 void D3D12GPUTexture2DArray::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -544,7 +546,7 @@ GPUTexture2DArray *D3D12GPUDevice::CreateTexture2DArray(const GPU_TEXTURE2DARRAY
     if (pTextureDesc->Flags & GPU_TEXTURE_FLAG_SHADER_BINDABLE)
     {
         // allocate a descriptor
-        if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Allocate(&srvHandle))
+        if (!GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Allocate(&srvHandle))
         {
             pD3DResource->Release();
             return false;
@@ -573,16 +575,16 @@ GPUTexture2DArray *D3D12GPUDevice::CreateTexture2DArray(const GPU_TEXTURE2DARRAY
         if (!D3D12Helpers::FillD3D12SamplerStateDesc(pSamplerStateDesc, &samplerDesc))
         {
             Log_ErrorPrintf("Failed to convert sampler state description.");
-            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
             pD3DResource->Release();
             return false;
         }
 
         // allocate a descriptor
-        if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&samplerHandle))
+        if (!GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Allocate(&samplerHandle))
         {
             Log_ErrorPrintf("Failed to allocator sampler descriptor.");
-            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
             pD3DResource->Release();
             return false;
         }
@@ -598,12 +600,12 @@ GPUTexture2DArray *D3D12GPUDevice::CreateTexture2DArray(const GPU_TEXTURE2DARRAY
         BeginResourceBatchUpload();
 
         // upload the texture
-        ID3D12Resource *pUploadResource = UploadTextureData(m_pD3DDevice, GetCommandList(), pD3DResource, &resourceDesc, ppInitialData, pInitialDataPitch, nullptr);
+        ID3D12Resource *pUploadResource = UploadTextureData(m_pD3DDevice, GetCurrentCopyCommandList(), pD3DResource, &resourceDesc, ppInitialData, pInitialDataPitch, nullptr);
         if (pUploadResource == nullptr)
         {
             Log_ErrorPrintf("Failed to upload texture data", hResult);
-            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
-            m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
+            GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)->Free(srvHandle);
+            GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)->Free(samplerHandle);
             pD3DResource->Release();
             return false;
         }
@@ -612,13 +614,12 @@ GPUTexture2DArray *D3D12GPUDevice::CreateTexture2DArray(const GPU_TEXTURE2DARRAY
         ResourceBarrier(pD3DResource, D3D12_RESOURCE_STATE_COPY_DEST, defaultResourceState);
 
         // done with the upload, and free the buffer
-        FlushCopyQueue();
-        ScheduleUploadResourceDeletion(pUploadResource);
+        ScheduleCopyResourceForDeletion(pUploadResource);
         EndResourceBatchUpload();
     }
 
     // create class
-    return new D3D12GPUTexture2DArray(pTextureDesc, pD3DResource, srvHandle, samplerHandle, defaultResourceState);
+    return new D3D12GPUTexture2DArray(pTextureDesc, this, pD3DResource, srvHandle, samplerHandle, defaultResourceState);
 }
 
 bool D3D12GPUContext::ReadTexture(GPUTexture2DArray *pTexture, void *pDestination, uint32 destinationRowPitch, uint32 cbDestination, uint32 arrayIndex, uint32 mipIndex, uint32 startX, uint32 startY, uint32 countX, uint32 countY)
@@ -691,17 +692,19 @@ bool D3D12GPUContext::WriteTexture(GPUDepthTexture *pTexture, const void *pSourc
     return false;
 }
 
-D3D12GPURenderTargetView::D3D12GPURenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource)
+D3D12GPURenderTargetView::D3D12GPURenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc, D3D12GPUDevice *pDevice, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource)
     : GPURenderTargetView(pTexture, pDesc)
+    , m_pDevice(pDevice)
     , m_descriptorHandle(descriptorHandle)
     , m_pD3DResource(pD3DResource)
 {
-
+    m_pDevice->AddRef();
 }
 
 D3D12GPURenderTargetView::~D3D12GPURenderTargetView()
 {
-    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_descriptorHandle);
+    m_pDevice->ScheduleDescriptorForDeletion(m_descriptorHandle);
+    m_pDevice->Release();
 }
 
 void D3D12GPURenderTargetView::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -816,7 +819,7 @@ GPURenderTargetView *D3D12GPUDevice::CreateRenderTargetView(GPUTexture *pTexture
 
     // allocate handle
     D3D12DescriptorHandle handle;
-    if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Allocate(&handle))
+    if (!GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->Allocate(&handle))
     {
         Log_ErrorPrintf("D3D12GPUDevice::CreateRenderTargetView: Failed to allocate descriptor.");
         return nullptr;
@@ -824,20 +827,22 @@ GPURenderTargetView *D3D12GPUDevice::CreateRenderTargetView(GPUTexture *pTexture
 
     // create RTV
     m_pD3DDevice->CreateRenderTargetView(pD3DResource, &rtvDesc, handle);
-    return new D3D12GPURenderTargetView(pTexture, pDesc, handle, pD3DResource);
+    return new D3D12GPURenderTargetView(pTexture, pDesc, this, handle, pD3DResource);
 }
 
-D3D12GPUDepthStencilBufferView::D3D12GPUDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource)
+D3D12GPUDepthStencilBufferView::D3D12GPUDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc, D3D12GPUDevice *pDevice, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource)
     : GPUDepthStencilBufferView(pTexture, pDesc)
+    , m_pDevice(pDevice)
     , m_descriptorHandle(descriptorHandle)
     , m_pD3DResource(pD3DResource)
 {
-
+    m_pDevice->AddRef();
 }
 
 D3D12GPUDepthStencilBufferView::~D3D12GPUDepthStencilBufferView()
 {
-    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_descriptorHandle);
+    m_pDevice->ScheduleDescriptorForDeletion(m_descriptorHandle);
+    m_pDevice->Release();
 }
 
 void D3D12GPUDepthStencilBufferView::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const
@@ -954,7 +959,7 @@ GPUDepthStencilBufferView *D3D12GPUDevice::CreateDepthStencilBufferView(GPUTextu
 
     // allocate handle
     D3D12DescriptorHandle handle;
-    if (!m_pBackend->GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Allocate(&handle))
+    if (!GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->Allocate(&handle))
     {
         Log_ErrorPrintf("D3D12GPUDevice::CreateRenderTargetView: Failed to allocate descriptor.");
         return nullptr;
@@ -962,20 +967,22 @@ GPUDepthStencilBufferView *D3D12GPUDevice::CreateDepthStencilBufferView(GPUTextu
 
     // create RTV
     m_pD3DDevice->CreateDepthStencilView(pD3DResource, &dsvDesc, handle);
-    return new D3D12GPUDepthStencilBufferView(pTexture, pDesc, handle, pD3DResource);
+    return new D3D12GPUDepthStencilBufferView(pTexture, pDesc, this, handle, pD3DResource);
 }
 
-D3D12GPUComputeView::D3D12GPUComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource)
+D3D12GPUComputeView::D3D12GPUComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc, D3D12GPUDevice *pDevice, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource)
     : GPUComputeView(pResource, pDesc)
+    , m_pDevice(pDevice)
     , m_descriptorHandle(descriptorHandle)
     , m_pD3DResource(pD3DResource)
 {
-
+    m_pDevice->AddRef();
 }
 
 D3D12GPUComputeView::~D3D12GPUComputeView()
 {
-    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleDescriptorForDeletion(m_descriptorHandle);
+    m_pDevice->ScheduleDescriptorForDeletion(m_descriptorHandle);
+    m_pDevice->Release();
 }
 
 void D3D12GPUComputeView::GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const

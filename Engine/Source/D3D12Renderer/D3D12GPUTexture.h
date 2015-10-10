@@ -5,7 +5,7 @@
 class D3D12GPUTexture2D : public GPUTexture2D
 {
 public:
-    D3D12GPUTexture2D(const GPU_TEXTURE2D_DESC *pDesc, ID3D12Resource *pD3DResource, const D3D12DescriptorHandle &srvHandle, const D3D12DescriptorHandle &samplerHandle, D3D12_RESOURCE_STATES defaultResourceState);
+    D3D12GPUTexture2D(const GPU_TEXTURE2D_DESC *pDesc, D3D12GPUDevice *pDevice, ID3D12Resource *pD3DResource, const D3D12DescriptorHandle &srvHandle, const D3D12DescriptorHandle &samplerHandle, D3D12_RESOURCE_STATES defaultResourceState);
     virtual ~D3D12GPUTexture2D();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
@@ -17,6 +17,7 @@ public:
     D3D12_RESOURCE_STATES GetDefaultResourceState() const { return m_defaultResourceState; }
 
 protected:
+    D3D12GPUDevice *m_pDevice;
     ID3D12Resource *m_pD3DResource;
     D3D12DescriptorHandle m_srvHandle;
     D3D12DescriptorHandle m_samplerHandle;
@@ -26,7 +27,7 @@ protected:
 class D3D12GPUTexture2DArray : public GPUTexture2DArray
 {
 public:
-    D3D12GPUTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pDesc, ID3D12Resource *pD3DResource, const D3D12DescriptorHandle &srvHandle, const D3D12DescriptorHandle &samplerHandle, D3D12_RESOURCE_STATES defaultResourceState);
+    D3D12GPUTexture2DArray(const GPU_TEXTURE2DARRAY_DESC *pDesc, D3D12GPUDevice *pDevice, ID3D12Resource *pD3DResource, const D3D12DescriptorHandle &srvHandle, const D3D12DescriptorHandle &samplerHandle, D3D12_RESOURCE_STATES defaultResourceState);
     virtual ~D3D12GPUTexture2DArray();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
@@ -38,6 +39,7 @@ public:
     D3D12_RESOURCE_STATES GetDefaultResourceState() const { return m_defaultResourceState; }
 
 protected:
+    D3D12GPUDevice *m_pDevice;
     ID3D12Resource *m_pD3DResource;
     D3D12DescriptorHandle m_srvHandle;
     D3D12DescriptorHandle m_samplerHandle;
@@ -47,7 +49,7 @@ protected:
 class D3D12GPURenderTargetView : public GPURenderTargetView
 {
 public:
-    D3D12GPURenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource);
+    D3D12GPURenderTargetView(GPUTexture *pTexture, const GPU_RENDER_TARGET_VIEW_DESC *pDesc, D3D12GPUDevice *pDevice, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource);
     virtual ~D3D12GPURenderTargetView();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
@@ -57,6 +59,7 @@ public:
     ID3D12Resource *GetD3DResource() const { return m_pD3DResource; }
 
 protected:
+    D3D12GPUDevice *m_pDevice;
     D3D12DescriptorHandle m_descriptorHandle;
     ID3D12Resource *m_pD3DResource;
 };
@@ -64,7 +67,7 @@ protected:
 class D3D12GPUDepthStencilBufferView : public GPUDepthStencilBufferView
 {
 public:
-    D3D12GPUDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource);
+    D3D12GPUDepthStencilBufferView(GPUTexture *pTexture, const GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC *pDesc, D3D12GPUDevice *pDevice, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource);
     virtual ~D3D12GPUDepthStencilBufferView();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
@@ -74,6 +77,7 @@ public:
     ID3D12Resource *GetD3DResource() const { return m_pD3DResource; }
 
 protected:
+    D3D12GPUDevice *m_pDevice;
     D3D12DescriptorHandle m_descriptorHandle;
     ID3D12Resource *m_pD3DResource;
 };
@@ -81,7 +85,7 @@ protected:
 class D3D12GPUComputeView : public GPUComputeView
 {
 public:
-    D3D12GPUComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource);
+    D3D12GPUComputeView(GPUResource *pResource, const GPU_COMPUTE_VIEW_DESC *pDesc, D3D12GPUDevice *pDevice, const D3D12DescriptorHandle &descriptorHandle, ID3D12Resource *pD3DResource);
     virtual ~D3D12GPUComputeView();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
@@ -91,6 +95,7 @@ public:
     ID3D12Resource *GetD3DResource() const { return m_pD3DResource; }
 
 protected:
+    D3D12GPUDevice *m_pDevice;
     D3D12DescriptorHandle m_descriptorHandle;
     ID3D12Resource *m_pD3DResource;
 };

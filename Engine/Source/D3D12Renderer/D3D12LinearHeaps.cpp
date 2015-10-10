@@ -1,6 +1,5 @@
 #include "D3D12Renderer/PrecompiledHeader.h"
 #include "D3D12Renderer/D3D12LinearHeaps.h"
-#include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12Helpers.h"
 Log_SetChannel(D3D12RenderBackend);
 
@@ -45,7 +44,7 @@ D3D12LinearBufferHeap *D3D12LinearBufferHeap::Create(ID3D12Device *pDevice, uint
 D3D12LinearBufferHeap::~D3D12LinearBufferHeap()
 {
     DebugAssert(m_pMappedPointer == nullptr);
-    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(m_pResource);
+    m_pResource->Release();
 }
 
 void *D3D12LinearBufferHeap::GetPointer(uint32 offset) const
@@ -141,7 +140,7 @@ D3D12LinearDescriptorHeap *D3D12LinearDescriptorHeap::Create(ID3D12Device *pDevi
 
 D3D12LinearDescriptorHeap::~D3D12LinearDescriptorHeap()
 {
-    D3D12RenderBackend::GetInstance()->GetGraphicsCommandQueue()->ScheduleResourceForDeletion(m_pD3DHeap);
+    m_pD3DHeap->Release();
 }
 
 bool D3D12LinearDescriptorHeap::Allocate(uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE *pOutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE *pOutGPUHandle)

@@ -1,5 +1,4 @@
 #include "D3D12Renderer/PrecompiledHeader.h"
-#include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12GPUDevice.h"
 #include "D3D12Renderer/D3D12GPUContext.h"
 #include "D3D12Renderer/D3D12GPUOutputBuffer.h"
@@ -9,13 +8,14 @@
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(D3D12GPUDevice);
 
-D3D12GraphicsCommandQueue::D3D12GraphicsCommandQueue(D3D12RenderBackend *pBackend, ID3D12Device *pDevice, uint32 linearBufferHeapSize, uint32 linearViewHeapSize, uint32 linearSamplerHeapSize)
-    : m_pBackend(pBackend)
-    , m_pD3DDevice(pDevice)
+D3D12CommandQueue::D3D12CommandQueue(D3D12GPUDevice *pGPUDevice, ID3D12Device *pD3DDevice, D3D12_COMMAND_LIST_TYPE type, uint32 linearBufferHeapSize, uint32 linearViewHeapSize, uint32 linearSamplerHeapSize)
+    : m_pGPUDevice(pGPUDevice)
+    , m_pD3DDevice(pD3DDevice)
+    , m_type(type)
     , m_linearBufferHeapSize(linearBufferHeapSize)
     , m_linearViewHeapSize(linearViewHeapSize)
     , m_linearSamplerHeapSize(linearSamplerHeapSize)
-    , m_maxCommandAllocatorPoolSize(pBackend->GetFrameLatency() * 1)
+    , m_maxCommandAllocatorPoolSize(16)
     , m_maxLinearBufferHeapPoolSize(256)
     , m_maxLinearViewHeapPoolSize(1024)
     , m_maxLinearSamplerHeapPoolSize(1024)
@@ -31,36 +31,79 @@ D3D12GraphicsCommandQueue::D3D12GraphicsCommandQueue(D3D12RenderBackend *pBacken
 
 }
 
-D3D12GraphicsCommandQueue::~D3D12GraphicsCommandQueue()
+D3D12CommandQueue::~D3D12CommandQueue()
 {
     // sync, then destroy everything
     if (m_pD3DCommandQueue != nullptr)
     {
         uint64 fenceValue = CreateSynchronizationPoint();
         WaitForFence(fenceValue);
-
-        // nuke descriptors
-        for (uint32 i = 0; i < m_pendingDeletionDescriptors.GetSize(); i++)
-            m_pBackend->GetCPUDescriptorHeap(m_pendingDeletionDescriptors[i].Handle.Type)->Free(m_pendingDeletionDescriptors[i].Handle);
-
-        // nuke resources
-        for (uint32 i = 0; i < m_pendingDeletionResources.GetSize(); i++)
-            m_pendingDeletionResources[i].pResource->Release();
     }
+
+    // shouldn't have anything outstanding
+    Assert(m_outstandingCommandLists == 0);
+    Assert(m_outstandingCommandAllocators == 0);
+    Assert(m_outstandingLinearBufferHeaps == 0);
+    Assert(m_outstandingLinearViewHeaps == 0);
+    Assert(m_outstandingLinearSamplerHeaps == 0);
+
+    // nuke command lists
+    while (!m_commandListPool.IsEmpty())
+        m_commandListPool.PopBack()->Release();
+    
+    // nuke command allocators
+    while (!m_commandAllocatorPool.IsEmpty())
+    {
+        CommandAllocatorEntry entry;
+        m_commandAllocatorPool.PopBack(&entry);
+        entry.Key->Release();
+    }
+
+    // nuke linear buffer heaps
+    while (!m_linearBufferHeapPool.IsEmpty())
+    {
+        LinearBufferHeapEntry entry;
+        m_linearBufferHeapPool.PopBack(&entry);
+        delete entry.Key;
+    }
+
+    // nuke linear view heaps
+    while (!m_linearViewHeapPool.IsEmpty())
+    {
+        LinearResourceDescriptorHeapEntry entry;
+        m_linearViewHeapPool.PopBack(&entry);
+        delete entry.Key;
+    }
+
+    // nuke linear view heaps
+    while (!m_linearSamplerHeapPool.IsEmpty())
+    {
+        LinearSamplerDescriptorHeapEntry entry;
+        m_linearSamplerHeapPool.PopBack(&entry);
+        delete entry.Key;
+    }
+
+    // nuke descriptors
+    for (uint32 i = 0; i < m_pendingDeletionDescriptors.GetSize(); i++)
+        m_pGPUDevice->GetCPUDescriptorHeap(m_pendingDeletionDescriptors[i].Handle.Type)->Free(m_pendingDeletionDescriptors[i].Handle);
+
+    // nuke resources
+    for (uint32 i = 0; i < m_pendingDeletionResources.GetSize(); i++)
+        m_pendingDeletionResources[i].pResource->Release();
 
     if (m_fenceEvent != NULL)
         CloseHandle(m_fenceEvent);
+
     SAFE_RELEASE(m_pD3DFence);
     SAFE_RELEASE(m_pD3DCommandQueue);
-
 }
 
-bool D3D12GraphicsCommandQueue::Initialize()
+bool D3D12CommandQueue::Initialize()
 {
     HRESULT hResult;
 
     // allocate command queue
-    D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 1 };
+    D3D12_COMMAND_QUEUE_DESC queueDesc = { m_type, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, D3D12_COMMAND_QUEUE_FLAG_NONE, 1 };
     hResult = m_pD3DDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_pD3DCommandQueue));
     if (FAILED(hResult))
     {
@@ -87,19 +130,8 @@ bool D3D12GraphicsCommandQueue::Initialize()
     return true;
 }
 
-void D3D12GraphicsCommandQueue::ReleaseStaleResources()
+uint64 D3D12CommandQueue::CreateSynchronizationPoint()
 {
-    DebugAssert(Renderer::IsOnRenderThread());
-
-    // clean up as much as we can
-    UpdateLastCompletedFenceValue();
-    DeletePendingResources(m_lastCompletedFenceValue);
-}
-
-uint64 D3D12GraphicsCommandQueue::CreateSynchronizationPoint()
-{
-    DebugAssert(Renderer::IsOnRenderThread());
-
     uint64 returnValue = m_nextFenceValue++;
     HRESULT hResult = m_pD3DCommandQueue->Signal(m_pD3DFence, returnValue);
     if (FAILED(hResult))
@@ -108,16 +140,86 @@ uint64 D3D12GraphicsCommandQueue::CreateSynchronizationPoint()
     return returnValue;
 }
 
-uint64 D3D12GraphicsCommandQueue::ExecuteCommandList(ID3D12CommandList *pCommandList)
+void D3D12CommandQueue::ExecuteCommandList(ID3D12CommandList *pCommandList)
 {
-    DebugAssert(Renderer::IsOnRenderThread());
-
     m_pD3DCommandQueue->ExecuteCommandLists(1, &pCommandList);
-    return CreateSynchronizationPoint();
+}
+
+ID3D12GraphicsCommandList *D3D12CommandQueue::RequestCommandList()
+{
+    RecursiveMutexLock lock(m_allocatorLock);
+
+    // free one
+    if (!m_commandListPool.IsEmpty())
+    {
+        m_outstandingCommandLists++;
+        return m_commandListPool.PopFront();
+    }
+
+    // create one, we need a temporary allocator
+    ID3D12CommandAllocator *pTemporaryAllocator = RequestCommandAllocator();
+    ID3D12GraphicsCommandList *pCommandList;
+    HRESULT hResult = m_pD3DDevice->CreateCommandList(1, m_type, pTemporaryAllocator, nullptr, IID_PPV_ARGS(&pCommandList));
+    if (FAILED(hResult))
+        Panic("Failed to create command list.");
+
+    // close the command list
+    hResult = pCommandList->Close();
+    if (FAILED(hResult))
+        Log_WarningPrintf("Closing new command list failed with HRESULT %08X", hResult);
+
+    // and release allocator back
+    ReleaseCommandAllocator(pTemporaryAllocator, m_lastCompletedFenceValue);
+
+    // return new list
+    m_outstandingCommandLists++;
+    return pCommandList;
+}
+
+ID3D12GraphicsCommandList *D3D12CommandQueue::RequestAndOpenCommandList(ID3D12CommandAllocator *pCommandAllocator)
+{
+    RecursiveMutexLock lock(m_allocatorLock);
+
+    // free one
+    if (!m_commandListPool.IsEmpty())
+    {
+        ID3D12GraphicsCommandList *pCommandList = m_commandListPool.PopFront();
+        HRESULT hResult = pCommandList->Reset(pCommandAllocator, nullptr);
+        if (FAILED(hResult))
+            Panic("Failed to reset pooled command list.");
+
+        m_outstandingCommandLists++;
+        return pCommandList;
+    }
+
+    // create a new list on the specified allocator
+    ID3D12GraphicsCommandList *pCommandList;
+    HRESULT hResult = m_pD3DDevice->CreateCommandList(1, m_type, pCommandAllocator, nullptr, IID_PPV_ARGS(&pCommandList));
+    if (FAILED(hResult))
+        Panic("Failed to create command list.");
+
+    // return new list
+    m_outstandingCommandLists++;
+    return pCommandList;
+}
+
+void D3D12CommandQueue::ReleaseCommandList(ID3D12GraphicsCommandList *pCommandList)
+{
+    DebugAssert(m_outstandingCommandLists > 0);
+    m_commandListPool.Add(pCommandList);
+    m_outstandingCommandLists--;
+}
+
+void D3D12CommandQueue::ReleaseFailedCommandList(ID3D12GraphicsCommandList *pCommandList)
+{
+    // don't put it back in the pool
+    DebugAssert(m_outstandingCommandLists > 0);
+    m_outstandingCommandLists--;
+    pCommandList->Release();
 }
 
 template<class T>
-T *D3D12GraphicsCommandQueue::SearchPool(MemArray<KeyValuePair<T *, uint64>> &pool)
+T *D3D12CommandQueue::SearchPool(MemArray<KeyValuePair<T *, uint64>> &pool)
 {
     if (pool.IsEmpty())
         return nullptr;
@@ -134,7 +236,7 @@ T *D3D12GraphicsCommandQueue::SearchPool(MemArray<KeyValuePair<T *, uint64>> &po
 }
 
 template<class T>
-T *D3D12GraphicsCommandQueue::SearchPoolAndWait(MemArray<KeyValuePair<T *, uint64>> &pool)
+T *D3D12CommandQueue::SearchPoolAndWait(MemArray<KeyValuePair<T *, uint64>> &pool)
 {
     DebugAssert(!pool.IsEmpty());
     
@@ -146,7 +248,7 @@ T *D3D12GraphicsCommandQueue::SearchPoolAndWait(MemArray<KeyValuePair<T *, uint6
 }
 
 template<class T>
-void D3D12GraphicsCommandQueue::InsertIntoPool(MemArray<KeyValuePair<T *, uint64>> &pool, T *pItem, uint64 fenceValue)
+void D3D12CommandQueue::InsertIntoPool(MemArray<KeyValuePair<T *, uint64>> &pool, T *pItem, uint64 fenceValue)
 {
     uint32 pos = 0;
     for (; pos < pool.GetSize(); pos++)
@@ -158,10 +260,10 @@ void D3D12GraphicsCommandQueue::InsertIntoPool(MemArray<KeyValuePair<T *, uint64
     pool.Insert(KeyValuePair<T *, uint64>(pItem, fenceValue), pos);
 }
 
-ID3D12CommandAllocator *D3D12GraphicsCommandQueue::RequestCommandAllocator()
+ID3D12CommandAllocator *D3D12CommandQueue::RequestCommandAllocator()
 {
     ID3D12CommandAllocator *pReturnAllocator;
-    MutexLock lock(m_allocatorLock);
+    RecursiveMutexLock lock(m_allocatorLock);
 
     // search the pool first
     pReturnAllocator = SearchPool<ID3D12CommandAllocator>(m_commandAllocatorPool);
@@ -216,19 +318,19 @@ ID3D12CommandAllocator *D3D12GraphicsCommandQueue::RequestCommandAllocator()
     return nullptr;
 }
 
-void D3D12GraphicsCommandQueue::ReleaseCommandAllocator(ID3D12CommandAllocator *pAllocator, uint64 availableFenceValue)
+void D3D12CommandQueue::ReleaseCommandAllocator(ID3D12CommandAllocator *pAllocator, uint64 availableFenceValue)
 {
-    MutexLock lock(m_allocatorLock);
+    RecursiveMutexLock lock(m_allocatorLock);
 
     DebugAssert(m_outstandingCommandAllocators > 0);
     InsertIntoPool<ID3D12CommandAllocator>(m_commandAllocatorPool, pAllocator, availableFenceValue);
     m_outstandingCommandAllocators--;
 }
 
-D3D12LinearBufferHeap *D3D12GraphicsCommandQueue::RequestLinearBufferHeap()
+D3D12LinearBufferHeap *D3D12CommandQueue::RequestLinearBufferHeap()
 {
     D3D12LinearBufferHeap *pReturnHeap;
-    MutexLock lock(m_allocatorLock);
+    RecursiveMutexLock lock(m_allocatorLock);
 
     // search the pool first
     pReturnHeap = SearchPool<D3D12LinearBufferHeap>(m_linearBufferHeapPool);
@@ -267,19 +369,19 @@ D3D12LinearBufferHeap *D3D12GraphicsCommandQueue::RequestLinearBufferHeap()
     return nullptr;
 }
 
-void D3D12GraphicsCommandQueue::ReleaseLinearBufferHeap(D3D12LinearBufferHeap *pHeap, uint64 availableFenceValue)
+void D3D12CommandQueue::ReleaseLinearBufferHeap(D3D12LinearBufferHeap *pHeap, uint64 availableFenceValue)
 {
-    MutexLock lock(m_allocatorLock);
-
+    RecursiveMutexLock lock(m_allocatorLock);
+    
     DebugAssert(m_outstandingLinearBufferHeaps > 0);
     InsertIntoPool<D3D12LinearBufferHeap>(m_linearBufferHeapPool, pHeap, availableFenceValue);
     m_outstandingLinearBufferHeaps--;
 }
 
-D3D12LinearDescriptorHeap *D3D12GraphicsCommandQueue::RequestLinearViewHeap()
+D3D12LinearDescriptorHeap *D3D12CommandQueue::RequestLinearViewHeap()
 {
     D3D12LinearDescriptorHeap *pReturnHeap;
-    MutexLock lock(m_allocatorLock);
+    RecursiveMutexLock lock(m_allocatorLock);
 
     // search the pool first
     pReturnHeap = SearchPool<D3D12LinearDescriptorHeap>(m_linearViewHeapPool);
@@ -318,19 +420,19 @@ D3D12LinearDescriptorHeap *D3D12GraphicsCommandQueue::RequestLinearViewHeap()
     return nullptr;
 }
 
-void D3D12GraphicsCommandQueue::ReleaseLinearViewHeap(D3D12LinearDescriptorHeap *pHeap, uint64 availableFenceValue)
+void D3D12CommandQueue::ReleaseLinearViewHeap(D3D12LinearDescriptorHeap *pHeap, uint64 availableFenceValue)
 {
-    MutexLock lock(m_allocatorLock);
-
+    RecursiveMutexLock lock(m_allocatorLock);
+    
     DebugAssert(m_outstandingLinearViewHeaps > 0);
     InsertIntoPool<D3D12LinearDescriptorHeap>(m_linearViewHeapPool, pHeap, availableFenceValue);
     m_outstandingLinearViewHeaps--;
 }
 
-D3D12LinearDescriptorHeap *D3D12GraphicsCommandQueue::RequestLinearSamplerHeap()
+D3D12LinearDescriptorHeap *D3D12CommandQueue::RequestLinearSamplerHeap()
 {
     D3D12LinearDescriptorHeap *pReturnHeap;
-    MutexLock lock(m_allocatorLock);
+    RecursiveMutexLock lock(m_allocatorLock);
 
     // search the pool first
     pReturnHeap = SearchPool<D3D12LinearDescriptorHeap>(m_linearSamplerHeapPool);
@@ -369,18 +471,17 @@ D3D12LinearDescriptorHeap *D3D12GraphicsCommandQueue::RequestLinearSamplerHeap()
     return nullptr;
 }
 
-void D3D12GraphicsCommandQueue::ReleaseLinearSamplerHeap(D3D12LinearDescriptorHeap *pHeap, uint64 availableFenceValue)
+void D3D12CommandQueue::ReleaseLinearSamplerHeap(D3D12LinearDescriptorHeap *pHeap, uint64 availableFenceValue)
 {
-    MutexLock lock(m_allocatorLock);
+    RecursiveMutexLock lock(m_allocatorLock);
 
     DebugAssert(m_outstandingLinearSamplerHeaps > 0);
     InsertIntoPool<D3D12LinearDescriptorHeap>(m_linearSamplerHeapPool, pHeap, availableFenceValue);
     m_outstandingLinearSamplerHeaps--;
 }
 
-void D3D12GraphicsCommandQueue::WaitForFence(uint64 fence)
+void D3D12CommandQueue::WaitForFence(uint64 fence)
 {
-    DebugAssert(Renderer::IsOnRenderThread());
     UpdateLastCompletedFenceValue();
 
     if (m_lastCompletedFenceValue < fence)
@@ -399,17 +500,24 @@ void D3D12GraphicsCommandQueue::WaitForFence(uint64 fence)
     }
 }
 
-void D3D12GraphicsCommandQueue::UpdateLastCompletedFenceValue()
+void D3D12CommandQueue::UpdateLastCompletedFenceValue()
 {
     m_lastCompletedFenceValue = m_pD3DFence->GetCompletedValue();
 }
 
-void D3D12GraphicsCommandQueue::ScheduleResourceForDeletion(ID3D12Pageable *pResource)
+void D3D12CommandQueue::ReleaseStaleResources()
+{
+    // clean up as much as we can
+    UpdateLastCompletedFenceValue();
+    DeletePendingResources(m_lastCompletedFenceValue);
+}
+
+void D3D12CommandQueue::ScheduleResourceForDeletion(ID3D12Pageable *pResource)
 {
     ScheduleResourceForDeletion(pResource, m_nextFenceValue);
 }
 
-void D3D12GraphicsCommandQueue::ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)
+void D3D12CommandQueue::ScheduleResourceForDeletion(ID3D12Pageable *pResource, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)
 {
     PendingDeletionResource pdr;
     pdr.pResource = pResource;
@@ -420,12 +528,12 @@ void D3D12GraphicsCommandQueue::ScheduleResourceForDeletion(ID3D12Pageable *pRes
     m_pendingResourceLock.Unlock();
 }
 
-void D3D12GraphicsCommandQueue::ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle)
+void D3D12CommandQueue::ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle)
 {
     ScheduleDescriptorForDeletion(handle, m_nextFenceValue);
 }
 
-void D3D12GraphicsCommandQueue::ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)
+void D3D12CommandQueue::ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle, uint64 fenceValue /* = GetCurrentCleanupFenceValue() */)
 {
     PendingDeletionDescriptor pdr;
     pdr.Handle = handle;
@@ -438,10 +546,8 @@ void D3D12GraphicsCommandQueue::ScheduleDescriptorForDeletion(const D3D12Descrip
 
 //thread_local D3D12_RESOURCE_DESC rsz;
 
-void D3D12GraphicsCommandQueue::DeletePendingResources(uint64 fenceValue)
+void D3D12CommandQueue::DeletePendingResources(uint64 fenceValue)
 {
-    DebugAssert(Renderer::IsOnRenderThread());
-
     m_pendingResourceLock.Lock();
 
     for (uint32 i = 0; i < m_pendingDeletionResources.GetSize(); )
@@ -477,7 +583,7 @@ void D3D12GraphicsCommandQueue::DeletePendingResources(uint64 fenceValue)
         }
 
         DebugAssert(desc.Handle.Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES);
-        m_pBackend->GetCPUDescriptorHeap(desc.Handle.Type)->Free(desc.Handle);
+        m_pGPUDevice->GetCPUDescriptorHeap(desc.Handle.Type)->Free(desc.Handle);
         m_pendingDeletionDescriptors.FastRemove(i);
     }
 

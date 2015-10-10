@@ -13,7 +13,7 @@ public:
     virtual void SetVSyncType(RENDERER_VSYNC_TYPE vsyncType) override;
 
     // creation
-    static D3D12GPUOutputBuffer *Create(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, ID3D12Device *pD3DDevice, ID3D12CommandQueue *pCommandQueue, HWND hWnd, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType);
+    static D3D12GPUOutputBuffer *Create(D3D12GPUDevice *pDevice, IDXGIFactory4 *pDXGIFactory, ID3D12Device *pD3DDevice, ID3D12CommandQueue *pCommandQueue, HWND hWnd, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilFormat, RENDERER_VSYNC_TYPE vsyncType);
 
     // views
     HWND GetHWND() const { return m_hWnd; }
@@ -40,9 +40,9 @@ public:
     void InternalReleaseBuffers();
 
 private:
-    D3D12GPUOutputBuffer(D3D12RenderBackend *pBackend, ID3D12Device *pD3DDevice, IDXGISwapChain3 *pDXGISwapChain, HWND hWnd, uint32 width, uint32 height, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilFormat, DXGI_FORMAT backBufferDXGIFormat, DXGI_FORMAT depthStencilDXGIFormat, RENDERER_VSYNC_TYPE vsyncType);
+    D3D12GPUOutputBuffer(D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice, IDXGISwapChain3 *pDXGISwapChain, HWND hWnd, uint32 width, uint32 height, PIXEL_FORMAT backBufferFormat, PIXEL_FORMAT depthStencilFormat, DXGI_FORMAT backBufferDXGIFormat, DXGI_FORMAT depthStencilDXGIFormat, RENDERER_VSYNC_TYPE vsyncType);
 
-    D3D12RenderBackend *m_pBackend;
+    D3D12GPUDevice *m_pDevice;
     ID3D12Device *m_pD3DDevice;
     IDXGISwapChain3 *m_pDXGISwapChain;
 

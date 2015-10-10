@@ -1,13 +1,13 @@
 #pragma once
 #include "D3D12Renderer/D3D12Common.h"
-#include "D3D12Renderer/D3D12GraphicsCommandQueue.h"
+#include "D3D12Renderer/D3D12CommandQueue.h"
 #include "D3D12Renderer/D3D12DescriptorHeap.h"
 #include "D3D12Renderer/D3D12LinearHeaps.h"
 
 class D3D12GPUContext : public GPUContext
 {
 public:
-    D3D12GPUContext(D3D12RenderBackend *pBackend, D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice);
+    D3D12GPUContext(D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice, D3D12CommandQueue *pGraphicsCommandQueue);
     ~D3D12GPUContext();
 
     // Start of frame
@@ -198,10 +198,9 @@ private:
     bool IsBoundAsUnorderedAccess(GPUResource *pResource);
     void UpdateScissorRect();
 
-    D3D12RenderBackend *m_pBackend;
-    D3D12GraphicsCommandQueue *m_pGraphicsCommandQueue;
     D3D12GPUDevice *m_pDevice;
     ID3D12Device *m_pD3DDevice;
+    D3D12CommandQueue *m_pGraphicsCommandQueue;
 
     GPUContextConstants *m_pConstants;
 

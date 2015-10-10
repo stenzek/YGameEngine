@@ -5,16 +5,15 @@
 #include "D3D12Renderer/D3D12GPUBuffer.h"
 #include "D3D12Renderer/D3D12GPUTexture.h"
 #include "D3D12Renderer/D3D12GPUShaderProgram.h"
-#include "D3D12Renderer/D3D12RenderBackend.h"
 #include "D3D12Renderer/D3D12GPUOutputBuffer.h"
 #include "D3D12Renderer/D3D12Helpers.h"
 #include "Renderer/ShaderConstantBuffer.h"
 Log_SetChannel(D3D12RenderBackend);
 
-D3D12GPUCommandList::D3D12GPUCommandList(D3D12RenderBackend *pBackend, ID3D12Device *pD3DDevice)
-    : m_pBackend(pBackend)
-    , m_pGraphicsCommandQueue(nullptr)
+D3D12GPUCommandList::D3D12GPUCommandList(D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevice)
+    : m_pDevice(pDevice)
     , m_pD3DDevice(pD3DDevice)
+    , m_pGraphicsCommandQueue(nullptr)
     , m_pConstants(nullptr)
     , m_pCommandList(nullptr)
     , m_pCurrentCommandAllocator(nullptr)
@@ -23,6 +22,7 @@ D3D12GPUCommandList::D3D12GPUCommandList(D3D12RenderBackend *pBackend, ID3D12Dev
     , m_pCurrentScratchSamplerHeap(nullptr)
 {
     m_open = false;
+    m_pDevice->AddRef();
 
     // null memory
     Y_memzero(&m_currentViewport, sizeof(m_currentViewport));
@@ -84,6 +84,8 @@ D3D12GPUCommandList::~D3D12GPUCommandList()
     }
 
     delete m_pConstants;
+
+    m_pDevice->Release();
 }
 
 void D3D12GPUCommandList::ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState)
@@ -108,7 +110,7 @@ void D3D12GPUCommandList::ResourceBarrier(ID3D12Resource *pResource, uint32 subR
     m_pCommandList->ResourceBarrier(1, &resourceBarrier);
 }
 
-bool D3D12GPUCommandList::Create(D3D12GraphicsCommandQueue *pCommandQueue)
+bool D3D12GPUCommandList::Create(D3D12CommandQueue *pCommandQueue)
 {   
     // allocate constants
     m_pConstants = new GPUContextConstants(this);
@@ -157,7 +159,7 @@ void D3D12GPUCommandList::CreateConstantBuffers()
             continue;
         if (declaration->GetPlatformRequirement() != RENDERER_PLATFORM_COUNT && declaration->GetPlatformRequirement() != RENDERER_PLATFORM_D3D12)
             continue;
-        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > D3D12RenderBackend::GetInstance()->GetFeatureLevel())
+        if (declaration->GetMinimumFeatureLevel() != RENDERER_FEATURE_LEVEL_COUNT && declaration->GetMinimumFeatureLevel() > m_pDevice->GetFeatureLevel())
             continue;
 
         // set size so we know to allocate it later or on demand
@@ -171,7 +173,7 @@ void D3D12GPUCommandList::CreateConstantBuffers()
     }
 }
 
-bool D3D12GPUCommandList::Open(D3D12GraphicsCommandQueue *pCommandQueue, D3D12GPUOutputBuffer *pOutputBuffer)
+bool D3D12GPUCommandList::Open(D3D12CommandQueue *pCommandQueue, D3D12GPUOutputBuffer *pOutputBuffer)
 {
     // should not be open
     Assert(!m_open);
@@ -347,8 +349,8 @@ void D3D12GPUCommandList::UpdateShaderDescriptorHeaps()
 void D3D12GPUCommandList::RestoreCommandListDependantState()
 {
     // graphics root
-    m_pCommandList->SetGraphicsRootSignature(m_pBackend->GetLegacyGraphicsRootSignature());
-    m_pCommandList->SetComputeRootSignature(m_pBackend->GetLegacyComputeRootSignature());
+    m_pCommandList->SetGraphicsRootSignature(m_pDevice->GetLegacyGraphicsRootSignature());
+    m_pCommandList->SetComputeRootSignature(m_pDevice->GetLegacyComputeRootSignature());
     UpdateShaderDescriptorHeaps();
 
     // pipeline state
@@ -1325,7 +1327,7 @@ void D3D12GPUCommandList::CommitConstantBuffer(uint32 bufferIndex)
         Y_memcpy(pCPUPointer, cbInfo->pLocalMemory + cbInfo->DirtyLowerBounds, modifySize);
 
         // get constant buffer pointer
-        ID3D12Resource *pConstantBufferResource = m_pBackend->GetConstantBufferResource(bufferIndex);
+        ID3D12Resource *pConstantBufferResource = m_pDevice->GetConstantBufferResource(bufferIndex);
         DebugAssert(pConstantBufferResource != nullptr);
 
         // block predicates
@@ -1567,10 +1569,10 @@ bool D3D12GPUCommandList::UpdatePipelineState(bool force)
                 if (!state->ConstantBuffers[i].IsNull())
                     pCPUHandles[i] = state->ConstantBuffers[i];
                 else
-                    pCPUHandles[i] = m_pBackend->GetNullCBVDescriptorHandle();
+                    pCPUHandles[i] = m_pDevice->GetNullCBVDescriptorHandle();
             }
             for (uint32 i = state->ConstantBufferBindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS; i++)
-                pCPUHandles[i] = m_pBackend->GetNullCBVDescriptorHandle();
+                pCPUHandles[i] = m_pDevice->GetNullCBVDescriptorHandle();
 
             // allocate scratch descriptors and copy
             if (AllocateScratchView(D3D12_LEGACY_GRAPHICS_ROOT_CONSTANT_BUFFER_SLOTS, &state->CBVTableCPUHandle, &state->CBVTableGPUHandle))
@@ -1592,10 +1594,10 @@ bool D3D12GPUCommandList::UpdatePipelineState(bool force)
                 if (!state->Resources[i].IsNull())
                     pCPUHandles[i] = state->Resources[i];
                 else
-                    pCPUHandles[i] = m_pBackend->GetNullSRVDescriptorHandle();
+                    pCPUHandles[i] = m_pDevice->GetNullSRVDescriptorHandle();
             }
             for (uint32 i = state->ResourceBindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS; i++)
-                pCPUHandles[i] = m_pBackend->GetNullSRVDescriptorHandle();
+                pCPUHandles[i] = m_pDevice->GetNullSRVDescriptorHandle();
 
             // allocate scratch descriptors and copy
             if (AllocateScratchView(D3D12_LEGACY_GRAPHICS_ROOT_SHADER_RESOURCE_SLOTS, &state->SRVTableCPUHandle, &state->SRVTableGPUHandle))
@@ -1617,10 +1619,10 @@ bool D3D12GPUCommandList::UpdatePipelineState(bool force)
                 if (!state->Samplers[i].IsNull())
                     pCPUHandles[i] = state->Samplers[i];
                 else
-                    pCPUHandles[i] = m_pBackend->GetNullSamplerHandle();
+                    pCPUHandles[i] = m_pDevice->GetNullSamplerHandle();
             }
             for (uint32 i = state->SamplerBindCount; i < D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS; i++)
-                pCPUHandles[i] = m_pBackend->GetNullSamplerHandle();
+                pCPUHandles[i] = m_pDevice->GetNullSamplerHandle();
 
             // allocate scratch descriptors and copy
             if (AllocateScratchSamplers(D3D12_LEGACY_GRAPHICS_ROOT_SHADER_SAMPLER_SLOTS, &state->SamplerTableCPUHandle, &state->SamplerTableGPUHandle))

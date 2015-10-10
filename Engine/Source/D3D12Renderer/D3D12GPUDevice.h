@@ -1,11 +1,12 @@
 #pragma once
 #include "D3D12Renderer/D3D12Common.h"
 #include "D3D12Renderer/D3D12DescriptorHeap.h"
+#include "D3D12Renderer/D3D12CommandQueue.h"
 
 class D3D12GPUSamplerState : public GPUSamplerState
 {
 public:
-    D3D12GPUSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, const D3D12DescriptorHandle &samplerHandle);
+    D3D12GPUSamplerState(const GPU_SAMPLER_STATE_DESC *pSamplerStateDesc, D3D12GPUDevice *pDevice, const D3D12DescriptorHandle &samplerHandle);
     virtual ~D3D12GPUSamplerState();
 
     virtual void GetMemoryUsage(uint32 *cpuMemoryUsage, uint32 *gpuMemoryUsage) const override;
@@ -14,6 +15,7 @@ public:
     const D3D12DescriptorHandle &GetSamplerHandle() { return m_samplerHandle; }
 
 private:
+    D3D12GPUDevice *m_pDevice;
     D3D12DescriptorHandle m_samplerHandle;
 };
 
@@ -65,14 +67,56 @@ private:
 class D3D12GPUDevice : public GPUDevice
 {
 public:
-    D3D12GPUDevice(D3D12RenderBackend *pBackend, IDXGIFactory4 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice, PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat);
+    // shared command queue structure
+    struct CopyCommandQueue
+    {
+        CopyCommandQueue()
+            : pCommandQueue(nullptr), pCommandAllocator(nullptr), pCommandList(nullptr) 
+        {
+        }
+
+        ~CopyCommandQueue()
+        { 
+            if (pCommandList != nullptr)
+                pCommandQueue->ReleaseCommandList(pCommandList);
+            if (pCommandAllocator != nullptr)
+                pCommandQueue->ReleaseCommandAllocator(pCommandAllocator);
+            delete pCommandQueue;
+        }
+
+        D3D12CommandQueue *pCommandQueue;
+        ID3D12CommandAllocator *pCommandAllocator;
+        ID3D12GraphicsCommandList *pCommandList;
+        Mutex Lock;
+    };
+    typedef Array<CopyCommandQueue> CopyCommandQueueArray;
+
+    // copy queue reference
+    struct CopyQueueReference
+    {
+        CopyQueueReference(D3D12GPUDevice *pDevice);
+        ~CopyQueueReference();
+        bool HasContext() const;
+
+        D3D12GPUDevice *pDevice;
+        D3D12CommandQueue *pQueue;
+        ID3D12GraphicsCommandList *pCommandList;
+        bool ContextNeedsRelease;
+    };
+
+public:
+    D3D12GPUDevice(HMODULE hD3D12Module, IDXGIFactory4 *pDXGIFactory, IDXGIAdapter3 *pDXGIAdapter, ID3D12Device *pD3DDevice,
+                   D3D_FEATURE_LEVEL D3DFeatureLevel, RENDERER_FEATURE_LEVEL featureLevel, TEXTURE_PLATFORM texturePlatform,
+                   PIXEL_FORMAT outputBackBufferFormat, PIXEL_FORMAT outputDepthStencilFormat, uint32 frameLatency);
+
     virtual ~D3D12GPUDevice();
 
-    // private methods
-    IDXGIFactory3 *GetDXGIFactory() const { return m_pDXGIFactory; }
-    IDXGIAdapter3 *GetDXGIAdapter() const { return m_pDXGIAdapter; }
-    ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
-    D3D12RenderBackend *GetBackend() const { return m_pBackend; }
+    // Accessors.
+    virtual RENDERER_PLATFORM GetPlatform() const override final;
+    virtual RENDERER_FEATURE_LEVEL GetFeatureLevel() const override final;
+    virtual TEXTURE_PLATFORM GetTexturePlatform() const override final;
+    virtual void GetCapabilities(RendererCapabilities *pCapabilities) const override final;
+    virtual bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = nullptr) const override final;
 
     // Creates a swap chain on an existing window.
     virtual GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) override final;
@@ -103,35 +147,90 @@ public:
     virtual void BeginResourceBatchUpload() override final;
     virtual void EndResourceBatchUpload() override final;
 
-    // helper methods
-    D3D12GPUContext *GetGPUContext() const { return m_pGPUContext; }
-    void SetGPUContext(D3D12GPUContext *pContext) { m_pGPUContext = pContext; }
-    ID3D12GraphicsCommandList *GetCommandList();
-    void ScheduleUploadResourceDeletion(ID3D12Pageable *pResource);
-    bool CreateOffThreadResources();
-    void FlushCopyQueue();
+    // private methods
+    IDXGIFactory3 *GetDXGIFactory() const { return m_pDXGIFactory; }
+    IDXGIAdapter3 *GetDXGIAdapter() const { return m_pDXGIAdapter; }
+    ID3D12Device *GetD3DDevice() const { return m_pD3DDevice; }
+    uint32 GetFrameLatency() const { return m_frameLatency; }
+
+    // creation interface
+    D3D12GPUContext *InitializeAndCreateContext();
+
+    // legacy root signatures
+    ID3D12RootSignature *GetLegacyGraphicsRootSignature() const { return m_pLegacyGraphicsRootSignature; }
+    ID3D12RootSignature *GetLegacyComputeRootSignature() const { return m_pLegacyComputeRootSignature; }
+
+    // cpu descriptor heaps
+    D3D12DescriptorHeap *GetCPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) { return m_pCPUDescriptorHeaps[type]; }
+    const D3D12DescriptorHandle GetNullCBVDescriptorHandle() { return m_nullCBVDescriptorHandle; }
+    const D3D12DescriptorHandle GetNullSRVDescriptorHandle() { return m_nullSRVDescriptorHandle; }
+    const D3D12DescriptorHandle GetNullSamplerHandle() { return m_nullSamplerHandle; }
+
+    // constant buffer management
+    ID3D12Resource *GetConstantBufferResource(uint32 index);
+    const D3D12DescriptorHandle *GetConstantBufferDescriptor(uint32 index) const;
 
     // create a resource barrier on the current command list. NOTE: doesn't flush the copy command list, assumes batching
     void ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
     void ResourceBarrier(ID3D12Resource *pResource, uint32 subResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
 
+    // resource freeing - done on graphics queue
+    void ScheduleResourceForDeletion(ID3D12Pageable *pResource);
+    void ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle);
+
+    // copy queue accessor
+    void SetCopyCommandList(ID3D12GraphicsCommandList *pCommandList);
+    void ScheduleCopyResourceForDeletion(ID3D12Pageable *pResource);
+    void GetFreeCopyCommandQueue();
+    void ReleaseCopyCommandQueue();
+    
 private:
-    D3D12RenderBackend *m_pBackend;
+    bool CreateCommandQueues(uint32 copyCommandQueueCount);
+    bool CreateLegacyRootSignatures();
+    bool CreateCPUDescriptorHeaps();
+    bool CreateConstantStorage();
+    ID3D12GraphicsCommandList *GetCurrentCopyCommandList();
+
+    HMODULE m_hD3D12Module;
     IDXGIFactory4 *m_pDXGIFactory;
     IDXGIAdapter3 *m_pDXGIAdapter;
+    
     ID3D12Device *m_pD3DDevice;
-    D3D12GPUContext *m_pGPUContext;
+    ID3D12InfoQueue *m_pD3DInfoQueue;
 
-    ID3D12CommandAllocator *m_pOffThreadCommandAllocator;
-    ID3D12CommandQueue *m_pOffThreadCommandQueue;
-    ID3D12GraphicsCommandList *m_pOffThreadCommandList;
-    ID3D12Fence *m_pOffThreadFence;
-    HANDLE m_offThreadFenceReachedEvent;
-    PODArray<ID3D12Pageable *> m_offThreadUploadResources;
-    uint64 m_offThreadNextFenceValue;
-    uint32 m_offThreadCopyQueueLength;
-    uint32 m_offThreadCopyQueueEnabled;
+    D3D_FEATURE_LEVEL m_D3DFeatureLevel;
+    RENDERER_FEATURE_LEVEL m_featureLevel;
+    TEXTURE_PLATFORM m_texturePlatform;
 
     PIXEL_FORMAT m_outputBackBufferFormat;
     PIXEL_FORMAT m_outputDepthStencilFormat;
+
+    uint32 m_frameLatency;
+
+    // graphics command queue
+    D3D12CommandQueue *m_pGraphicsCommandQueue;
+
+    // copy command queues
+    CopyCommandQueueArray m_copyCommandQueues;
+
+    // legacy root signature
+    ID3D12RootSignature *m_pLegacyGraphicsRootSignature;
+    ID3D12RootSignature *m_pLegacyComputeRootSignature;
+    PFN_D3D12_SERIALIZE_ROOT_SIGNATURE m_fnD3D12SerializeRootSignature;
+
+    // descriptor heaps
+    D3D12DescriptorHeap *m_pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+    D3D12DescriptorHandle m_nullCBVDescriptorHandle;
+    D3D12DescriptorHandle m_nullSRVDescriptorHandle;
+    D3D12DescriptorHandle m_nullSamplerHandle;
+
+    // constant buffer storage
+    struct ConstantBufferStorage
+    {
+        ID3D12Resource *pResource;
+        D3D12DescriptorHandle DescriptorHandle;
+        uint32 Size;
+    };
+    MemArray<ConstantBufferStorage> m_constantBufferStorage;
+    ID3D12Heap *m_pConstantBufferStorageHeap;
 };

@@ -62,6 +62,9 @@ D3D12GPUDevice::D3D12GPUDevice(HMODULE hD3D12Module, IDXGIFactory4 *pDXGIFactory
     , m_pLegacyGraphicsRootSignature(nullptr)
     , m_pLegacyComputeRootSignature(nullptr)
     , m_fnD3D12SerializeRootSignature(nullptr)
+    , m_pDefaultRasterizerState(nullptr)
+    , m_pDefaultDepthStencilState(nullptr)
+    , m_pDefaultBlendState(nullptr)
     , m_pConstantBufferStorageHeap(nullptr)
 {
     Y_memzero(m_pCPUDescriptorHeaps, sizeof(m_pCPUDescriptorHeaps));
@@ -80,6 +83,11 @@ D3D12GPUDevice::~D3D12GPUDevice()
             constantBufferStorage.pResource->Release();
     }
     SAFE_RELEASE(m_pConstantBufferStorageHeap);
+
+    // cleanup default states
+    SAFE_RELEASE(m_pDefaultBlendState);
+    SAFE_RELEASE(m_pDefaultDepthStencilState);
+    SAFE_RELEASE(m_pDefaultRasterizerState);
 
     // remove descriptor heaps
     m_pCPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->Free(m_nullCBVDescriptorHandle);
@@ -171,6 +179,16 @@ bool D3D12GPUDevice::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelForm
         *CompatibleFormat = PixelFormat;
 
     return true;
+}
+
+void D3D12GPUDevice::CorrectProjectionMatrix(float4x4 &projectionMatrix) const
+{
+
+}
+
+float D3D12GPUDevice::GetTexelOffset() const
+{
+    return 0.0f;
 }
 
 bool D3D12GPUDevice::CreateCommandQueues(uint32 copyCommandQueueCount)
@@ -388,7 +406,7 @@ void D3D12GPUDevice::TransitionPendingResources(D3D12CommandQueue *pCommandQueue
     // get a command allocator and list
     ID3D12CommandAllocator *pCommandAllocator = pCommandQueue->RequestCommandAllocator();
     ID3D12GraphicsCommandList *pCommandList = pCommandQueue->RequestAndOpenCommandList(pCommandAllocator);
-    Log_DevPrintf("D3D12RenderBackend: Transitioning %u pending resources.", m_pendingResourceTransitions.GetSize());
+    //Log_DevPrintf("D3D12RenderBackend: Transitioning %u pending resources.", m_pendingResourceTransitions.GetSize());
 
     // pass through to d3d. unfortunately this will be a period of contention, when 
     // resources have to be transitioned, command list execution halts on all threads.
@@ -486,6 +504,10 @@ D3D12GPUContext *D3D12GPUDevice::InitializeAndCreateContext()
 
     // create descriptor heaps
     if (!CreateCPUDescriptorHeaps())
+        return nullptr;
+
+    // create default states
+    if (!CreateDefaultStates())
         return nullptr;
 
     // create constant buffers
@@ -652,6 +674,26 @@ bool D3D12GPUDevice::CreateCPUDescriptorHeaps()
     m_pD3DDevice->CreateSampler(&samplerDesc, m_nullSamplerHandle);
 
     // done
+    return true;
+}
+
+bool D3D12GPUDevice::CreateDefaultStates()
+{
+    RENDERER_RASTERIZER_STATE_DESC rasterizerStateDesc;
+    Renderer::FillDefaultRasterizerState(&rasterizerStateDesc);
+    if ((m_pDefaultRasterizerState = static_cast<D3D12GPURasterizerState *>(CreateRasterizerState(&rasterizerStateDesc))) == nullptr)
+        return false;
+
+    RENDERER_DEPTHSTENCIL_STATE_DESC depthStencilStateDesc;
+    Renderer::FillDefaultDepthStencilState(&depthStencilStateDesc);
+    if ((m_pDefaultDepthStencilState = static_cast<D3D12GPUDepthStencilState *>(CreateDepthStencilState(&depthStencilStateDesc))) == nullptr)
+        return false;
+
+    RENDERER_BLEND_STATE_DESC blendStateDesc;
+    Renderer::FillDefaultBlendState(&blendStateDesc);
+    if ((m_pDefaultBlendState = static_cast<D3D12GPUBlendState *>(CreateBlendState(&blendStateDesc))) == nullptr)
+        return false;
+
     return true;
 }
 

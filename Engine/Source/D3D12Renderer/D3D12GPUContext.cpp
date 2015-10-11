@@ -168,13 +168,15 @@ void D3D12GPUContext::ResourceBarrier(ID3D12Resource *pResource, uint32 subResou
 bool D3D12GPUContext::Create()
 {   
     // allocate constants
-    m_pConstants = new GPUContextConstants(this);
+    m_pConstants = new GPUContextConstants(m_pDevice, this);
     CreateConstantBuffers();
 
     // create command list
     if (!CreateInternalCommandList())
         return false;
 
+    // reset to known state
+    ClearState(true, true, true, true);
     return true;
 }
 
@@ -657,10 +659,10 @@ void D3D12GPUContext::ClearState(bool clearShaders /* = true */, bool clearBuffe
 
     if (clearStates)
     {
-        SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState());
-        SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(), 0);
-        SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
-        SetDrawTopology(DRAW_TOPOLOGY_UNDEFINED);
+        SetRasterizerState(m_pDevice->GetDefaultRasterizerState());
+        SetDepthStencilState(m_pDevice->GetDefaultDepthStencilState(), 0);
+        SetBlendState(m_pDevice->GetDefaultBlendState());
+        SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
 
         RENDERER_SCISSOR_RECT scissor(0, 0, 0, 0);
         SetFullViewport(nullptr);
@@ -2194,4 +2196,14 @@ void D3D12GPUContext::ExecuteCommandList(GPUCommandList *pCommandList)
     
     // release everything the command list used
     pD3D12CommandList->ReleaseAllocators(m_pGraphicsCommandQueue->GetNextFenceValue());
+
+    // flag all constant buffers as dirty, as the command list may have modified them
+    for (ConstantBuffer &constantBuffer : m_constantBuffers)
+    {
+        if (constantBuffer.pLocalMemory != nullptr)
+        {
+            constantBuffer.DirtyLowerBounds = 0;
+            constantBuffer.DirtyUpperBounds = constantBuffer.Size - 1;
+        }
+    }
 }

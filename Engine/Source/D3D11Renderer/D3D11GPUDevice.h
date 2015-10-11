@@ -86,6 +86,8 @@ public:
     virtual TEXTURE_PLATFORM GetTexturePlatform() const override final;
     virtual void GetCapabilities(RendererCapabilities *pCapabilities) const override final;
     virtual bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = nullptr) const override final;
+    virtual void CorrectProjectionMatrix(float4x4 &projectionMatrix) const override final;
+    virtual float GetTexelOffset() const override final;
 
     // Creates a swap chain on an existing window.
     virtual GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) override final;

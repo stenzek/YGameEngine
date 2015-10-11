@@ -74,6 +74,26 @@ bool OpenGLES2GPUDevice::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT Pixel
     return true;
 }
 
+void OpenGLES2GPUDevice::CorrectProjectionMatrix(float4x4 &projectionMatrix) const
+{
+    float4x4 scaleMatrix(1.0f, 0.0f, 0.0f, 0.0f,
+                         0.0f, 1.0f, 0.0f, 0.0f,
+                         0.0f, 0.0f, 2.0f, 0.0f,
+                         0.0f, 0.0f, 0.0f, 1.0f);
+
+    float4x4 biasMatrix(1.0f, 0.0f, 0.0f, 0.0f,
+                        0.0f, 1.0f, 0.0f, 0.0f,
+                        0.0f, 0.0f, 1.0f, -1.0f,
+                        0.0f, 0.0f, 0.0f, 1.0f);
+
+    projectionMatrix = biasMatrix * scaleMatrix * projectionMatrix;
+}
+
+float OpenGLES2GPUDevice::GetTexelOffset() const
+{
+    return 0.0f;
+}
+
 void OpenGLES2GPUDevice::BindMutatorTextureUnit()
 {
     if (m_pImmediateContext != nullptr)

@@ -178,7 +178,7 @@ bool OpenGLES2GPUContext::Create()
     }
 
     // create constants
-    m_pConstants = new GPUContextConstants(this);
+    m_pConstants = new GPUContextConstants(m_pDevice, this);
 
     // allocate constant library buffer
     m_pConstantLibrary = m_pDevice->GetConstantLibrary();

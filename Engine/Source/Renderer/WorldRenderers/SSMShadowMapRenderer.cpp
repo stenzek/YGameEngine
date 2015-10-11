@@ -172,7 +172,7 @@ void SSMShadowMapRenderer::DrawDirectionalShadowMap(GPUContext *pGPUContext, Sha
     // store matrix to shadow map data
     pShadowMapData->IsActive = true;
     pShadowMapData->ViewProjectionMatrix = lightCamera.GetViewProjectionMatrix();
-    g_pRenderer->CorrectProjectionMatrix(pShadowMapData->ViewProjectionMatrix);
+    g_pRenderer->GetGPUDevice()->CorrectProjectionMatrix(pShadowMapData->ViewProjectionMatrix);
 
     // clear render queue
     m_renderQueue.Clear();

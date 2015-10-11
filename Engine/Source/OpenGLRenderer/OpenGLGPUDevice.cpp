@@ -115,13 +115,32 @@ void OpenGLGPUDevice::GetCapabilities(RendererCapabilities *pCapabilities) const
     pCapabilities->SupportsGeometryShaders = (GLAD_GL_EXT_geometry_shader4 == GL_TRUE);
     pCapabilities->SupportsSinglePassCubeMaps = (GLAD_GL_EXT_geometry_shader4 == GL_TRUE && GLAD_GL_ARB_viewport_array == GL_TRUE);
     pCapabilities->SupportsInstancing = (GLAD_GL_EXT_draw_instanced == GL_TRUE);
-
 }
 
 bool OpenGLGPUDevice::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat /*= NULL*/) const
 {
     // @TODO
     return true;
+}
+
+void OpenGLGPUDevice::CorrectProjectionMatrix(float4x4 &projectionMatrix) const
+{
+    float4x4 scaleMatrix(1.0f, 0.0f, 0.0f, 0.0f,
+                         0.0f, 1.0f, 0.0f, 0.0f,
+                         0.0f, 0.0f, 2.0f, 0.0f,
+                         0.0f, 0.0f, 0.0f, 1.0f);
+
+    float4x4 biasMatrix(1.0f, 0.0f, 0.0f, 0.0f,
+                        0.0f, 1.0f, 0.0f, 0.0f,
+                        0.0f, 0.0f, 1.0f, -1.0f,
+                        0.0f, 0.0f, 0.0f, 1.0f);
+
+    projectionMatrix = biasMatrix * scaleMatrix * projectionMatrix;
+}
+
+float OpenGLGPUDevice::GetTexelOffset() const
+{
+    return 0.0f;
 }
 
 SDL_GLContext OpenGLGPUDevice::GetOffThreadGLContext()

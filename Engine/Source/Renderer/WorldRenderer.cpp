@@ -1042,6 +1042,7 @@ void WorldRenderer::DrawIntermediateBuffers()
 
 void WorldRenderer::ExecuteRenderPasses()
 {
+    MICROPROFILE_SCOPEI("WorldRenderer", "ExecuteRenderPasses", MAKE_COLOR_R8G8B8_UNORM(50, 50, 200));
     if (!m_options.EnableMultithreadedRendering)
         return;
 
@@ -1067,9 +1068,6 @@ void WorldRenderer::ExecuteRenderPasses()
 
     // ensure the semaphore is zero
     while (WaitForSingleObject(m_hQueueingCommandsSemaphore, 0) == WAIT_OBJECT_0);
-
-    // flush immediate context first
-    m_pGPUContext->Flush();
 
     // execute primary command lists
     while (!m_readyPrimaryCommandLists.IsEmpty())

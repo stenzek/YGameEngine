@@ -155,7 +155,7 @@ bool D3D11GPUContext::Create()
     }
 
     // allocate constants
-    m_pConstants = new GPUContextConstants(this);
+    m_pConstants = new GPUContextConstants(m_pDevice, this);
 
     // create constant buffers
     if (!CreateConstantBuffers())

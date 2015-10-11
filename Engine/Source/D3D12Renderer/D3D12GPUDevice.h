@@ -117,6 +117,8 @@ public:
     virtual TEXTURE_PLATFORM GetTexturePlatform() const override final;
     virtual void GetCapabilities(RendererCapabilities *pCapabilities) const override final;
     virtual bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = nullptr) const override final;
+    virtual void CorrectProjectionMatrix(float4x4 &projectionMatrix) const override final;
+    virtual float GetTexelOffset() const override final;
 
     // Creates a swap chain on an existing window.
     virtual GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) override final;
@@ -166,6 +168,11 @@ public:
     const D3D12DescriptorHandle GetNullSRVDescriptorHandle() { return m_nullSRVDescriptorHandle; }
     const D3D12DescriptorHandle GetNullSamplerHandle() { return m_nullSamplerHandle; }
 
+    // default states
+    D3D12GPURasterizerState *GetDefaultRasterizerState() const { return m_pDefaultRasterizerState; }
+    D3D12GPUDepthStencilState *GetDefaultDepthStencilState() const { return m_pDefaultDepthStencilState; }
+    D3D12GPUBlendState *GetDefaultBlendState() const { return m_pDefaultBlendState; }
+
     // constant buffer management
     ID3D12Resource *GetConstantBufferResource(uint32 index);
     const D3D12DescriptorHandle *GetConstantBufferDescriptor(uint32 index) const;
@@ -190,6 +197,7 @@ private:
     bool CreateCommandQueues(uint32 copyCommandQueueCount);
     bool CreateLegacyRootSignatures();
     bool CreateCPUDescriptorHeaps();
+    bool CreateDefaultStates();
     bool CreateConstantStorage();
     ID3D12GraphicsCommandList *GetCurrentCopyCommandList();
 
@@ -225,6 +233,11 @@ private:
     D3D12DescriptorHandle m_nullCBVDescriptorHandle;
     D3D12DescriptorHandle m_nullSRVDescriptorHandle;
     D3D12DescriptorHandle m_nullSamplerHandle;
+
+    // default states
+    D3D12GPURasterizerState *m_pDefaultRasterizerState;
+    D3D12GPUDepthStencilState *m_pDefaultDepthStencilState;
+    D3D12GPUBlendState *m_pDefaultBlendState;
 
     // constant buffer storage
     struct ConstantBufferStorage

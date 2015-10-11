@@ -113,33 +113,8 @@ void D3D12GPUCommandList::ResourceBarrier(ID3D12Resource *pResource, uint32 subR
 bool D3D12GPUCommandList::Create(D3D12CommandQueue *pCommandQueue)
 {   
     // allocate constants
-    m_pConstants = new GPUContextConstants(this);
+    m_pConstants = new GPUContextConstants(m_pDevice, this);
     CreateConstantBuffers();
-
-    // get a temporary allocator
-    ID3D12CommandAllocator *pTemporaryAllocator = pCommandQueue->RequestCommandAllocator();
-    DebugAssert(pTemporaryAllocator != nullptr);
-
-    // create command list
-    HRESULT hResult = m_pD3DDevice->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, pTemporaryAllocator, nullptr, IID_PPV_ARGS(&m_pCommandList));
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("CreateCommandList failed with hResult %08X", hResult);
-        pCommandQueue->ReleaseCommandAllocator(pTemporaryAllocator, pCommandQueue->GetLastCompletedFenceValue());
-        return false;
-    }
-
-    // reset the command list (since it's expected to be in the closed state)
-    hResult = m_pCommandList->Close();
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("Close failed with hResult %02X", hResult);
-        pCommandQueue->ReleaseCommandAllocator(pTemporaryAllocator, pCommandQueue->GetLastCompletedFenceValue());
-        return false;
-    }
-
-    // release allocator
-    pCommandQueue->ReleaseCommandAllocator(pTemporaryAllocator, pCommandQueue->GetLastCompletedFenceValue());
     return true;
 }
 
@@ -181,6 +156,8 @@ bool D3D12GPUCommandList::Open(D3D12CommandQueue *pCommandQueue, D3D12GPUOutputB
     // release anything if we didn't execute
     if (m_pCurrentCommandAllocator != nullptr)
         pCommandQueue->ReleaseCommandAllocator(m_pCurrentCommandAllocator);
+    if (m_pCommandList)
+        pCommandQueue->ReleaseCommandList(m_pCommandList);
     if (m_pCurrentScratchBuffer != nullptr)
         pCommandQueue->ReleaseLinearBufferHeap(m_pCurrentScratchBuffer);
     if (m_pCurrentScratchViewHeap != nullptr)
@@ -225,26 +202,33 @@ bool D3D12GPUCommandList::Open(D3D12CommandQueue *pCommandQueue, D3D12GPUOutputB
     }
 
     // reset the command list
-    HRESULT hResult = m_pCommandList->Reset(m_pCurrentCommandAllocator, nullptr);
-    if (FAILED(hResult))
-    {
-        Log_ErrorPrintf("ID3D12CommandList::Reset failed with hResult %08X", hResult);
-        pCommandQueue->ReleaseCommandAllocator(m_pCurrentCommandAllocator);
-        pCommandQueue->ReleaseLinearBufferHeap(m_pCurrentScratchBuffer);
-        pCommandQueue->ReleaseLinearViewHeap(m_pCurrentScratchViewHeap);
-        pCommandQueue->ReleaseLinearSamplerHeap(m_pCurrentScratchSamplerHeap);
-        m_pCurrentCommandAllocator = nullptr;
-        m_pCurrentScratchBuffer = nullptr;
-        m_pCurrentScratchViewHeap = nullptr;
-        m_pCurrentScratchSamplerHeap = nullptr;
-        m_pGraphicsCommandQueue = nullptr;
-        return false;
-    }
+    m_pCommandList = m_pGraphicsCommandQueue->RequestAndOpenCommandList(m_pCurrentCommandAllocator);
+    DebugAssert(m_pCommandList != nullptr);
 
     // set output buffer
     DebugAssert(m_pCurrentSwapChain == nullptr);
     if ((m_pCurrentSwapChain = pOutputBuffer) != nullptr)
         m_pCurrentSwapChain->AddRef();
+
+    // set default state
+    DebugAssert(m_pCurrentRasterizerState == nullptr && m_pCurrentDepthStencilState == nullptr && m_pCurrentBlendState == nullptr);
+    m_pCurrentRasterizerState = m_pDevice->GetDefaultRasterizerState();
+    m_pCurrentRasterizerState->AddRef();
+    m_pCurrentDepthStencilState = m_pDevice->GetDefaultDepthStencilState();
+    m_pCurrentDepthStencilState->AddRef();
+    m_pCurrentBlendState = m_pDevice->GetDefaultBlendState();
+    m_pCurrentBlendState->AddRef();
+    m_currentDepthStencilRef = 0;
+    m_currentBlendStateBlendFactors.SetZero();
+    m_currentTopology = DRAW_TOPOLOGY_TRIANGLE_LIST;
+    m_currentD3DTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    for (ShaderStageState &stageState : m_shaderStates)
+    {
+        stageState.ConstantBuffersDirty = true;
+        stageState.ResourcesDirty = true;
+        stageState.SamplersDirty = true;
+        stageState.UAVsDirty = true;
+    }
 
     // restore state
     SetFullViewport();
@@ -272,6 +256,28 @@ bool D3D12GPUCommandList::Close()
     // should be open
     Assert(m_open);
 
+    // transition any render targets back
+    for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
+    {
+        D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentRenderTargetViews[i]->GetTargetTexture());
+        if (defaultState != D3D12_RESOURCE_STATE_RENDER_TARGET)
+            ResourceBarrier(m_pCurrentRenderTargetViews[i]->GetD3DResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, defaultState);
+
+        m_pCurrentRenderTargetViews[i]->Release();
+        m_pCurrentRenderTargetViews[i] = nullptr;
+    }
+    if (m_pCurrentDepthBufferView != nullptr)
+    {
+        D3D12_RESOURCE_STATES defaultState = D3D12Helpers::GetResourceDefaultState(m_pCurrentDepthBufferView->GetTargetTexture());
+        if (defaultState != D3D12_RESOURCE_STATE_DEPTH_WRITE)
+            ResourceBarrier(m_pCurrentDepthBufferView->GetD3DResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, defaultState);
+
+        m_pCurrentDepthBufferView->Release();
+        m_pCurrentDepthBufferView = nullptr;
+    }
+    m_pCommandList->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
+    m_nCurrentRenderTargets = 0;
+
     // release everything we own
     m_shaderStates.ZeroContents();
     SAFE_RELEASE(m_pCurrentShaderProgram);
@@ -284,7 +290,6 @@ bool D3D12GPUCommandList::Close()
     for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
         SAFE_RELEASE(m_pCurrentRenderTargetViews[i]);
     SAFE_RELEASE(m_pCurrentDepthBufferView);
-    m_nCurrentRenderTargets = 0;
 
     // predicate
     //SAFE_RELEASE(m_pCurrentPredicate);
@@ -296,6 +301,9 @@ bool D3D12GPUCommandList::Close()
     m_currentDepthStencilRef = 0;
     Y_memzero(&m_currentViewport, sizeof(m_currentViewport));
     Y_memzero(&m_scissorRect, sizeof(m_scissorRect));
+    SAFE_RELEASE(m_pCurrentRasterizerState);
+    SAFE_RELEASE(m_pCurrentDepthStencilState);
+    SAFE_RELEASE(m_pCurrentBlendState);
     
     // output buffer
     SAFE_RELEASE(m_pCurrentSwapChain);
@@ -592,10 +600,10 @@ void D3D12GPUCommandList::ClearState(bool clearShaders /* = true */, bool clearB
 
     if (clearStates)
     {
-        SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState());
-        SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(), 0);
-        SetBlendState(g_pRenderer->GetFixedResources()->GetBlendStateNoBlending());
-        SetDrawTopology(DRAW_TOPOLOGY_UNDEFINED);
+        SetRasterizerState(m_pDevice->GetDefaultRasterizerState());
+        SetDepthStencilState(m_pDevice->GetDefaultDepthStencilState(), 0);
+        SetBlendState(m_pDevice->GetDefaultBlendState());
+        SetDrawTopology(DRAW_TOPOLOGY_TRIANGLE_LIST);
 
         RENDERER_SCISSOR_RECT scissor(0, 0, 0, 0);
         SetFullViewport(nullptr);

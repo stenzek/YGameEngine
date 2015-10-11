@@ -279,7 +279,7 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUCommandList *pCommandList, ShadowMap
         // store vp matrix
         pShadowMapData->CascadeFrustumEyeSpaceDepths[i] = m_splitDepths[i + 1];
         pShadowMapData->ViewProjectionMatrices[i] = lightCamera.GetViewProjectionMatrix();
-        g_pRenderer->CorrectProjectionMatrix(pShadowMapData->ViewProjectionMatrices[i]);
+        g_pRenderer->GetGPUDevice()->CorrectProjectionMatrix(pShadowMapData->ViewProjectionMatrices[i]);
 
         // follow the normal process... clear queue
         m_renderQueue.Clear();

@@ -435,7 +435,7 @@ class GPUContextConstants
     DeclareNonCopyable(GPUContextConstants);
 
 public:
-    GPUContextConstants(GPUCommandList *pCommandList);
+    GPUContextConstants(GPUDevice *pDevice, GPUCommandList *pCommandList);
     virtual ~GPUContextConstants();
 
     // Object Constants
@@ -469,6 +469,7 @@ public:
     void CommitGlobalConstantBufferChanges();
 
 private:
+    GPUDevice *m_pDevice;
     GPUCommandList *m_pCommandList;
 
     // Object constants
@@ -506,6 +507,8 @@ public:
     virtual TEXTURE_PLATFORM GetTexturePlatform() const = 0;
     virtual void GetCapabilities(RendererCapabilities *pCapabilities) const = 0;
     virtual bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = nullptr) const = 0;
+    virtual void CorrectProjectionMatrix(float4x4 &projectionMatrix) const = 0;
+    virtual float GetTexelOffset() const = 0;
 
     // Creates a swap chain on an existing window.
     virtual GPUOutputBuffer *CreateOutputBuffer(RenderSystemWindowHandle hWnd, RENDERER_VSYNC_TYPE vsyncType) = 0;
@@ -917,7 +920,6 @@ public:
     const RENDERER_FEATURE_LEVEL GetFeatureLevel() const { return m_eRendererFeatureLevel; }
     const TEXTURE_PLATFORM GetTexturePlatform() const { return m_eTexturePlatform; }
     const RendererCapabilities &GetCapabilities() const { return m_capabilities; }
-    const float GetTexelOffset() const { return m_fTexelOffset; }
 
     // Accesses the implicit swap chain.
     RendererOutputWindow *GetImplicitOutputWindow() { return m_pImplicitOutputWindow; }
@@ -980,9 +982,6 @@ public:
     // determine global shader flags for current environment
     static uint32 GetGlobalShaderFlagsForCurrentEnvironment();
 
-    // Convert a projection matrix into the depth range expected by the renderer.
-    void CorrectProjectionMatrix(float4x4 &projectionMatrix);
-
     // Device queries.
     bool CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelFormat, PIXEL_FORMAT *CompatibleFormat = NULL) const;
 
@@ -1037,7 +1036,6 @@ protected:
     RENDERER_FEATURE_LEVEL m_eRendererFeatureLevel;
     TEXTURE_PLATFORM m_eTexturePlatform;
     RendererCapabilities m_capabilities;
-    float m_fTexelOffset;
 
     // backend
     GPUDevice *m_pDevice;

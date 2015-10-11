@@ -111,6 +111,16 @@ bool D3D11GPUDevice::CheckTexturePixelFormatCompatibility(PIXEL_FORMAT PixelForm
     return true;
 }
 
+void D3D11GPUDevice::CorrectProjectionMatrix(float4x4 &projectionMatrix) const
+{
+
+}
+
+float D3D11GPUDevice::GetTexelOffset() const
+{
+    return 0.0f;
+}
+
 void D3D11GPUDevice::BeginResourceBatchUpload()
 {
 

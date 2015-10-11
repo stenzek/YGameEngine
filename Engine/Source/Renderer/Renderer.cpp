@@ -469,7 +469,6 @@ Renderer::Renderer(GPUDevice *pDevice, GPUContext *pImmediateContext, RendererOu
     // default caps, supports nothing
     Y_memzero(&m_capabilities, sizeof(m_capabilities));
     pDevice->GetCapabilities(&m_capabilities);
-    m_fTexelOffset = 0.0f;
 }
 
 Renderer::~Renderer()
@@ -520,34 +519,6 @@ void Renderer::BaseOnShutdown()
     {
         GPUCommandList *pCommandList = m_freeCommandListPool.PopFront();
         pCommandList->Release();
-    }
-}
-
-void Renderer::CorrectProjectionMatrix(float4x4 &projectionMatrix)
-{
-    switch (m_eRendererPlatform)
-    {
-    case RENDERER_PLATFORM_D3D11:
-    case RENDERER_PLATFORM_D3D12:
-        // Projection matrix already in D3D format.
-        break;
-
-    case RENDERER_PLATFORM_OPENGL:
-    case RENDERER_PLATFORM_OPENGLES2:
-        {
-            float4x4 scaleMatrix(1.0f, 0.0f, 0.0f, 0.0f,
-                                 0.0f, 1.0f, 0.0f, 0.0f,
-                                 0.0f, 0.0f, 2.0f, 0.0f,
-                                 0.0f, 0.0f, 0.0f, 1.0f);
-
-            float4x4 biasMatrix(1.0f, 0.0f, 0.0f, 0.0f,
-                                0.0f, 1.0f, 0.0f, 0.0f,
-                                0.0f, 0.0f, 1.0f, -1.0f,
-                                0.0f, 0.0f, 0.0f, 1.0f);
-
-            projectionMatrix = biasMatrix * scaleMatrix * projectionMatrix;
-        }
-        break;
     }
 }
 
@@ -2281,10 +2252,11 @@ END_SHADER_CONSTANT_BUFFER(cbViewConstants)
 DECLARE_RAW_SHADER_CONSTANT_BUFFER(cbGlobalConstants);
 DEFINE_RAW_SHADER_CONSTANT_BUFFER(cbGlobalConstants, "$Globals", "", 65536, RENDERER_PLATFORM_COUNT, RENDERER_FEATURE_LEVEL_SM4, SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY_PER_PROGRAM);
 
-GPUContextConstants::GPUContextConstants(GPUCommandList *pCommandList)
-    : m_pCommandList(pCommandList),
-      m_recalculateCombinedMatrices(false),
-      m_recalculateViewportFractions(false)
+GPUContextConstants::GPUContextConstants(GPUDevice *pDevice, GPUCommandList *pCommandList)
+    : m_pDevice(pDevice)
+    , m_pCommandList(pCommandList)
+    , m_recalculateCombinedMatrices(false)
+    , m_recalculateViewportFractions(false)
 {
     m_localToWorldMatrix.SetZero();
     m_materialTintColor.SetZero();
@@ -2447,7 +2419,7 @@ void GPUContextConstants::CommitChanges()
     {
         // adjust projection matrix to renderer-specific attributes
         float4x4 adjustedProjectionMatrix(m_cameraProjectionMatrix);
-        g_pRenderer->CorrectProjectionMatrix(adjustedProjectionMatrix);
+        g_pRenderer->GetGPUDevice()->CorrectProjectionMatrix(adjustedProjectionMatrix);
 
         // calculate inverse matrices
         float4x4 inverseViewMatrix(m_cameraViewMatrix.Inverse());
@@ -2477,11 +2449,11 @@ void GPUContextConstants::CommitChanges()
         cbViewConstants.SetFieldFloat2(m_pCommandList, 18, invVPSizeF, false);
 
         // create ortho projection matrix
-        float texelOffset = g_pRenderer->GetTexelOffset();
+        float texelOffset = m_pDevice->GetTexelOffset();
         float4x4 screenProjectionMatrix(float4x4::MakeOrthographicOffCenterProjectionMatrix((float)0.0f, (float)m_viewportSize.x, (float)m_viewportSize.y, 0.0f, 0.0f, 1.0f) *
                                         float4x4::MakeTranslationMatrix(texelOffset, texelOffset, 0.0f));
 
-        g_pRenderer->CorrectProjectionMatrix(screenProjectionMatrix);
+        m_pDevice->CorrectProjectionMatrix(screenProjectionMatrix);
         cbViewConstants.SetFieldFloat4x4(m_pCommandList, 6, screenProjectionMatrix, false);
         m_recalculateViewportFractions = false;
     }

@@ -235,7 +235,7 @@ bool OpenGLGPUContext::Create()
     }
 
     // create constants buffers
-    m_pConstants = new GPUContextConstants(this);
+    m_pConstants = new GPUContextConstants(m_pDevice, this);
 
     // create constant buffers
     if (!CreateConstantBuffers())

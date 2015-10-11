@@ -1420,6 +1420,14 @@ void BaseGame::RenderThreadDrawImGuiOverlays()
             if (ImGui::CollapsingHeader("Render Settings", nullptr, true, true))
             {
                 // shadows
+                boolValue = CVars::r_multithreaded_rendering.GetBool();
+                if (ImGui::Checkbox("Multithreaded Rendering", &boolValue))
+                {
+                    g_pConsole->SetCVar(&CVars::r_multithreaded_rendering, boolValue);
+                    QueueRendererRestart();
+                }
+
+                // shadows
                 boolValue = CVars::r_deferred_shading.GetBool();
                 if (ImGui::Checkbox("Deferred Shading", &boolValue))
                 {

@@ -257,13 +257,11 @@ void D3D12GPUContext::FlushCommandList(bool reopen, bool wait, bool refreshAlloc
         // execute it
         m_pGraphicsCommandQueue->ExecuteCommandList(m_pCommandList);
 
-        // create a synchronization point
-        uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
-
         // wait for the gpu to catch up
         if (wait)
         {
             // re-use the same allocators since the gpu has caught up
+            uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
             m_pGraphicsCommandQueue->WaitForFence(fenceValue);
             m_pCurrentScratchBuffer->Reset(true);
             m_pCurrentScratchViewHeap->Reset();
@@ -272,6 +270,7 @@ void D3D12GPUContext::FlushCommandList(bool reopen, bool wait, bool refreshAlloc
         else if (refreshAllocators)
         {
             // get new allocators
+            uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
             GetNewAllocators(fenceValue);
         }
     }

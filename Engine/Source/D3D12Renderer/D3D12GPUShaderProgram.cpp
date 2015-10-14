@@ -76,6 +76,7 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
 #endif
 
     // search the list
+    m_pDevice->GetShaderPipelineStateLock()->LockShared();
     for (uint32 i = 0; i < m_pipelineStates.GetSize(); i++)
     {
         const PipelineState *ps = &m_pipelineStates[i];
@@ -85,7 +86,29 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
             continue;
 
         if (Y_memcmp(ps->Key2, key2, sizeof(key2)) == 0)
+        {
+            m_pDevice->GetShaderPipelineStateLock()->UnlockShared();
             return ps->pPipelineState;
+        }
+    }
+
+    // move to a write lock
+    m_pDevice->GetShaderPipelineStateLock()->UpgradeSharedLockToExclusive();
+
+    // ensure another thread hasn't created the pipeline in the meantime
+    for (uint32 i = 0; i < m_pipelineStates.GetSize(); i++)
+    {
+        const PipelineState *ps = &m_pipelineStates[i];
+        if (ps->Key1 > key1)
+            break;
+        else if (ps->Key1 < key1)
+            continue;
+
+        if (Y_memcmp(ps->Key2, key2, sizeof(key2)) == 0)
+        {
+            m_pDevice->GetShaderPipelineStateLock()->UnlockExclusive();
+            return ps->pPipelineState;
+        }
     }
 
     // fill new details
@@ -206,6 +229,7 @@ ID3D12PipelineState *D3D12GPUShaderProgram::GetPipelineState(const PipelineState
         m_pipelineStates.Add(ps);
 
     // done
+    m_pDevice->GetShaderPipelineStateLock()->UnlockExclusive();
     return ps.pPipelineState;
 }
 

@@ -168,6 +168,9 @@ public:
     const D3D12DescriptorHandle GetNullSRVDescriptorHandle() { return m_nullSRVDescriptorHandle; }
     const D3D12DescriptorHandle GetNullSamplerHandle() { return m_nullSamplerHandle; }
 
+    // shader pipeline state lock
+    ReadWriteLock *GetShaderPipelineStateLock() { return &m_shaderPipelineStateLock; }
+
     // default states
     D3D12GPURasterizerState *GetDefaultRasterizerState() const { return m_pDefaultRasterizerState; }
     D3D12GPUDepthStencilState *GetDefaultDepthStencilState() const { return m_pDefaultDepthStencilState; }
@@ -233,6 +236,9 @@ private:
     D3D12DescriptorHandle m_nullCBVDescriptorHandle;
     D3D12DescriptorHandle m_nullSRVDescriptorHandle;
     D3D12DescriptorHandle m_nullSamplerHandle;
+
+    // shader pipeline state lock
+    ReadWriteLock m_shaderPipelineStateLock;
 
     // default states
     D3D12GPURasterizerState *m_pDefaultRasterizerState;

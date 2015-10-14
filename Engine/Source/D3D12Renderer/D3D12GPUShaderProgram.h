@@ -98,6 +98,7 @@ protected:
         uint32 Key2[4];
     };
     MemArray<PipelineState> m_pipelineStates;
+    ReadWriteLock m_pipelineStateLock;
 
     // vertex attributes
     MemArray<D3D12_INPUT_ELEMENT_DESC> m_vertexAttributes;

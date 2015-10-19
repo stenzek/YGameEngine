@@ -241,7 +241,7 @@ bool D3D12GPUContext::WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint3
 
     // transition to copy state, and queue a copy from the upload buffer
     ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
-    m_pCommandList->CopyBufferRegion(pUploadBuffer, 0, pD3D12Buffer->GetD3DResource(), start, count);
+    m_pCommandList->CopyBufferRegion(pD3D12Buffer->GetD3DResource(), start, pUploadBuffer, 0, count);
     m_commandCounter++;
     ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
 

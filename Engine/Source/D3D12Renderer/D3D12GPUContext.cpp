@@ -20,6 +20,7 @@ D3D12GPUContext::D3D12GPUContext(D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevi
     , m_pCurrentScratchBuffer(nullptr)
     , m_pCurrentScratchViewHeap(nullptr)
     , m_pCurrentScratchSamplerHeap(nullptr)
+    , m_commandCounter(0)
 {
     m_pDevice->AddRef();
 
@@ -69,7 +70,7 @@ D3D12GPUContext::~D3D12GPUContext()
     // execute all pending commands and wait until they're completed
     if (m_pCommandList != nullptr)
     {
-        FlushCommandList(false, true, false);
+        CloseAndExecuteCommandList(false, false);
         m_pGraphicsCommandQueue->ReleaseCommandList(m_pCommandList);
     }
 
@@ -95,6 +96,9 @@ D3D12GPUContext::~D3D12GPUContext()
         m_pGraphicsCommandQueue->ReleaseLinearSamplerHeap(m_pCurrentScratchSamplerHeap, syncFence);
         m_pCurrentScratchSamplerHeap = nullptr;
     }
+
+    // wait for the gpu to catch up
+    m_pGraphicsCommandQueue->WaitForFence(syncFence);
 
 #if 0
     // clear any state
@@ -152,6 +156,7 @@ void D3D12GPUContext::ResourceBarrier(ID3D12Resource *pResource, D3D12_RESOURCE_
     };
 
     m_pCommandList->ResourceBarrier(1, &resourceBarrier);
+    m_commandCounter++;
 }
 
 void D3D12GPUContext::ResourceBarrier(ID3D12Resource *pResource, uint32 subResource, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState)
@@ -163,6 +168,7 @@ void D3D12GPUContext::ResourceBarrier(ID3D12Resource *pResource, uint32 subResou
     };
 
     m_pCommandList->ResourceBarrier(1, &resourceBarrier);
+    m_commandCounter++;
 }
 
 bool D3D12GPUContext::Create()
@@ -223,64 +229,60 @@ bool D3D12GPUContext::CreateInternalCommandList()
     m_pDevice->SetCopyCommandList(m_pCommandList);
 
     // set initial state
-    ClearCommandListDependantState();
+    ResetCommandList(false, false);
     return true;
 }
 
 void D3D12GPUContext::BeginFrame()
 {
-    FlushCommandList(true, false, true);
-    RestoreCommandListDependantState();
+
 }
 
 void D3D12GPUContext::Flush()
 {
-    FlushCommandList(true, false, false);
-    RestoreCommandListDependantState();
+    CloseAndExecuteCommandList(false, false);
+    ResetCommandList(true, false);
 }
 
 void D3D12GPUContext::Finish()
 {
-    FlushCommandList(true, true, true);
-    RestoreCommandListDependantState();
+    // allocator refresh not needed because of wait
+    CloseAndExecuteCommandList(true, false);
+    ResetCommandList(true, false);
 }
 
-void D3D12GPUContext::FlushCommandList(bool reopen, bool wait, bool refreshAllocators)
+void D3D12GPUContext::CloseAndExecuteCommandList(bool waitForCompletion, bool forceWithoutDrawCommands)
 {
-    // execute any queued commands on the immediate command list
+    // transition pending resources before execution.
+    m_pDevice->TransitionPendingResources(m_pGraphicsCommandQueue);
+
+    // close the command list
     HRESULT hResult = m_pCommandList->Close();
     if (SUCCEEDED(hResult))
     {
-        // transition pending resources before execution.
-        m_pDevice->TransitionPendingResources(m_pGraphicsCommandQueue);
-
         // execute it
-        m_pGraphicsCommandQueue->ExecuteCommandList(m_pCommandList);
+        if (m_commandCounter > 0 || forceWithoutDrawCommands)
+            m_pGraphicsCommandQueue->ExecuteCommandList(m_pCommandList);
 
         // wait for the gpu to catch up
-        if (wait)
+        if (waitForCompletion)
         {
             // re-use the same allocators since the gpu has caught up
             uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
             m_pGraphicsCommandQueue->WaitForFence(fenceValue);
+            m_pGraphicsCommandQueue->ReleaseStaleResources();
             m_pCurrentScratchBuffer->Reset(true);
             m_pCurrentScratchViewHeap->Reset();
             m_pCurrentScratchSamplerHeap->Reset();
         }
-        else if (refreshAllocators)
-        {
-            // get new allocators
-            uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
-            GetNewAllocators(fenceValue);
-        }
     }
     else
     {
-        Log_ErrorPrintf("ID3D12CommandList::Close failed with hResult %08X, some commands may not be executed. Recreating command list.", hResult);
+        Log_ErrorPrintf("ID3D12CommandList::Close failed with hResult %08X, some commands may not be executed.", hResult);
 
         // mark command list as failed and get a new list
         m_pGraphicsCommandQueue->ReleaseFailedCommandList(m_pCommandList);
-        m_pCommandList = m_pGraphicsCommandQueue->RequestAndOpenCommandList(m_pCurrentCommandAllocator);
+        m_pCommandList = m_pGraphicsCommandQueue->RequestCommandList();
 
         // issue copies on the graphics queue
         m_pDevice->SetCopyCommandList(m_pCommandList);
@@ -291,15 +293,85 @@ void D3D12GPUContext::FlushCommandList(bool reopen, bool wait, bool refreshAlloc
         m_pCurrentScratchSamplerHeap->Reset();
     }
 
-    if (reopen)
+    // clear command counter
+    m_commandCounter = 0;
+}
+
+void D3D12GPUContext::ResetCommandList(bool restoreState, bool refreshAllocators)
+{
+    // allocator refresh needed?
+    if (refreshAllocators)
     {
-        hResult = m_pCommandList->Reset(m_pCurrentCommandAllocator, nullptr);
-        if (FAILED(hResult))
-            Log_WarningPrintf("ID3D12CommandList:Reset failed with hResult %08X", hResult);
+        // get new allocators
+        uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
+        GetNewAllocators(fenceValue);
+
+        // take this opportunity to clean up stale resources (even if we're not waiting, it's a good place, since the gpu will be busy for a while)
+        m_pGraphicsCommandQueue->ReleaseStaleResources();
     }
 
-    // take this opportunity to clean up stale resources (even if we're not waiting, it's a good place, since the gpu will be busy for a while)
-    m_pGraphicsCommandQueue->ReleaseStaleResources();
+    // re-open the command list
+    HRESULT hResult = m_pCommandList->Reset(m_pCurrentCommandAllocator, nullptr);
+    if (FAILED(hResult))
+        Log_WarningPrintf("ID3D12CommandList:Reset failed with hResult %08X", hResult);
+
+    // restore state?
+    if (restoreState)
+    {
+        // graphics root
+        m_pCommandList->SetGraphicsRootSignature(m_pDevice->GetLegacyGraphicsRootSignature());
+        m_pCommandList->SetComputeRootSignature(m_pDevice->GetLegacyComputeRootSignature());
+        UpdateShaderDescriptorHeaps();
+
+        // pipeline state
+        UpdatePipelineState(true);
+
+        // render targets
+        SynchronizeRenderTargetsAndUAVs();
+        UpdateScissorRect();
+
+        // other stuff
+        D3D12_VIEWPORT D3D12Viewport = { (float)m_currentViewport.TopLeftX, (float)m_currentViewport.TopLeftY, (float)m_currentViewport.Width, (float)m_currentViewport.Height, m_currentViewport.MinDepth, m_currentViewport.MaxDepth };
+        m_pCommandList->RSSetViewports(1, &D3D12Viewport);
+        m_pCommandList->IASetPrimitiveTopology(D3D12Helpers::GetD3D12PrimitiveTopology(m_currentTopology));
+        m_pCommandList->OMSetBlendFactor(m_currentBlendStateBlendFactors);
+        m_pCommandList->OMSetStencilRef(m_currentDepthStencilRef);
+    }
+    else
+    {
+        // graphics root
+        m_pCommandList->SetGraphicsRootSignature(m_pDevice->GetLegacyGraphicsRootSignature());
+        m_pCommandList->SetComputeRootSignature(m_pDevice->GetLegacyComputeRootSignature());
+        UpdateShaderDescriptorHeaps();
+
+        // pipeline state
+        m_shaderStates.ZeroContents();
+        SAFE_RELEASE(m_pCurrentShaderProgram);
+        m_perDrawConstantBuffers.ZeroContents();
+        m_perDrawConstantBufferCount = 0;
+        m_perDrawConstantBuffersDirty = false;
+        m_pipelineChanged = false;
+        UpdatePipelineState(true);
+
+        // render targets -- still needs to be re-synced
+        for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
+            SAFE_RELEASE(m_pCurrentRenderTargetViews[i]);
+        SAFE_RELEASE(m_pCurrentDepthBufferView);
+        m_nCurrentRenderTargets = 0;
+        SynchronizeRenderTargetsAndUAVs();
+        UpdateScissorRect();
+
+        // predicate
+        //SAFE_RELEASE(m_pCurrentPredicate);
+
+        // other stuff
+        m_currentTopology = DRAW_TOPOLOGY_UNDEFINED;
+        m_currentD3DTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+        m_currentBlendStateBlendFactors.SetZero();
+        m_currentDepthStencilRef = 0;
+        Y_memzero(&m_currentViewport, sizeof(m_currentViewport));
+        Y_memzero(&m_scissorRect, sizeof(m_scissorRect));
+    }
 }
 
 void D3D12GPUContext::GetNewAllocators(uint64 fenceValue)
@@ -374,64 +446,6 @@ void D3D12GPUContext::UpdateShaderDescriptorHeaps()
 {
     ID3D12DescriptorHeap *pDescriptorHeaps[] = { m_pCurrentScratchViewHeap->GetD3DHeap(), m_pCurrentScratchSamplerHeap->GetD3DHeap() };
     m_pCommandList->SetDescriptorHeaps(countof(pDescriptorHeaps), pDescriptorHeaps);
-}
-
-void D3D12GPUContext::ClearCommandListDependantState()
-{
-    // graphics root
-    m_pCommandList->SetGraphicsRootSignature(m_pDevice->GetLegacyGraphicsRootSignature());
-    m_pCommandList->SetComputeRootSignature(m_pDevice->GetLegacyComputeRootSignature());
-    UpdateShaderDescriptorHeaps();
-
-    // pipeline state
-    m_shaderStates.ZeroContents();
-    SAFE_RELEASE(m_pCurrentShaderProgram);
-    m_perDrawConstantBuffers.ZeroContents();
-    m_perDrawConstantBufferCount = 0;
-    m_perDrawConstantBuffersDirty = false;
-    m_pipelineChanged = false;
-    UpdatePipelineState(true);
-
-    // render targets -- still needs to be re-synced
-    for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
-        SAFE_RELEASE(m_pCurrentRenderTargetViews[i]);
-    SAFE_RELEASE(m_pCurrentDepthBufferView);
-    m_nCurrentRenderTargets = 0;
-    SynchronizeRenderTargetsAndUAVs();
-    UpdateScissorRect();
-
-    // predicate
-    //SAFE_RELEASE(m_pCurrentPredicate);
-
-    // other stuff
-    m_currentTopology = DRAW_TOPOLOGY_UNDEFINED;
-    m_currentD3DTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-    m_currentBlendStateBlendFactors.SetZero();
-    m_currentDepthStencilRef = 0;
-    Y_memzero(&m_currentViewport, sizeof(m_currentViewport));
-    Y_memzero(&m_scissorRect, sizeof(m_scissorRect));
-}
-
-void D3D12GPUContext::RestoreCommandListDependantState()
-{
-    // graphics root
-    m_pCommandList->SetGraphicsRootSignature(m_pDevice->GetLegacyGraphicsRootSignature());
-    m_pCommandList->SetComputeRootSignature(m_pDevice->GetLegacyComputeRootSignature());
-    UpdateShaderDescriptorHeaps();
-
-    // pipeline state
-    UpdatePipelineState(true);
-
-    // render targets
-    SynchronizeRenderTargetsAndUAVs();
-    UpdateScissorRect();
-
-    // other stuff
-    D3D12_VIEWPORT D3D12Viewport = { (float)m_currentViewport.TopLeftX, (float)m_currentViewport.TopLeftY, (float)m_currentViewport.Width, (float)m_currentViewport.Height, m_currentViewport.MinDepth, m_currentViewport.MaxDepth };
-    m_pCommandList->RSSetViewports(1, &D3D12Viewport);
-    m_pCommandList->IASetPrimitiveTopology(D3D12Helpers::GetD3D12PrimitiveTopology(m_currentTopology));
-    m_pCommandList->OMSetBlendFactor(m_currentBlendStateBlendFactors);
-    m_pCommandList->OMSetStencilRef(m_currentDepthStencilRef);
 }
 
 bool D3D12GPUContext::GetPerDrawConstantBufferGPUAddress(uint32 index, D3D12_GPU_VIRTUAL_ADDRESS *pAddress)
@@ -836,10 +850,16 @@ void D3D12GPUContext::ClearTargets(bool clearColor /* = true */, bool clearDepth
         if (m_pCurrentSwapChain != nullptr)
         {
             if (clearColor)
+            {
                 m_pCommandList->ClearRenderTargetView(m_pCurrentSwapChain->GetCurrentBackBufferViewDescriptorCPUHandle(), clearColorValue, 0, nullptr);
+                m_commandCounter++;
+            }
 
             if (clearDepth && m_pCurrentSwapChain->GetDepthStencilBufferResource() != nullptr)
+            {
                 m_pCommandList->ClearDepthStencilView(m_pCurrentSwapChain->GetDepthStencilBufferViewDescriptorCPUHandle(), clearFlags, clearDepthValue, clearStencilValue, 0, nullptr);
+                m_commandCounter++;
+            }
         }
     }
     else
@@ -849,12 +869,18 @@ void D3D12GPUContext::ClearTargets(bool clearColor /* = true */, bool clearDepth
             for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
             {
                 if (m_pCurrentRenderTargetViews[i] != nullptr)
+                {
                     m_pCommandList->ClearRenderTargetView(m_pCurrentRenderTargetViews[i]->GetDescriptorHandle(), clearColorValue, 0, nullptr);
+                    m_commandCounter++;
+                }
             }
         }
 
         if (clearFlags != 0 && m_pCurrentDepthBufferView != nullptr)
+        {
             m_pCommandList->ClearDepthStencilView(m_pCurrentDepthBufferView->GetDescriptorHandle(), clearFlags, clearDepthValue, clearStencilValue, 0, nullptr);
+            m_commandCounter++;
+        }
     }
 }
 
@@ -866,9 +892,15 @@ void D3D12GPUContext::DiscardTargets(bool discardColor /* = true */, bool discar
         if (m_pCurrentSwapChain != nullptr)
         {
             if (discardColor)
+            {
                 m_pCommandList->DiscardResource(m_pCurrentSwapChain->GetCurrentBackBufferResource(), nullptr);
+                m_commandCounter++;
+            }
             if (discardDepth && discardStencil && m_pCurrentSwapChain->HasDepthStencilBuffer())
+            {
                 m_pCommandList->DiscardResource(m_pCurrentSwapChain->GetDepthStencilBufferResource(), nullptr);
+                m_commandCounter++;
+            }
         }
     }
     else
@@ -878,12 +910,18 @@ void D3D12GPUContext::DiscardTargets(bool discardColor /* = true */, bool discar
             for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
             {
                 if (m_pCurrentRenderTargetViews[i] != nullptr)
+                {
                     m_pCommandList->DiscardResource(m_pCurrentRenderTargetViews[i]->GetD3DResource(), nullptr);
+                    m_commandCounter++;
+                }
             }
         }
 
         if (discardDepth && discardStencil && m_pCurrentDepthBufferView != nullptr)
+        {
             m_pCommandList->DiscardResource(m_pCurrentDepthBufferView->GetD3DResource(), nullptr);
+            m_commandCounter++;
+        }
     }
 }
 
@@ -975,8 +1013,9 @@ void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
 
     // ensure all commands have been queued. don't refresh allocators yet, because otherwise we could block here when trying to get
     // the new allocators. Instead, push the delay to BeginFrame, which will have some time passed.
-    FlushCommandList(true, false, false);
+    //FlushCommandList(true, false, false);
     //FlushCommandList(true, false, true);
+    CloseAndExecuteCommandList(false, false);
 
 #if 1
     // vsync off?
@@ -1002,7 +1041,7 @@ void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
 #endif
 
     // restore state (since new command list)
-    ClearCommandListDependantState();
+    ResetCommandList(true, true);
 }
 
 uint32 D3D12GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)
@@ -1490,6 +1529,7 @@ void D3D12GPUContext::CommitConstantBuffer(uint32 bufferIndex)
         // queue a copy to the actual buffer
         ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
         m_pCommandList->CopyBufferRegion(pConstantBufferResource, cbInfo->DirtyLowerBounds, pScratchBufferResource, scratchBufferOffset, modifySize);
+        m_commandCounter++;
         ResourceBarrier(pConstantBufferResource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
         // restore predicates
@@ -1841,6 +1881,8 @@ void D3D12GPUContext::Draw(uint32 firstVertex, uint32 nVertices)
         return;
     
     m_pCommandList->DrawInstanced(nVertices, 1, firstVertex, 0);
+    m_commandCounter++;
+
     g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
@@ -1850,6 +1892,8 @@ void D3D12GPUContext::DrawInstanced(uint32 firstVertex, uint32 nVertices, uint32
         return;
 
     m_pCommandList->DrawInstanced(nVertices, nInstances, firstVertex, 0);
+    m_commandCounter++;
+
     g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
@@ -1859,6 +1903,8 @@ void D3D12GPUContext::DrawIndexed(uint32 startIndex, uint32 nIndices, uint32 bas
         return;
 
     m_pCommandList->DrawIndexedInstanced(nIndices, 1, startIndex, baseVertex, 0);
+    m_commandCounter++;
+
     g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
@@ -1868,6 +1914,8 @@ void D3D12GPUContext::DrawIndexedInstanced(uint32 startIndex, uint32 nIndices, u
         return;
 
     m_pCommandList->DrawIndexedInstanced(nIndices, nInstances, startIndex, baseVertex, 0);
+    m_commandCounter++;
+
     g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
@@ -1877,6 +1925,8 @@ void D3D12GPUContext::Dispatch(uint32 threadGroupCountX, uint32 threadGroupCount
         return;
 
     m_pCommandList->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+    m_commandCounter++;
+
     g_pRenderer->GetCounters()->IncrementDrawCallCounter();
 }
 
@@ -1908,6 +1958,7 @@ void D3D12GPUContext::DrawUserPointer(const void *pVertices, uint32 vertexSize, 
 
     // invoke draw
     m_pCommandList->DrawInstanced(nVertices, 1, 0, 0);
+    m_commandCounter++;
 
     // restore vertex buffer
     if (m_pCurrentVertexBuffers[0] != nullptr)
@@ -1999,6 +2050,7 @@ bool D3D12GPUContext::CopyTexture(GPUTexture2D *pSourceTexture, GPUTexture2D *pD
         D3D12_TEXTURE_COPY_LOCATION sourceLocation = { pD3D12SourceTexture->GetD3DResource(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, i };
         D3D12_TEXTURE_COPY_LOCATION destinationLocation = { pD3D12DestinationTexture->GetD3DResource(), D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, i };
         m_pCommandList->CopyTextureRegion(&destinationLocation, 0, 0, 0, &sourceLocation, nullptr);
+        m_commandCounter++;
     }
 
     // switch back from copy states
@@ -2182,13 +2234,18 @@ void D3D12GPUContext::ExecuteCommandList(GPUCommandList *pCommandList)
 {
     D3D12GPUCommandList *pD3D12CommandList = reinterpret_cast<D3D12GPUCommandList *>(pCommandList);
 
-    // transition pending resources before execution.
-    //m_pDevice->TransitionPendingResources(m_pGraphicsCommandQueue);
-
-    // current command list has to be executed before (this will also take care of any transitions)
-    // @TODO remove this at some point, it's bad...
-    FlushCommandList(true, false, false);
-    RestoreCommandListDependantState();
+    // if there was no worthwhile (draw, copy) commands issued since the last flush, don't flush this list
+    if (m_commandCounter == 0)
+    {
+        // but still transition pending resources
+        m_pDevice->TransitionPendingResources(m_pGraphicsCommandQueue);
+    }
+    else
+    {
+        // current command list has to be executed before (this will also take care of any transitions)
+        CloseAndExecuteCommandList(false, false);
+        ResetCommandList(true, false);
+    }
 
     // execute on our command queue
     m_pGraphicsCommandQueue->ExecuteCommandList(pD3D12CommandList->GetD3DCommandList());

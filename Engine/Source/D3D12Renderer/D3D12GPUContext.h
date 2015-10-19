@@ -185,11 +185,10 @@ private:
     // preallocate constant buffers
     void CreateConstantBuffers();
     bool CreateInternalCommandList();
-    void FlushCommandList(bool reopen, bool wait, bool refreshAllocators);
+    void CloseAndExecuteCommandList(bool waitForCompletion, bool forceWithoutDrawCommands);
+    void ResetCommandList(bool restoreState, bool refreshAllocators);
     void GetNewAllocators(uint64 fenceValue);
     void UpdateShaderDescriptorHeaps();
-    void ClearCommandListDependantState();
-    void RestoreCommandListDependantState();
     bool UpdatePipelineState(bool force);
     void GetCurrentRenderTargetDimensions(uint32 *width, uint32 *height);
     D3D12_RESOURCE_STATES GetCurrentResourceState(GPUResource *pResource);
@@ -212,6 +211,9 @@ private:
     D3D12LinearBufferHeap *m_pCurrentScratchBuffer;
     D3D12LinearDescriptorHeap *m_pCurrentScratchViewHeap;
     D3D12LinearDescriptorHeap *m_pCurrentScratchSamplerHeap;
+
+    // number of commands queued to command list
+    uint32 m_commandCounter;
 
     // state
     RENDERER_VIEWPORT m_currentViewport;

@@ -194,7 +194,8 @@ public:
     void ReleaseCopyCommandQueue();
 
     // clean up after resources are created off-thread
-    void TransitionPendingResources(D3D12CommandQueue *pCommandQueue);
+    // returns true if there were any transitions
+    bool TransitionPendingResources(D3D12CommandQueue *pCommandQueue);
     
 private:
     bool CreateCommandQueues(uint32 copyCommandQueueCount);

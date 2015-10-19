@@ -161,6 +161,7 @@ bool D3D12GPUContext::ReadBuffer(GPUBuffer *pBuffer, void *pDestination, uint32 
     // transition to copy state, and queue a copy to the readback buffer (the transition back is placed on the next command list)
     ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_SOURCE);
     m_pCommandList->CopyBufferRegion(pReadbackBuffer, 0, pD3D12Buffer->GetD3DResource(), start, count);
+    m_commandCounter++;
 
     // flush + finish the command queue (slow!)
     D3D12GPUContext::Finish();
@@ -208,6 +209,7 @@ bool D3D12GPUContext::WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint3
             // queue a copy from scratch buffer -> buffer
             ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
             m_pCommandList->CopyBufferRegion(pD3D12Buffer->GetD3DResource(), start, pScratchBufferResource, scratchBufferOffset, count);
+            m_commandCounter++;
             ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
             return true;
         }
@@ -240,6 +242,7 @@ bool D3D12GPUContext::WriteBuffer(GPUBuffer *pBuffer, const void *pSource, uint3
     // transition to copy state, and queue a copy from the upload buffer
     ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
     m_pCommandList->CopyBufferRegion(pUploadBuffer, 0, pD3D12Buffer->GetD3DResource(), start, count);
+    m_commandCounter++;
     ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
 
     // release the upload buffer later
@@ -270,6 +273,7 @@ bool D3D12GPUContext::MapBuffer(GPUBuffer *pBuffer, GPU_MAP_TYPE mapType, void *
         // copy the contents from the gpu buffer to the readback buffer
         ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_SOURCE);
         m_pCommandList->CopyBufferRegion(pMapBuffer, 0, pD3D12Buffer->GetD3DResource(), 0, bufferSize);
+        m_commandCounter++;
 
         // flush + finish the command queue (slow!)
         D3D12GPUContext::Finish();
@@ -332,6 +336,7 @@ void D3D12GPUContext::Unmapbuffer(GPUBuffer *pBuffer, void *pPointer)
         // copy to the gpu buffer
         ResourceBarrier(pD3D12Buffer->GetD3DResource(), pD3D12Buffer->GetDefaultResourceState(), D3D12_RESOURCE_STATE_COPY_DEST);
         m_pCommandList->CopyBufferRegion(pD3D12Buffer->GetD3DResource(), 0, pMapBuffer, 0, pD3D12Buffer->GetDesc()->Size);
+        m_commandCounter++;
         ResourceBarrier(pD3D12Buffer->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST, pD3D12Buffer->GetDefaultResourceState());
 
         // have to wait until the gpu is finished with it before releasing the buffer

@@ -393,14 +393,14 @@ void D3D12GPUDevice::ReleaseCopyCommandQueue()
     pCopyQueue->Lock.Unlock();
 }
 
-void D3D12GPUDevice::TransitionPendingResources(D3D12CommandQueue *pCommandQueue)
+bool D3D12GPUDevice::TransitionPendingResources(D3D12CommandQueue *pCommandQueue)
 {
     // get out as quickly as possible if there's no pending transitions.
     m_pendingResourceTransitionLock.Lock();
     if (m_pendingResourceTransitions.IsEmpty())
     {
         m_pendingResourceTransitionLock.Unlock();
-        return;
+        return false;
     }
 
     // get a command allocator and list
@@ -448,6 +448,7 @@ void D3D12GPUDevice::TransitionPendingResources(D3D12CommandQueue *pCommandQueue
 
     // release command allocator back.
     pCommandQueue->ReleaseCommandAllocator(pCommandAllocator);
+    return true;
 }
 
 ID3D12GraphicsCommandList *D3D12GPUDevice::GetCurrentCopyCommandList()

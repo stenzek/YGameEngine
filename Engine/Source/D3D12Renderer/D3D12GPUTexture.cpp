@@ -419,13 +419,14 @@ bool D3D12GPUContext::ReadTexture(GPUTexture2D *pTexture, void *pDestination, ui
     D3D12_TEXTURE_COPY_LOCATION copyDestination = { pReadbackResource, D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT, regionTextureFootprint };
     D3D12_BOX copySourceBox = { startX, startY, 0, startX + countX, startY + countY, 1 };
     m_pCommandList->CopyTextureRegion(&copyDestination, 0, 0, 0, &copySource, &copySourceBox);
+    m_commandCounter++;
 
     // have to have a barrier here
     ResourceBarrier(pWrappedTexture->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, returnResourceState);
 
     // flush the queue, and wait for all operations to finish
-    FlushCommandList(true, true, false);
-    RestoreCommandListDependantState();
+    CloseAndExecuteCommandList(true, false);
+    ResetCommandList(true, false);
 
     // map the readback texture
     void *pMappedPointer;

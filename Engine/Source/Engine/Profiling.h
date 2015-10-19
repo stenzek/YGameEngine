@@ -12,6 +12,8 @@
     #include "microprofile.h"
 #endif
 
+#define MICROPROFILE_COLOR(r, g, b) ((uint32)0xFF000000 | ((uint32)(r) << 16) | ((uint32)(g) << 8) | ((uint32)(b)) )
+
 #endif      // WITH_PROFILER
 
 namespace Profiling

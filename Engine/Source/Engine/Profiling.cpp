@@ -267,7 +267,30 @@ void MicroProfileDrawText(int nX, int nY, uint32_t nColor, const char* pText, ui
 void MicroProfileDrawBox(int nX, int nY, int nX1, int nY1, uint32_t nColor, MicroProfileBoxType type)
 {
     MINIGUI_RECT rect(nX, nX1, nY, nY1);
-    s_profilerGUIContext.DrawFilledRect(&rect, nColor);
+    if (type == MicroProfileBoxTypeBar)
+    {
+        // draw gradient box
+        uint32 r = (nColor >> 16) & 0xFF;
+        uint32 g = (nColor >> 8) & 0xFF;
+        uint32 b = (nColor) & 0xFF;
+        uint32 maxIntensity = Max(Max(r, Max(g, b)), (uint32)30);
+        uint32 minIntensity = Min(Min(r, Min(g, b)), (uint32)180);
+        uint32 r0 = ((r + maxIntensity) / 2) & 0xFF;
+        uint32 g0 = ((g + maxIntensity) / 2) & 0xFF;
+        uint32 b0 = ((b + maxIntensity) / 2) & 0xFF;
+        uint32 r1 = ((r + minIntensity) / 2) & 0xFF;
+        uint32 g1 = ((g + minIntensity) / 2) & 0xFF;
+        uint32 b1 = ((b + minIntensity) / 2) & 0xFF;
+        uint32 colorTop = MAKE_COLOR_R8G8B8A8_UNORM(r0, g0, b0, (nColor >> 24));
+        uint32 colorBottom = MAKE_COLOR_R8G8B8A8_UNORM(r1, g1, b1, (nColor >> 24));
+        s_profilerGUIContext.DrawFilledRect(&rect, colorTop, colorTop, colorBottom, colorBottom);
+    }
+    else
+    {
+        // draw flat box
+        s_profilerGUIContext.DrawFilledRect(&rect, nColor);
+    }
+
 }
 
 void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColor)

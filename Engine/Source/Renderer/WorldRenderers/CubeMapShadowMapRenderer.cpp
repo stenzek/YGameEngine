@@ -139,7 +139,7 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUCommandList *pCommandList, Shado
 
         // find renderables
         {
-            MICROPROFILE_SCOPEI("CubeMapShadowMapRenderer", "EnumerateRenerables", MAKE_COLOR_R8G8B8_UNORM(50, 150, 100));
+            MICROPROFILE_SCOPEI("CubeMapShadowMapRenderer", "EnumerateRenerables", MICROPROFILE_COLOR(50, 150, 100));
 
             // enumerate everything in frustum
             pRenderWorld->EnumerateRenderablesInFrustum(lightCamera.GetFrustum(), [this, &lightCamera](const RenderProxy *pRenderProxy)
@@ -167,7 +167,7 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUCommandList *pCommandList, Shado
         {
             RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetOpaqueRenderables().GetBasePointer();
             RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetOpaqueRenderables().GetBasePointer() + m_renderQueue.GetOpaqueRenderables().GetSize();
-            MICROPROFILE_SCOPEI("CubeMapShadowMapRenderer", "DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(150, 50, 100));
+            MICROPROFILE_SCOPEI("CubeMapShadowMapRenderer", "DrawOpaqueObjects", MICROPROFILE_COLOR(150, 50, 100));
 
             for (; pQueueEntry != pQueueEntryEnd; pQueueEntry++)
             {
@@ -202,7 +202,7 @@ void CubeMapShadowMapRenderer::DrawShadowMap(GPUCommandList *pCommandList, Shado
         {
             RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetTranslucentRenderables().GetBasePointer();
             RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetTranslucentRenderables().GetBasePointer() + m_renderQueue.GetTranslucentRenderables().GetSize();
-            MICROPROFILE_SCOPEI("CubeMapShadowMapRenderer", "DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(150, 100, 50));
+            MICROPROFILE_SCOPEI("CubeMapShadowMapRenderer", "DrawOpaqueObjects", MICROPROFILE_COLOR(150, 100, 50));
 
             for (; pQueueEntry != pQueueEntryEnd; pQueueEntry++)
             {

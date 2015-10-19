@@ -470,7 +470,7 @@ void WorldRenderer::SetAdditiveBlendingModeForMaterial(GPUCommandList *pCommandL
 
 void WorldRenderer::FillRenderQueue(const Camera *pCamera, const RenderWorld *pRenderWorld)
 {
-    MICROPROFILE_SCOPEI("WorldRenderer", "FillRenderQueue", MAKE_COLOR_R8G8B8_UNORM(0, 255, 255));
+    MICROPROFILE_SCOPEI("WorldRenderer", "FillRenderQueue", MICROPROFILE_COLOR(0, 255, 255));
 
     // clear render queue
     m_renderQueue.Clear();
@@ -488,7 +488,7 @@ void WorldRenderer::FillRenderQueue(const Camera *pCamera, const RenderWorld *pR
 
 void WorldRenderer::DrawDebugInfo(const Camera *pCamera)
 {
-    MICROPROFILE_SCOPEI("WorldRenderer", "DrawDebugInfo", MAKE_COLOR_R8G8B8_UNORM(185, 20, 185));
+    MICROPROFILE_SCOPEI("WorldRenderer", "DrawDebugInfo", MICROPROFILE_COLOR(185, 20, 185));
     
     // batch batch batch!
     SmallString tempString;
@@ -517,7 +517,7 @@ void WorldRenderer::DrawDebugInfo(const Camera *pCamera)
 
 void WorldRenderer::DrawWireframeOverlay(GPUCommandList *pCommandList, const Camera *pCamera, const RenderQueue::RenderableArray *pRenderables)
 {
-    MICROPROFILE_SCOPEI("WorldRenderer", "DrawWireframeOverlay", MAKE_COLOR_R8G8B8_UNORM(20, 185, 185));
+    MICROPROFILE_SCOPEI("WorldRenderer", "DrawWireframeOverlay", MICROPROFILE_COLOR(20, 185, 185));
 
     // set common state
     pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_WIREFRAME, RENDERER_CULL_BACK, true, false, false));
@@ -572,7 +572,7 @@ void WorldRenderer::DrawWireframeOverlay(GPUCommandList *pCommandList, const Cam
 
 void WorldRenderer::DrawOcclusionCullingProxies(GPUCommandList *pCommandList, const Camera *pCamera)
 {
-    MICROPROFILE_SCOPEI("WorldRenderer", "DrawOcclusionCullingProxies", MAKE_COLOR_R8G8B8_UNORM(20, 20, 185));
+    MICROPROFILE_SCOPEI("WorldRenderer", "DrawOcclusionCullingProxies", MICROPROFILE_COLOR(20, 20, 185));
     Panic("Fixme for map!");
 
     // Everything here uses the normal rasterizer state, so set that up here.
@@ -709,7 +709,7 @@ void WorldRenderer::DrawOcclusionCullingProxies(GPUCommandList *pCommandList, co
 void WorldRenderer::CollectOcclusionCullingResults()
 {
     static const uint32 keepRenderPasses = RENDER_PASS_OCCLUSION_CULLING_PROXY;
-    MICROPROFILE_SCOPEI("WorldRenderer", "CollectOcclusionCullingResults", MAKE_COLOR_R8G8B8_UNORM(20, 50, 120));
+    MICROPROFILE_SCOPEI("WorldRenderer", "CollectOcclusionCullingResults", MICROPROFILE_COLOR(20, 50, 120));
 
     uint32 queryFlags = 0;
     bool waitForResults = CVars::r_occlusion_culling_wait_for_results.GetBool();
@@ -757,7 +757,7 @@ void WorldRenderer::CollectOcclusionCullingResults()
 
 void WorldRenderer::BindOcclusionQueriesToQueueEntries()
 {
-    MICROPROFILE_SCOPEI("WorldRenderer", "BindOcclusionQueriesToQueueEntries", MAKE_COLOR_R8G8B8_UNORM(120, 50, 120));
+    MICROPROFILE_SCOPEI("WorldRenderer", "BindOcclusionQueriesToQueueEntries", MICROPROFILE_COLOR(120, 50, 120));
 
     // kill the render passes of any OPAQUE objects that's occluding
     for (uint32 i = 0; i < m_occlusionCullingPendingQueries.GetSize(); i++)
@@ -960,7 +960,7 @@ void WorldRenderer::DrawIntermediateBuffers()
     uint32 PREVIEW_TEXTURE_WIDTH = 128;
     uint32 PREVIEW_TEXTURE_HEIGHT = 128;
     uint32 PREVIEW_TEXTURE_MARGIN = 8;
-    MICROPROFILE_SCOPEI("WorldRenderer", "DrawIntermediateBuffers", MAKE_COLOR_R8G8B8_UNORM(120, 120, 45));
+    MICROPROFILE_SCOPEI("WorldRenderer", "DrawIntermediateBuffers", MICROPROFILE_COLOR(120, 120, 45));
 
     // can't do much without gui context
     if (m_pGUIContext != nullptr)
@@ -1030,7 +1030,7 @@ void WorldRenderer::DrawIntermediateBuffers()
                     MINIGUI_RECT rect(startX, endX, startY, endY);
                     MINIGUI_UV_RECT uvRect(0.0f, 1.0f, 0.0f, 1.0f);
                     m_pGUIContext->DrawTexturedRect(&rect, &uvRect, dbv.pTexture);
-                    m_pGUIContext->DrawTextAt(startX + 4, startY + 4, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MAKE_COLOR_R8G8B8_UNORM(255, 255, 255), dbv.Name);
+                    m_pGUIContext->DrawTextAt(startX + 4, startY + 4, g_pRenderer->GetFixedResources()->GetDebugFont(), 16, MICROPROFILE_COLOR(255, 255, 255), dbv.Name);
                 }
             }
         }
@@ -1042,7 +1042,7 @@ void WorldRenderer::DrawIntermediateBuffers()
 
 void WorldRenderer::ExecuteRenderPasses()
 {
-    MICROPROFILE_SCOPEI("WorldRenderer", "ExecuteRenderPasses", MAKE_COLOR_R8G8B8_UNORM(50, 50, 200));
+    MICROPROFILE_SCOPEI("WorldRenderer", "ExecuteRenderPasses", MICROPROFILE_COLOR(50, 50, 200));
     if (!m_options.EnableMultithreadedRendering)
         return;
 

@@ -119,7 +119,7 @@ void ForwardShadingWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, con
 
     // clear render targets
     {
-        MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "Prepare", MAKE_COLOR_R8G8B8_UNORM(127, 72, 98));
+        MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "Prepare", MICROPROFILE_COLOR(127, 72, 98));
 
         // need a seperate viewport
         RENDERER_VIEWPORT bufferViewport(0, 0, m_options.RenderWidth, m_options.RenderHeight, 0.0f, 1.0f);
@@ -196,7 +196,7 @@ void ForwardShadingWorldRenderer::OnFrameComplete()
 
 void ForwardShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "DrawShadowMaps", MAKE_COLOR_R8G8B8_UNORM(127, 98, 42));
+    MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "DrawShadowMaps", MICROPROFILE_COLOR(127, 98, 42));
 
     // directional lights
     {
@@ -610,7 +610,7 @@ uint32 ForwardShadingWorldRenderer::DrawForwardLightPassesForObject(const ViewPa
 
 void ForwardShadingWorldRenderer::DrawDepthPrepass(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "DrawDepthPrepass", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
+    MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "DrawDepthPrepass", MICROPROFILE_COLOR(255, 100, 255));
 
     ShaderProgramSelector shaderSelector(m_globalShaderFlags);
     shaderSelector.SetBaseShader(OBJECT_TYPEINFO(DepthOnlyShader), 0);
@@ -657,7 +657,7 @@ void ForwardShadingWorldRenderer::DrawDepthPrepass(const ViewParameters *pViewPa
 
 void ForwardShadingWorldRenderer::DrawOpaqueObjects(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(90, 127, 42));
+    MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "DrawOpaqueObjects", MICROPROFILE_COLOR(90, 127, 42));
 
     // Iterate over renderables.
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetOpaqueRenderables().GetBasePointer();
@@ -689,7 +689,7 @@ void ForwardShadingWorldRenderer::DrawOpaqueObjects(const ViewParameters *pViewP
 
 void ForwardShadingWorldRenderer::DrawTranslucentObjects(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "DrawTranslucentObjects", MAKE_COLOR_R8G8B8_UNORM(20, 50, 42));
+    MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "DrawTranslucentObjects", MICROPROFILE_COLOR(20, 50, 42));
 
     // Iterate over renderables.
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetTranslucentRenderables().GetBasePointer();
@@ -723,7 +723,7 @@ void ForwardShadingWorldRenderer::DrawTranslucentObjects(const ViewParameters *p
 
 void ForwardShadingWorldRenderer::DrawPostProcessObjects(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "DrawPostProcessObjects", MAKE_COLOR_R8G8B8_UNORM(50, 20, 42));
+    MICROPROFILE_SCOPEI("ForwardShadingWorldRenderer", "DrawPostProcessObjects", MICROPROFILE_COLOR(50, 20, 42));
 
     // if we don't have any objects, exit early
     if (m_renderQueue.GetPostProcessRenderables().GetSize() == 0)

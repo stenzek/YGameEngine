@@ -533,7 +533,7 @@ void BaseGame::RenderThreadCollectEvents(float deltaTime)
 
 void BaseGame::MainThreadProcessInputEvents(float deltaTime)
 {
-    MICROPROFILE_SCOPEI("BaseGame", "MainThreadProcessInputEvents", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+    MICROPROFILE_SCOPEI("BaseGame", "MainThreadProcessInputEvents", MICROPROFILE_COLOR(100, 255, 255));
 
     for (uint32 i = 0; i < m_pendingEvents.GetSize(); i++)
     {
@@ -560,7 +560,7 @@ void BaseGame::MainThreadProcessInputEvents(float deltaTime)
 
 void BaseGame::MainThreadFrame(float deltaTime)
 {
-    MICROPROFILE_SCOPEI("BaseGame", "MainThreadFrame", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+    MICROPROFILE_SCOPEI("BaseGame", "MainThreadFrame", MICROPROFILE_COLOR(50, 127, 127));
 
     // wait for the render thread to fill the event buffer
     if (Renderer::HasRenderThread())
@@ -568,43 +568,43 @@ void BaseGame::MainThreadFrame(float deltaTime)
 
     // begin frame
     {
-        MICROPROFILE_SCOPEI("BaseGame", "BeginFrame", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+        MICROPROFILE_SCOPEI("BaseGame", "BeginFrame", MICROPROFILE_COLOR(50, 0, 50));
         OnMainThreadBeginFrame(deltaTime);
     }
 
     // process input events
     {
-        MICROPROFILE_SCOPEI("BaseGame", "ProcesInputEvents", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+        MICROPROFILE_SCOPEI("BaseGame", "ProcesInputEvents", MICROPROFILE_COLOR(50, 127, 0));
         MainThreadProcessInputEvents(deltaTime);
     }
 
     // pre-tick hooks
     {
-        MICROPROFILE_SCOPEI("BaseGame", "BeginFrame", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+        MICROPROFILE_SCOPEI("BaseGame", "BeginFrame", MICROPROFILE_COLOR(0, 127, 0));
         OnMainThreadBeginFrame(deltaTime);
     }
 
     // run async tick
     {
-        MICROPROFILE_SCOPEI("BaseGame", "UpdateAsync", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+        MICROPROFILE_SCOPEI("BaseGame", "UpdateAsync", MICROPROFILE_COLOR(0, 50, 127));
         OnMainThreadAsyncTick(deltaTime);
     }
 
     // wait for async commands to finish, use the main thread to help them out
     {
-        MICROPROFILE_SCOPEI("BaseGame", "CompleteAsyncTasks", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+        MICROPROFILE_SCOPEI("BaseGame", "CompleteAsyncTasks", MICROPROFILE_COLOR(10, 50, 20));
         g_pEngine->GetAsyncCommandQueue()->ExecuteQueuedTasks();
     }
 
     // run any callbacks
     {
-        MICROPROFILE_SCOPEI("BaseGame", "ExecuteQueuedTasks", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+        MICROPROFILE_SCOPEI("BaseGame", "ExecuteQueuedTasks", MICROPROFILE_COLOR(75, 120, 10));
         g_pEngine->GetMainThreadCommandQueue()->ExecuteQueuedTasks();
     }
 
     // run normal tick
     {
-        MICROPROFILE_SCOPEI("BaseGame", "Update", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+        MICROPROFILE_SCOPEI("BaseGame", "Update", MICROPROFILE_COLOR(0, 75, 10));
         OnMainThreadTick(deltaTime);
     }
 
@@ -613,7 +613,7 @@ void BaseGame::MainThreadFrame(float deltaTime)
 
     // end simulation
     {
-        MICROPROFILE_SCOPEI("BaseGame", "EndFrame", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+        MICROPROFILE_SCOPEI("BaseGame", "EndFrame", MICROPROFILE_COLOR(0, 120, 0));
         OnMainThreadEndFrame(deltaTime);
     }
 
@@ -829,21 +829,21 @@ void BaseGame::RenderThreadRestartRenderer()
 
 void BaseGame::RenderThreadFrame(float deltaTime)
 {
-    MICROPROFILE_SCOPEI("BaseGame", "RenderThreadFrame", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
-    MICROPROFILE_SCOPEGPUI("RenderThreadFrame", MAKE_COLOR_R8G8B8_UNORM(100, 255, 255));
+    MICROPROFILE_SCOPEI("BaseGame", "RenderThreadFrame", MICROPROFILE_COLOR(50, 50, 180));
+    MICROPROFILE_SCOPEGPUI("RenderThreadFrame", MICROPROFILE_COLOR(50, 50, 180));
 
     // reset counters
     g_pRenderer->GetCounters()->ResetPerFrameCounters();
 
     // collect events
     {
-        MICROPROFILE_SCOPEI("BaseGame", "RenderThreadCollectEvents", MAKE_COLOR_R8G8B8_UNORM(255, 255, 100));
+        MICROPROFILE_SCOPEI("BaseGame", "RenderThreadCollectEvents", MICROPROFILE_COLOR(255, 255, 100));
         RenderThreadCollectEvents(deltaTime);
     }
 
     // pre frame
     {
-        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadPreFrame", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
+        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadPreFrame", MICROPROFILE_COLOR(255, 100, 255));
         OnRenderThreadPreFrame(deltaTime);
     }
 
@@ -860,13 +860,13 @@ void BaseGame::RenderThreadFrame(float deltaTime)
 
     // clear the backbuffer/depth buffer, this is mainly as a help to tilers
     {
-        MICROPROFILE_SCOPEI("BaseGame", "Begin GPU Frame", MAKE_COLOR_R8G8B8_UNORM(200, 50, 50));
+        MICROPROFILE_SCOPEI("BaseGame", "Begin GPU Frame", MICROPROFILE_COLOR(200, 50, 50));
         m_pGPUContext->BeginFrame();
     }
 
     // begin frame helper
     {
-        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadBeginFrame", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
+        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadBeginFrame", MICROPROFILE_COLOR(255, 100, 255));
         OnRenderThreadBeginFrame(deltaTime);
     }
 
@@ -878,25 +878,25 @@ void BaseGame::RenderThreadFrame(float deltaTime)
 
     // call event
     {
-        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadDraw", MAKE_COLOR_R8G8B8_UNORM(255, 100, 100));
+        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadDraw", MICROPROFILE_COLOR(255, 100, 100));
         OnRenderThreadDraw(deltaTime);
     }
 
     // draw overlays
     {
-        MICROPROFILE_SCOPEI("BaseGame", "RenderThreadDrawOverlays", MAKE_COLOR_R8G8B8_UNORM(100, 200, 100));
+        MICROPROFILE_SCOPEI("BaseGame", "RenderThreadDrawOverlays", MICROPROFILE_COLOR(100, 200, 100));
         RenderThreadDrawOverlays(deltaTime);
     }
 
     // end frame
     {
-        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadEndFrame", MAKE_COLOR_R8G8B8_UNORM(100, 20, 30));
+        MICROPROFILE_SCOPEI("BaseGame", "OnRenderThreadEndFrame", MICROPROFILE_COLOR(100, 20, 30));
         OnRenderThreadEndFrame(deltaTime);
     }
 
     // clear state of context, and swap buffers
     {
-        MICROPROFILE_SCOPEI("BaseGame", "SwapBuffers", MAKE_COLOR_R8G8B8_UNORM(100, 255, 100));
+        MICROPROFILE_SCOPEI("BaseGame", "SwapBuffers", MICROPROFILE_COLOR(100, 255, 100));
 
         m_pGPUContext->ClearState(true, true, true, true);
         m_pGPUContext->PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR_IMMEDIATE); /* @TODO */
@@ -978,7 +978,7 @@ void BaseGame::RenderThreadDrawOverlays(float deltaTime)
 #ifdef WITH_IMGUI
     if (m_imGuiEnabled)
     {
-        MICROPROFILE_SCOPEI("ImGui", "Draw", MAKE_COLOR_R8G8B8_UNORM(128, 50, 75));
+        MICROPROFILE_SCOPEI("ImGui", "Draw", MICROPROFILE_COLOR(128, 50, 75));
 
         // draw imgui
         RenderThreadDrawImGuiOverlays();

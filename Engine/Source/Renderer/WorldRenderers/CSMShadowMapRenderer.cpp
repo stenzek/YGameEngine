@@ -245,7 +245,7 @@ void CSMShadowMapRenderer::DrawShadowMap(GPUCommandList *pCommandList, ShadowMap
 
 void CSMShadowMapRenderer::DrawMultiPass(GPUCommandList *pCommandList, ShadowMapData *pShadowMapData, const Camera *pViewCamera, float shadowDistance, const RenderWorld *pRenderWorld, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
 {
-    MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "DrawMultiPass", MAKE_COLOR_R8G8B8_UNORM(200, 47, 85));
+    MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "DrawMultiPass", MICROPROFILE_COLOR(200, 47, 85));
 
     // work out shadow draw distance
     float shadowDrawDistance = Min(shadowDistance, pViewCamera->GetFarPlaneDistance() - pViewCamera->GetNearPlaneDistance());
@@ -286,7 +286,7 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUCommandList *pCommandList, ShadowMap
 
         // find renderables
         {
-            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "EnumerateRenderables", MAKE_COLOR_R8G8B8_UNORM(47, 200, 85));
+            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "EnumerateRenderables", MICROPROFILE_COLOR(47, 200, 85));
 
             // find everything in this cascade's frustum
             pRenderWorld->EnumerateRenderablesInFrustum(lightCamera.GetFrustum(), [this, &lightCamera](const RenderProxy *pRenderProxy)
@@ -308,7 +308,7 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUCommandList *pCommandList, ShadowMap
 
         // draw opaque objects
         {           
-            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(47, 85, 200));
+            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "DrawOpaqueObjects", MICROPROFILE_COLOR(47, 85, 200));
 
             // initialize selector -- fixme for global flags?
             ShaderProgramSelector shaderSelector(0);
@@ -337,7 +337,7 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUCommandList *pCommandList, ShadowMap
 
         // draw transparent objects
         {
-            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "DrawTransparentObjects", MAKE_COLOR_R8G8B8_UNORM(200, 85, 47));
+            MICROPROFILE_SCOPEI("CSMShadowMapRenderer", "DrawTransparentObjects", MICROPROFILE_COLOR(200, 85, 47));
 
             // initialize selector
             ShaderProgramSelector shaderSelector(0);

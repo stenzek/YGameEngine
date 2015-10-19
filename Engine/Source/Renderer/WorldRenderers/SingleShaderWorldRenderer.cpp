@@ -31,11 +31,11 @@ SingleShaderWorldRenderer::~SingleShaderWorldRenderer()
 
 void SingleShaderWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView)
 {
-    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawWorld", MAKE_COLOR_R8G8B8_UNORM(47, 85, 200));
+    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawWorld", MICROPROFILE_COLOR(47, 85, 200));
 
     // initialize and clear render targets, kick this off first
     {
-        MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "Prepare", MAKE_COLOR_R8G8B8_UNORM(45, 75, 200));
+        MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "Prepare", MICROPROFILE_COLOR(45, 75, 200));
 
         // set render targets, for pipelining we do this before sorting
         m_pGPUContext->SetRenderTargets(1, &pRenderTargetView, pDepthStencilBufferView);
@@ -93,7 +93,7 @@ void SingleShaderWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const
 
 void SingleShaderWorldRenderer::DrawOpqaueObjects(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(200, 75, 200));
+    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawOpaqueObjects", MICROPROFILE_COLOR(200, 75, 200));
 
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetOpaqueRenderables().GetBasePointer();
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetOpaqueRenderables().GetBasePointer() + m_renderQueue.GetOpaqueRenderables().GetSize();
@@ -109,7 +109,7 @@ void SingleShaderWorldRenderer::DrawOpqaueObjects(const ViewParameters *pViewPar
 
 void SingleShaderWorldRenderer::DrawPostProcessObjects(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawPostProcessObjects", MAKE_COLOR_R8G8B8_UNORM(45, 200, 75));
+    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawPostProcessObjects", MICROPROFILE_COLOR(45, 200, 75));
 
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetPostProcessRenderables().GetBasePointer();
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetPostProcessRenderables().GetBasePointer() + m_renderQueue.GetPostProcessRenderables().GetSize();
@@ -125,7 +125,7 @@ void SingleShaderWorldRenderer::DrawPostProcessObjects(const ViewParameters *pVi
 
 void SingleShaderWorldRenderer::DrawTranslucentObjects(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawTranslucentObjects", MAKE_COLOR_R8G8B8_UNORM(75, 45, 200));
+    MICROPROFILE_SCOPEI("SingleShaderWorldRenderer", "DrawTranslucentObjects", MICROPROFILE_COLOR(75, 45, 200));
 
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetTranslucentRenderables().GetBasePointer();
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetTranslucentRenderables().GetBasePointer() + m_renderQueue.GetTranslucentRenderables().GetSize();

@@ -90,7 +90,7 @@ bool MobileWorldRenderer::Initialize()
 
 void MobileWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters, GPURenderTargetView *pRenderTargetView, GPUDepthStencilBufferView *pDepthStencilBufferView)
 {
-    MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawWorld", MAKE_COLOR_R8G8B8_UNORM(200, 100, 0));
+    MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawWorld", MICROPROFILE_COLOR(200, 100, 0));
 
     // add the main camera
     //RENDER_PROFILER_ADD_CAMERA(pRenderProfiler, &pViewParameters->ViewCamera, "World View Camera");
@@ -116,7 +116,7 @@ void MobileWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewP
 
     // clear render targets
     {
-        MICROPROFILE_SCOPEI("MobileWorldRenderer", "ClearTargets", MAKE_COLOR_R8G8B8_UNORM(200, 100, 20));
+        MICROPROFILE_SCOPEI("MobileWorldRenderer", "ClearTargets", MICROPROFILE_COLOR(200, 100, 20));
 
         // need a seperate viewport
         RENDERER_VIEWPORT bufferViewport(0, 0, m_options.RenderWidth, m_options.RenderHeight, 0.0f, 1.0f);
@@ -127,7 +127,7 @@ void MobileWorldRenderer::DrawWorld(const RenderWorld *pRenderWorld, const ViewP
 
     // set constants
     {
-        MICROPROFILE_SCOPEI("MobileWorldRenderer", "SetConstants", MAKE_COLOR_R8G8B8_UNORM(200, 100, 20));
+        MICROPROFILE_SCOPEI("MobileWorldRenderer", "SetConstants", MICROPROFILE_COLOR(200, 100, 20));
 
         // set up view-dependent constants
         GPUContextConstants *pConstants = m_pGPUContext->GetConstants();
@@ -194,7 +194,7 @@ void MobileWorldRenderer::OnFrameComplete()
 
 void MobileWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorld, const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawShadowMaps", MAKE_COLOR_R8G8B8_UNORM(200, 200, 200));
+    MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawShadowMaps", MICROPROFILE_COLOR(200, 200, 200));
 
     // directional lights
     {
@@ -553,8 +553,8 @@ uint32 MobileWorldRenderer::DrawForwardLightPassesForObject(const ViewParameters
 
 void MobileWorldRenderer::DrawDepthPrepass(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawDepthPrepass", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
-    MICROPROFILE_SCOPEGPUI("DrawDepthPrepass", MAKE_COLOR_R8G8B8_UNORM(255, 100, 255));
+    MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawDepthPrepass", MICROPROFILE_COLOR(255, 100, 255));
+    MICROPROFILE_SCOPEGPUI("DrawDepthPrepass", MICROPROFILE_COLOR(255, 100, 255));
 
     ShaderProgramSelector shaderSelector(m_globalShaderFlags);
     shaderSelector.SetBaseShader(OBJECT_TYPEINFO(DepthOnlyShader), 0);
@@ -597,8 +597,8 @@ void MobileWorldRenderer::DrawDepthPrepass(const ViewParameters *pViewParameters
 
 void MobileWorldRenderer::DrawOpaqueObjects(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(0, 200, 0));
-    MICROPROFILE_SCOPEGPUI("DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(0, 200, 0));
+    MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawOpaqueObjects", MICROPROFILE_COLOR(0, 200, 0));
+    MICROPROFILE_SCOPEGPUI("DrawOpaqueObjects", MICROPROFILE_COLOR(0, 200, 0));
 
     // Iterate over renderables.
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetOpaqueRenderables().GetBasePointer();
@@ -630,8 +630,8 @@ void MobileWorldRenderer::DrawOpaqueObjects(const ViewParameters *pViewParameter
 
 void MobileWorldRenderer::DrawTranslucentObjects(const ViewParameters *pViewParameters)
 {
-    MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawTranslucentObjects", MAKE_COLOR_R8G8B8_UNORM(0, 0, 200));
-    MICROPROFILE_SCOPEGPUI("DrawTranslucentObjects", MAKE_COLOR_R8G8B8_UNORM(0, 0, 200));
+    MICROPROFILE_SCOPEI("MobileWorldRenderer", "DrawTranslucentObjects", MICROPROFILE_COLOR(0, 0, 200));
+    MICROPROFILE_SCOPEGPUI("DrawTranslucentObjects", MICROPROFILE_COLOR(0, 0, 200));
 
     // Iterate over renderables.
     RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetTranslucentRenderables().GetBasePointer();
@@ -665,7 +665,7 @@ void MobileWorldRenderer::DrawTranslucentObjects(const ViewParameters *pViewPara
 
 void MobileWorldRenderer::DrawFinalPass(const ViewParameters *pViewParameters, GPURenderTargetView *pOutputRTV)
 {
-    MICROPROFILE_SCOPEGPUI("DrawFinalPass", MAKE_COLOR_R8G8B8_UNORM(0, 150, 0));
+    MICROPROFILE_SCOPEGPUI("DrawFinalPass", MICROPROFILE_COLOR(0, 150, 0));
 
 //     // @fixme
 //     m_pGPUContext->SetRenderTargets(1, &pOutputRTV, nullptr);

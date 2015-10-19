@@ -138,7 +138,7 @@ static void BuildDirectionalLightCamera(Camera *pShadowCamera, const Camera *pVi
 
 void SSMShadowMapRenderer::DrawDirectionalShadowMap(GPUContext *pGPUContext, ShadowMapData *pShadowMapData, const RenderWorld *pRenderWorld, const Camera *pViewCamera, float shadowDistance, const RENDER_QUEUE_DIRECTIONAL_LIGHT_ENTRY *pLight)
 {
-    MICROPROFILE_SCOPEI("SSMShadowMapRenderer", "DrawDirectionalShadowMap", MAKE_COLOR_R8G8B8_UNORM(200, 0, 0));
+    MICROPROFILE_SCOPEI("SSMShadowMapRenderer", "DrawDirectionalShadowMap", MICROPROFILE_COLOR(200, 0, 0));
 
     // fix shadow distance
     shadowDistance = Min(shadowDistance, pViewCamera->GetFarPlaneDistance() - pViewCamera->GetNearPlaneDistance());
@@ -179,7 +179,7 @@ void SSMShadowMapRenderer::DrawDirectionalShadowMap(GPUContext *pGPUContext, Sha
 
     // find renderables
     {
-        MICROPROFILE_SCOPEI("SSMShadowMapRenderer", "EnumerateRenderables", MAKE_COLOR_R8G8B8_UNORM(0, 200, 0));
+        MICROPROFILE_SCOPEI("SSMShadowMapRenderer", "EnumerateRenderables", MICROPROFILE_COLOR(0, 200, 0));
 
         // enumerate everything in frustum
         pRenderWorld->EnumerateRenderablesInFrustum(lightCamera.GetFrustum(), [this, &lightCamera](const RenderProxy *pRenderProxy)
@@ -212,8 +212,8 @@ void SSMShadowMapRenderer::DrawDirectionalShadowMap(GPUContext *pGPUContext, Sha
     {
         RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetOpaqueRenderables().GetBasePointer();
         RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetOpaqueRenderables().GetBasePointer() + m_renderQueue.GetOpaqueRenderables().GetSize();
-        MICROPROFILE_SCOPEI("SSMShadowMapRenderer", "DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(255, 100, 0));
-        MICROPROFILE_SCOPEGPUI("DrawOpaqueObjects", MAKE_COLOR_R8G8B8_UNORM(255, 100, 0));
+        MICROPROFILE_SCOPEI("SSMShadowMapRenderer", "DrawOpaqueObjects", MICROPROFILE_COLOR(255, 100, 0));
+        MICROPROFILE_SCOPEGPUI("DrawOpaqueObjects", MICROPROFILE_COLOR(255, 100, 0));
 
         for (; pQueueEntry != pQueueEntryEnd; pQueueEntry++)
         {
@@ -251,8 +251,8 @@ void SSMShadowMapRenderer::DrawDirectionalShadowMap(GPUContext *pGPUContext, Sha
     {
         RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntry = m_renderQueue.GetTranslucentRenderables().GetBasePointer();
         RENDER_QUEUE_RENDERABLE_ENTRY *pQueueEntryEnd = m_renderQueue.GetTranslucentRenderables().GetBasePointer() + m_renderQueue.GetTranslucentRenderables().GetSize();
-        MICROPROFILE_SCOPEI("SSMShadowMapRenderer", "DrawTranslucentObjects", MAKE_COLOR_R8G8B8_UNORM(255, 0, 0));
-        MICROPROFILE_SCOPEGPUI("DrawTranslucentObjects", MAKE_COLOR_R8G8B8_UNORM(255, 0, 0));
+        MICROPROFILE_SCOPEI("SSMShadowMapRenderer", "DrawTranslucentObjects", MICROPROFILE_COLOR(255, 0, 0));
+        MICROPROFILE_SCOPEGPUI("DrawTranslucentObjects", MICROPROFILE_COLOR(255, 0, 0));
 
         for (; pQueueEntry != pQueueEntryEnd; pQueueEntry++)
         {

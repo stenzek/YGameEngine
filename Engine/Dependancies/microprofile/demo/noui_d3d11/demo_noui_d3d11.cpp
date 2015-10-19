@@ -6,6 +6,7 @@
 #include <directxcolors.h>
 
 #define MICROPROFILE_IMPL
+#define MICROPROFILE_GPU_TIMERS_D3D11 1
 #include "microprofile.h"
 uint32_t g_nQuit = 0;
 
@@ -48,6 +49,7 @@ void Render();
 void StartFakeWork();
 void StopFakeWork();
 
+int g_QueueGraphics = -1;
 int WINAPI WinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow )
 {
     UNREFERENCED_PARAMETER( hPrevInstance );
@@ -65,12 +67,14 @@ int WINAPI WinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	MicroProfileSetForceEnable(true);
 	MicroProfileSetEnableAllGroups(true);
 	MicroProfileSetForceMetaCounters(true);
+
+
 	MicroProfileGpuInitD3D11(g_pd3dDevice, g_pImmediateContext);
 	MicroProfileStartContextSwitchTrace();
 	StartFakeWork();
 	char buffer[256];
 	snprintf(buffer, sizeof(buffer)-1, "Webserver started in localhost:%d\n", MicroProfileWebServerPort());
-	OutputDebugString(buffer);
+	OutputDebugStringA(buffer);
 
 
 
@@ -492,5 +496,7 @@ void Render()
 		// Present the information rendered to the back buffer to the front buffer (the screen)
 		g_pSwapChain->Present( 0, 0 );
 	}
-	MicroProfileFlip();
+
+	MicroProfileFlip(0);
+
 }

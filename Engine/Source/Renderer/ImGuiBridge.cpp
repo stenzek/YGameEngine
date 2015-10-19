@@ -22,7 +22,12 @@ static void RenderDrawListsCallback(ImDrawData *pDrawData)
         uint32 newVertexCount = Max((s_vertexBufferSize != 0) ? (s_vertexBufferSize * 2) : 1024, (uint32)pDrawData->TotalVtxCount);
         Log_PerfPrintf("Reallocating ImGui vertex buffer, new count = %u (%s)", newVertexCount, StringConverter::SizeToHumanReadableString(newVertexCount * sizeof(ImDrawVert)).GetCharArray());
 
-        GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_VERTEX_BUFFER | GPU_BUFFER_FLAG_MAPPABLE, newVertexCount * sizeof(ImDrawVert));
+        GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_VERTEX_BUFFER, newVertexCount * sizeof(ImDrawVert));
+        if (g_pRenderer->GetFeatureLevel() >= RENDERER_FEATURE_LEVEL_ES3)
+            bufferDesc.Flags |= GPU_BUFFER_FLAG_MAPPABLE;
+        else
+            bufferDesc.Flags |= GPU_BUFFER_FLAG_WRITABLE;
+
         GPUBuffer *pNewVertexBuffer = g_pRenderer->CreateBuffer(&bufferDesc, nullptr);
         if (pNewVertexBuffer == nullptr)
         {
@@ -41,7 +46,12 @@ static void RenderDrawListsCallback(ImDrawData *pDrawData)
         uint32 newIndexCount = Max((s_indexBufferSize != 0) ? (s_indexBufferSize * 2) : 1024, (uint32)pDrawData->TotalIdxCount);
         Log_PerfPrintf("Reallocating ImGui index buffer, new count = %u (%s)", newIndexCount, StringConverter::SizeToHumanReadableString(newIndexCount * sizeof(ImDrawIdx)).GetCharArray());
 
-        GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_INDEX_BUFFER | GPU_BUFFER_FLAG_MAPPABLE, newIndexCount * sizeof(ImDrawIdx));
+        GPU_BUFFER_DESC bufferDesc(GPU_BUFFER_FLAG_BIND_INDEX_BUFFER, newIndexCount * sizeof(ImDrawIdx));
+        if (g_pRenderer->GetFeatureLevel() >= RENDERER_FEATURE_LEVEL_ES3)
+            bufferDesc.Flags |= GPU_BUFFER_FLAG_MAPPABLE;
+        else
+            bufferDesc.Flags |= GPU_BUFFER_FLAG_WRITABLE;
+
         GPUBuffer *pNewIndexBuffer = g_pRenderer->CreateBuffer(&bufferDesc, nullptr);
         if (pNewIndexBuffer == nullptr)
         {

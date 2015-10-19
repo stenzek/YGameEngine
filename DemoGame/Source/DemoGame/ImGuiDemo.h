@@ -12,9 +12,7 @@ public:
     virtual bool OnWindowEvent(const union SDL_Event *event) override;
 
 protected:
+    virtual void OnRenderThreadBeginFrame(float deltaTime) override; 
     virtual void DrawUI(float deltaTime) override;
-
-private:
-    DemoGame *m_pDemoGame;
 };
 

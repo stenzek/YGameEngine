@@ -90,7 +90,11 @@ void LaunchpadGameState::OnRenderThreadPreFrame(float deltaTime)
 
 void LaunchpadGameState::OnRenderThreadBeginFrame(float deltaTime)
 {
-
+    // Clear targets. Have to do since no worldrenderer.
+    GPUContext *pGPUContext = m_pDemoGame->GetGPUContext();
+    pGPUContext->SetRenderTargets(0, nullptr, nullptr);
+    pGPUContext->SetFullViewport();
+    pGPUContext->ClearTargets(true, true, true);
 }
 
 void LaunchpadGameState::OnRenderThreadDraw(float deltaTime)

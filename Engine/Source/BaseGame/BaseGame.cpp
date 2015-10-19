@@ -862,10 +862,6 @@ void BaseGame::RenderThreadFrame(float deltaTime)
     {
         MICROPROFILE_SCOPEI("BaseGame", "Begin GPU Frame", MAKE_COLOR_R8G8B8_UNORM(200, 50, 50));
         m_pGPUContext->BeginFrame();
-        m_pGPUContext->SetRenderTargets(0, nullptr, nullptr);
-        m_pGPUContext->SetFullViewport();
-        m_pGPUContext->DiscardTargets(true, true, true);
-        m_pGPUContext->ClearTargets(true, true, true);
     }
 
     // begin frame helper

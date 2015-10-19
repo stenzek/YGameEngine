@@ -29,6 +29,17 @@ bool ImGuiDemo::OnWindowEvent(const union SDL_Event *event)
     return false;
 }
 
+void ImGuiDemo::OnRenderThreadBeginFrame(float deltaTime)
+{
+    BaseDemoGameState::OnRenderThreadBeginFrame(deltaTime);
+
+    // Clear targets. Have to do since no worldrenderer.
+    GPUContext *pGPUContext = m_pDemoGame->GetGPUContext();
+    pGPUContext->SetRenderTargets(0, nullptr, nullptr);
+    pGPUContext->SetFullViewport();
+    pGPUContext->ClearTargets(true, true, true);
+}
+
 void ImGuiDemo::DrawUI(float deltaTime)
 {
     BaseDemoGameState::DrawUI(deltaTime);

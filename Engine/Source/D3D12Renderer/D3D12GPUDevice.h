@@ -157,6 +157,8 @@ public:
 
     // creation interface
     D3D12GPUContext *InitializeAndCreateContext();
+    void SetImmediateContext(D3D12GPUContext *pContext);
+    void SetThreadCopyCommandQueue(ID3D12GraphicsCommandList *pCommandList);
 
     // legacy root signatures
     ID3D12RootSignature *GetLegacyGraphicsRootSignature() const { return m_pLegacyGraphicsRootSignature; }
@@ -188,7 +190,6 @@ public:
     void ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle);
 
     // copy queue accessor
-    void SetCopyCommandList(ID3D12GraphicsCommandList *pCommandList);
     void ScheduleCopyResourceForDeletion(ID3D12Pageable *pResource);
     void GetFreeCopyCommandQueue();
     void ReleaseCopyCommandQueue();
@@ -226,6 +227,9 @@ private:
 
     // copy command queues
     CopyCommandQueueArray m_copyCommandQueues;
+
+    // immediate context
+    D3D12GPUContext *m_pImmediateContext;
 
     // legacy root signature
     ID3D12RootSignature *m_pLegacyGraphicsRootSignature;

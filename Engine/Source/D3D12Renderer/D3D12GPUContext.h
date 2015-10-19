@@ -297,6 +297,9 @@ private:
     GPUQuery *m_pCurrentPredicate;
     //ID3D12Predicate *m_pCurrentPredicateD3D;
     uint32 m_predicateBypassCount;
+
+    // declare device as friend for copy command queuing
+    friend D3D12GPUDevice;
 };
 
 

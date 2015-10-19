@@ -23,6 +23,7 @@ D3D12GPUContext::D3D12GPUContext(D3D12GPUDevice *pDevice, ID3D12Device *pD3DDevi
     , m_commandCounter(0)
 {
     m_pDevice->AddRef();
+    m_pDevice->SetImmediateContext(this);
 
     // null memory
     Y_memzero(&m_currentViewport, sizeof(m_currentViewport));
@@ -144,6 +145,8 @@ D3D12GPUContext::~D3D12GPUContext()
 
     SAFE_RELEASE(m_pCurrentSwapChain);
 
+    m_pDevice->SetThreadCopyCommandQueue(nullptr);
+    m_pDevice->SetImmediateContext(nullptr);
     m_pDevice->Release();
 }
 
@@ -226,7 +229,7 @@ bool D3D12GPUContext::CreateInternalCommandList()
     m_pCommandList = m_pGraphicsCommandQueue->RequestAndOpenCommandList(m_pCurrentCommandAllocator);
 
     // issue copies on the graphics queue
-    m_pDevice->SetCopyCommandList(m_pCommandList);
+    m_pDevice->SetThreadCopyCommandQueue(m_pCommandList);
 
     // set initial state
     ResetCommandList(false, false);
@@ -285,7 +288,7 @@ void D3D12GPUContext::CloseAndExecuteCommandList(bool waitForCompletion, bool fo
         m_pCommandList = m_pGraphicsCommandQueue->RequestCommandList();
 
         // issue copies on the graphics queue
-        m_pDevice->SetCopyCommandList(m_pCommandList);
+        m_pDevice->SetThreadCopyCommandQueue(m_pCommandList);
 
         // since the command list was not executed, allocators can be re-used
         m_pCurrentScratchBuffer->Reset(true);

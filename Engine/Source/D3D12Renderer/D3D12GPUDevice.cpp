@@ -59,6 +59,7 @@ D3D12GPUDevice::D3D12GPUDevice(HMODULE hD3D12Module, IDXGIFactory4 *pDXGIFactory
     , m_outputDepthStencilFormat(outputDepthStencilFormat)
     , m_frameLatency(frameLatency)
     , m_pGraphicsCommandQueue(nullptr)
+    , m_pImmediateContext(nullptr)
     , m_pLegacyGraphicsRootSignature(nullptr)
     , m_pLegacyComputeRootSignature(nullptr)
     , m_fnD3D12SerializeRootSignature(nullptr)
@@ -72,6 +73,8 @@ D3D12GPUDevice::D3D12GPUDevice(HMODULE hD3D12Module, IDXGIFactory4 *pDXGIFactory
 
 D3D12GPUDevice::~D3D12GPUDevice()
 {
+    DebugAssert(m_pImmediateContext == nullptr);
+
     // remove any scheduled resources (descriptors will be dropped anyways)
     delete m_pGraphicsCommandQueue;
 
@@ -258,9 +261,18 @@ void D3D12GPUDevice::EndResourceBatchUpload()
     // Last one?
     if ((--s_currentThreadCopyBatchCount) == 0)
     {
-        // Release if it's a copy queue.
-        if (s_pCurrentThreadCopyCommandQueue != nullptr)
+        // Immediate context?
+        if (s_pCurrentThreadCopyCommandQueue == nullptr)
+        {
+            // Assume at least one operation.
+            DebugAssert(Renderer::IsOnRenderThread() && m_pImmediateContext != nullptr);
+            m_pImmediateContext->m_commandCounter++;
+        }
+        else
+        {
+            // Release if it's a copy queue.
             ReleaseCopyCommandQueue();
+        }       
     }
 }
 
@@ -299,13 +311,6 @@ void D3D12GPUDevice::ScheduleResourceForDeletion(ID3D12Pageable *pResource)
 void D3D12GPUDevice::ScheduleDescriptorForDeletion(const D3D12DescriptorHandle &handle)
 {
     m_pGraphicsCommandQueue->ScheduleDescriptorForDeletion(handle);
-}
-
-void D3D12GPUDevice::SetCopyCommandList(ID3D12GraphicsCommandList *pCommandList)
-{
-    // should only be done on render thread with the graphics context command list
-    DebugAssert(Renderer::IsOnRenderThread() && s_pCurrentThreadCopyCommandQueue == nullptr);
-    s_pCurrentThreadCopyCommandList = pCommandList;
 }
 
 void D3D12GPUDevice::ScheduleCopyResourceForDeletion(ID3D12Pageable *pResource)
@@ -527,7 +532,22 @@ D3D12GPUContext *D3D12GPUDevice::InitializeAndCreateContext()
         return false;
     }
 
+    DebugAssert(m_pImmediateContext == pContext);
     return pContext;
+}
+
+void D3D12GPUDevice::SetImmediateContext(D3D12GPUContext *pContext)
+{
+    // should only be done on render thread with the graphics context command list
+    DebugAssert(Renderer::IsOnRenderThread());
+    m_pImmediateContext = pContext;
+}
+
+void D3D12GPUDevice::SetThreadCopyCommandQueue(ID3D12GraphicsCommandList *pCommandList)
+{
+    // should only be done on render thread with the graphics context command list
+    DebugAssert(Renderer::IsOnRenderThread() && s_pCurrentThreadCopyCommandQueue == nullptr);
+    s_pCurrentThreadCopyCommandList = pCommandList;
 }
 
 bool D3D12GPUDevice::CreateLegacyRootSignatures()

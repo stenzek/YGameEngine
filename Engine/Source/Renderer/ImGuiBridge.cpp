@@ -106,8 +106,8 @@ static void RenderDrawListsCallback(ImDrawData *pDrawData)
         uint32 indexBufferOffset = 0;
         for (int i = 0; i < pDrawData->CmdListsCount; i++)
         {
-            pGPUContext->WriteBuffer(s_pVertexBuffer, pDrawData->CmdLists[i]->VtxBuffer.Data, 0, pDrawData->CmdLists[i]->VtxBuffer.size() * sizeof(ImDrawVert));
-            pGPUContext->WriteBuffer(s_pIndexBuffer, pDrawData->CmdLists[i]->IdxBuffer.Data, 0, pDrawData->CmdLists[i]->IdxBuffer.size() * sizeof(ImDrawIdx));
+            pGPUContext->WriteBuffer(s_pVertexBuffer, pDrawData->CmdLists[i]->VtxBuffer.Data, vertexBufferOffset, pDrawData->CmdLists[i]->VtxBuffer.size() * sizeof(ImDrawVert));
+            pGPUContext->WriteBuffer(s_pIndexBuffer, pDrawData->CmdLists[i]->IdxBuffer.Data, indexBufferOffset, pDrawData->CmdLists[i]->IdxBuffer.size() * sizeof(ImDrawIdx));
             vertexBufferOffset += pDrawData->CmdLists[i]->VtxBuffer.size() * sizeof(ImDrawVert);
             indexBufferOffset += pDrawData->CmdLists[i]->IdxBuffer.size() * sizeof(ImDrawIdx);
         }

@@ -275,7 +275,6 @@ bool D3D12GPUCommandList::Close()
         m_pCurrentDepthBufferView->Release();
         m_pCurrentDepthBufferView = nullptr;
     }
-    m_pCommandList->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
     m_nCurrentRenderTargets = 0;
 
     // release everything we own

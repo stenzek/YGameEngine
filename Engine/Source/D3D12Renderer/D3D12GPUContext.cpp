@@ -306,8 +306,7 @@ void D3D12GPUContext::ResetCommandList(bool restoreState, bool refreshAllocators
     if (refreshAllocators)
     {
         // get new allocators
-        uint64 fenceValue = m_pGraphicsCommandQueue->CreateSynchronizationPoint();
-        GetNewAllocators(fenceValue);
+        GetNewAllocators(m_pGraphicsCommandQueue->GetNextFenceValue());
 
         // take this opportunity to clean up stale resources (even if we're not waiting, it's a good place, since the gpu will be busy for a while)
         m_pGraphicsCommandQueue->ReleaseStaleResources();
@@ -1045,6 +1044,9 @@ void D3D12GPUContext::PresentOutputBuffer(GPU_PRESENT_BEHAVIOUR presentBehaviour
 
     // restore state (since new command list)
     ResetCommandList(true, true);
+
+    // create a new synchronization point for the next frame.
+    m_pGraphicsCommandQueue->CreateSynchronizationPoint();
 }
 
 uint32 D3D12GPUContext::GetRenderTargets(uint32 nRenderTargets, GPURenderTargetView **ppRenderTargetViews, GPUDepthStencilBufferView **ppDepthBufferView)

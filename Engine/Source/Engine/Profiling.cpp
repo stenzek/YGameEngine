@@ -252,7 +252,7 @@ void Profiling::EndFrame()
     if (g_MicroProfile.nRunning || g_MicroProfile.nToggleRunning)
     {
         QUEUE_BLOCKING_RENDERER_LAMBA_COMMAND([]() {
-            MicroProfileFlip();
+            MicroProfileFlip(nullptr);
         });
     }
 }
@@ -284,7 +284,7 @@ void MicroProfileDrawLine2D(uint32_t nVertices, float* pVertices, uint32_t nColo
     }
 }
 
-uint32_t MicroProfileGpuInsertTimeStamp()
+uint32_t MicroProfileGpuInsertTimeStamp(void *pContext)
 {
     if (!s_GPUTimingAvailable)
         return (uint32_t)-1;
@@ -329,6 +329,11 @@ uint64_t MicroProfileGpuGetTimeStamp(uint32_t nKey)
 uint64_t MicroProfileTicksPerSecondGpu()
 {
     return s_lastGPUFrequency;
+}
+
+int MicroProfileGetGpuTickReference(int64_t* pOutCPU, int64_t* pOutGpu)
+{
+    return 0;
 }
 
 // const char* MicroProfileGetThreadName()

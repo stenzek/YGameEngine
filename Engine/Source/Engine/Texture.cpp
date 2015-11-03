@@ -368,7 +368,7 @@ bool Texture2D::Load(const char *name, ByteStream *pStream)
     }
 
     // create on gpu
-    if (!CreateDeviceResources())
+    if (g_pRenderer != nullptr && !CreateDeviceResources())
     {
         Log_ErrorPrintf("GPU upload failed.");
         return false;
@@ -614,7 +614,7 @@ bool Texture2DArray::Load(const char *name, ByteStream *pStream)
     }
 
     // create on gpu
-    if (!CreateDeviceResources())
+    if (g_pRenderer != nullptr && !CreateDeviceResources())
     {
         Log_ErrorPrintf("GPU upload failed.");
         return false;

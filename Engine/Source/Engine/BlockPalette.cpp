@@ -3,6 +3,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/ResourceManager.h"
 #include "Engine/DataFormats.h"
+#include "Renderer/Renderer.h"
 #include "Core/ChunkFileReader.h"
 Log_SetChannel(BlockPalette);
 
@@ -458,7 +459,7 @@ bool BlockPalette::Load(const char *FileName, ByteStream *pStream)
 #undef ABORTREASON
 
     // create on gpu
-    if (!CreateGPUResources())
+    if (g_pRenderer != nullptr && !CreateGPUResources())
     {
         Log_ErrorPrintf("GPU upload failed.");
         return false;

@@ -254,7 +254,7 @@ bool StaticMesh::LOD::LoadFromStream(ByteStream *pStream, uint32 vertexFactoryFl
     }
 
     // create on gpu
-    if (!CreateGPUResources())
+    if (g_pRenderer != nullptr && !CreateGPUResources())
     {
         Log_ErrorPrintf("GPU upload failed.");
         return false;

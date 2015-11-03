@@ -15,8 +15,8 @@ public:
     struct ShadowMapData
     {
         bool IsActive;
-        GPUTexture2DArray *pShadowMapTexture;
-        GPUDepthStencilBufferView *pShadowMapDSV[MaxCascadeCount];
+        GPUTexture2D *pShadowMapTexture;
+        GPUDepthStencilBufferView *pShadowMapDSV;
 
         uint32 CascadeCount;
         float4x4 ViewProjectionMatrices[MaxCascadeCount];

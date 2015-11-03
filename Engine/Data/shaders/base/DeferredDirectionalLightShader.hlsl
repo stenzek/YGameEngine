@@ -18,7 +18,7 @@ cbuffer DeferredDirectionalLightParameters : register(b3) { struct
     float3 LightVector;
     float3 LightColor;
     float3 AmbientColor;
-    float4 ShadowMapSize;                       // xy = width, height, zw = 1.0 / width, 1.0 / height
+    float4 ShadowMapSize;                       // xy = width, 1.0 / cascade count, zw = 1.0 / width, 1.0 / height
     float4x4 CascadeViewProjectionMatrix[CASCADE_COUNT];
     float CascadeSplitDepths[CASCADE_COUNT];
 } cbDeferredDirectionalLightParameters; }
@@ -28,7 +28,7 @@ cbuffer DeferredDirectionalLightParameters : register(b3) { struct
 
 #include "ShadowMapFilters.hlsl"
 
-Texture2DArray ShadowMapTexture;// : register(t8);
+Texture2D ShadowMapTexture;// : register(t8);
 #if USE_HARDWARE_PCF
 	SamplerComparisonState ShadowMapTexture_SamplerState;// : register(s7);
 #else
@@ -57,6 +57,7 @@ float FindShadow(float3 worldPosition)
     
     // to shadow space
     float2 shadowMapTextureCoordinates = lightSpacePosition.xy * 0.5f + float2(0.5, 0.5);
+    shadowMapTextureCoordinates.x = cascadeIndex * cbDeferredDirectionalLightParameters.ShadowMapSize.y + shadowMapTextureCoordinates.x * cbDeferredDirectionalLightParameters.ShadowMapSize.y;
     shadowMapTextureCoordinates.y = 1.0 - shadowMapTextureCoordinates.y;
     
     // get comparison value
@@ -92,12 +93,12 @@ float FindShadow(float3 worldPosition)
         [loop]
         for (int i = 0; i < NOFFSETS; i++)
         {
-            float3 sampleCoordinates = float3(offsets[i] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex);
+            float2 sampleCoordinates = offsets[i] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates;
             shadowContribution += ShadowMapTexture.SampleCmpLevelZero(ShadowMapTexture_SamplerState, sampleCoordinates, shadowComparisonValue);
         }
 		shadowContribution /= (float)NOFFSETS;
 	#else
-		shadowContribution = ShadowMapTexture.SampleCmpLevelZero(ShadowMapTexture_SamplerState, float3(shadowMapTextureCoordinates, cascadeIndex), shadowComparisonValue);
+		shadowContribution = ShadowMapTexture.SampleCmpLevelZero(ShadowMapTexture_SamplerState, shadowMapTextureCoordinates, shadowComparisonValue);
     #endif
 #else
     // >1x1 path loops, 1x1 path doesn't
@@ -106,7 +107,7 @@ float FindShadow(float3 worldPosition)
         [loop]
         for (int i = 0; i < NOFFSETS; i++)
         {
-            float3 sampleCoordinates = float3(offsets[i] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex);
+            float2 sampleCoordinates = offsets[i] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates;
             shadowContribution += (shadowComparisonValue < ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, float3(offsets[0] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex), 0.0f).r);
         }
         shadowContribution /= (float)NOFFSETS;
@@ -114,22 +115,22 @@ float FindShadow(float3 worldPosition)
     #elif SHADOW_FILTER_3X3
         // fetch and weight 4 samples in parallel
         float4 sampleValues;
-        sampleValues.x = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, float3(offsets[0] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex), 0.0f).r;
-        sampleValues.y = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, float3(offsets[1] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex), 0.0f).r;
-        sampleValues.z = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, float3(offsets[2] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex), 0.0f).r;
-        sampleValues.w = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, float3(offsets[3] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex), 0.0f).r;
+        sampleValues.x = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, offsets[0] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, 0.0f).r;
+        sampleValues.y = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, offsets[1] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, 0.0f).r;
+        sampleValues.z = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, offsets[2] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, 0.0f).r;
+        sampleValues.w = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, offsets[3] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, 0.0f).r;
         shadowContribution = dot((sampleValues >= shadowComparisonValue), float4(1.0f, 1.0f, 1.0f, 1.0f));
         
-        sampleValues.x = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, float3(offsets[4] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex), 0.0f).r;
-        sampleValues.y = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, float3(offsets[5] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex), 0.0f).r;
-        sampleValues.z = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, float3(offsets[6] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex), 0.0f).r;
-        sampleValues.w = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, float3(offsets[7] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex), 0.0f).r;
+        sampleValues.x = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, offsets[4] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, 0.0f).r;
+        sampleValues.y = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, offsets[5] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, 0.0f).r;
+        sampleValues.z = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, offsets[6] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, 0.0f).r;
+        sampleValues.w = ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, offsets[7] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, 0.0f).r;
         shadowContribution += dot((sampleValues >= shadowComparisonValue), float4(1.0f, 1.0f, 1.0f, 1.0f));
         shadowContribution += (ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, float3(offsets[8] * cbDeferredDirectionalLightParameters.ShadowMapSize.zw + shadowMapTextureCoordinates, cascadeIndex), 0.0f).r >= shadowComparisonValue);
         shadowContribution /= (float)NOFFSETS;
         
     #else       // SHADOW_FILTER_1X1
-        shadowContribution = (shadowComparisonValue < (ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, float3(shadowMapTextureCoordinates, cascadeIndex), 0.0f).r));
+        shadowContribution = (shadowComparisonValue < (ShadowMapTexture.SampleLevel(ShadowMapTexture_SamplerState, shadowMapTextureCoordinates, 0.0f).r));
     #endif
 #endif      // USE_HARDWARE_PCF
           

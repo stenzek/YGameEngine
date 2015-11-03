@@ -38,7 +38,7 @@ bool CSMShadowMapRenderer::AllocateShadowMap(ShadowMapData *pShadowMapData)
     Y_memzero(pShadowMapData->CascadeFrustumEyeSpaceDepths, sizeof(pShadowMapData->CascadeFrustumEyeSpaceDepths));
 
     // create descriptor
-    GPU_TEXTURE2DARRAY_DESC textureDesc(m_shadowMapResolution, m_shadowMapResolution, m_shadowMapFormat, GPU_TEXTURE_FLAG_SHADER_BINDABLE | GPU_TEXTURE_FLAG_BIND_DEPTH_STENCIL_BUFFER, 1, m_cascadeCount);
+    GPU_TEXTURE2D_DESC textureDesc(m_shadowMapResolution * m_cascadeCount, m_shadowMapResolution, m_shadowMapFormat, GPU_TEXTURE_FLAG_SHADER_BINDABLE | GPU_TEXTURE_FLAG_BIND_DEPTH_STENCIL_BUFFER, 1);
     GPU_SAMPLER_STATE_DESC samplerStateDesc(TEXTURE_FILTER_MIN_MAG_MIP_POINT, TEXTURE_ADDRESS_MODE_BORDER, TEXTURE_ADDRESS_MODE_BORDER, TEXTURE_ADDRESS_MODE_CLAMP, float4::One, 0, 0, 0, 0, GPU_COMPARISON_FUNC_NEVER);
 
     // hardware pcf?
@@ -49,28 +49,18 @@ bool CSMShadowMapRenderer::AllocateShadowMap(ShadowMapData *pShadowMapData)
     }
 
     // create it
-    Log_PerfPrintf("CSMShadowMapRenderer::AllocateShadowMap: Allocating new %u x %u x %u %s texture", textureDesc.Width, textureDesc.Height, textureDesc.ArraySize, NameTable_GetNameString(NameTables::PixelFormat, m_shadowMapFormat));
-    pShadowMapData->pShadowMapTexture = g_pRenderer->CreateTexture2DArray(&textureDesc, &samplerStateDesc);
+    Log_PerfPrintf("CSMShadowMapRenderer::AllocateShadowMap: Allocating new %u x %u x %s texture", textureDesc.Width, textureDesc.Height, NameTable_GetNameString(NameTables::PixelFormat, m_shadowMapFormat));
+    pShadowMapData->pShadowMapTexture = g_pRenderer->CreateTexture2D(&textureDesc, &samplerStateDesc);
     if (pShadowMapData->pShadowMapTexture == nullptr)
         return false;
 
     // create views
-    Y_memzero(pShadowMapData->pShadowMapDSV, sizeof(pShadowMapData->pShadowMapDSV));
-    for (uint32 arrayIndex = 0; arrayIndex < m_cascadeCount; arrayIndex++)
+    GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC dbvDesc(pShadowMapData->pShadowMapTexture, 0);
+    if ((pShadowMapData->pShadowMapDSV = g_pRenderer->CreateDepthStencilBufferView(pShadowMapData->pShadowMapTexture, &dbvDesc)) == nullptr)
     {
-        GPU_DEPTH_STENCIL_BUFFER_VIEW_DESC dbvDesc(pShadowMapData->pShadowMapTexture, 0, arrayIndex);
-        pShadowMapData->pShadowMapDSV[arrayIndex] = g_pRenderer->CreateDepthStencilBufferView(pShadowMapData->pShadowMapTexture, &dbvDesc);
-        if (pShadowMapData->pShadowMapDSV[arrayIndex] == nullptr)
-        {
-            for (uint32 i = 0; i < arrayIndex; i++)
-            {
-                pShadowMapData->pShadowMapDSV[i]->Release();
-                pShadowMapData->pShadowMapDSV[i] = nullptr;
-            }
-            pShadowMapData->pShadowMapTexture->Release();
-            pShadowMapData->pShadowMapTexture = nullptr;
-            return false;
-        }
+        pShadowMapData->pShadowMapTexture->Release();
+        pShadowMapData->pShadowMapTexture = nullptr;
+        return false;
     }
 
     // ok
@@ -79,9 +69,7 @@ bool CSMShadowMapRenderer::AllocateShadowMap(ShadowMapData *pShadowMapData)
 
 void CSMShadowMapRenderer::FreeShadowMap(ShadowMapData *pShadowMapData)
 {
-    for (uint32 i = 0; i < pShadowMapData->CascadeCount; i++)
-        pShadowMapData->pShadowMapDSV[i]->Release();
-
+    pShadowMapData->pShadowMapDSV->Release();
     pShadowMapData->pShadowMapTexture->Release();
 }
 
@@ -251,10 +239,10 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUCommandList *pCommandList, ShadowMap
     float shadowDrawDistance = Min(shadowDistance, pViewCamera->GetFarPlaneDistance() - pViewCamera->GetNearPlaneDistance());
 
     // set common states
-    RENDERER_VIEWPORT shadowMapViewport(0, 0, m_shadowMapResolution, m_shadowMapResolution, 0.0f, 1.0f);
     pCommandList->SetRasterizerState(g_pRenderer->GetFixedResources()->GetRasterizerState(RENDERER_FILL_SOLID, RENDERER_CULL_BACK));
     pCommandList->SetDepthStencilState(g_pRenderer->GetFixedResources()->GetDepthStencilState(true, true, GPU_COMPARISON_FUNC_LESS), 0);
-    pCommandList->SetViewport(&shadowMapViewport);
+    pCommandList->SetRenderTargets(0, nullptr, pShadowMapData->pShadowMapDSV);
+    pCommandList->ClearTargets(false, true, false, float4::Zero, 1.0f);
 
     // calculate split depths
     CalculateSplitDepths(pViewCamera, shadowDrawDistance);
@@ -265,9 +253,9 @@ void CSMShadowMapRenderer::DrawMultiPass(GPUCommandList *pCommandList, ShadowMap
     // draw each cascade individually
     for (uint32 i = 0; i < m_cascadeCount; i++)
     {
-        // invoke the clear first of this layer
-        pCommandList->SetRenderTargets(0, nullptr, pShadowMapData->pShadowMapDSV[i]);
-        pCommandList->ClearTargets(false, true, false, float4::Zero, 1.0f);
+        // calculate viewport for this cascade
+        RENDERER_VIEWPORT shadowMapViewport(i * m_shadowMapResolution, 0, m_shadowMapResolution, m_shadowMapResolution, 0.0f, 1.0f);
+        pCommandList->SetViewport(&shadowMapViewport);
 
         // get camera
         Camera lightCamera;

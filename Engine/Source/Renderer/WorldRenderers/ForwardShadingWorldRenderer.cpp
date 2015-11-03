@@ -258,6 +258,9 @@ bool ForwardShadingWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *pR
     // invoke draw
     m_pDirectionalShadowMapRenderer->DrawShadowMap(m_pGPUContext, pShadowMapData, &pViewParameters->ViewCamera, pViewParameters->MaximumShadowViewDistance, pRenderWorld, pLight);
 
+    // add debug view
+    AddDebugBufferView(pShadowMapData->pShadowMapTexture, "DirectionalShadowMap");
+
     // ok
     return true;
 }

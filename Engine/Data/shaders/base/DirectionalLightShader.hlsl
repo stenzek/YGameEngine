@@ -36,7 +36,7 @@ cbuffer DirectionalLightParameters : register(b3) { struct
 
 #include "ShadowMapFilters.hlsl"
 
-Texture2DArray ShadowMapTexture;// : register(t8);
+Texture2D ShadowMapTexture;// : register(t8);
 #if USE_HARDWARE_PCF
 	SamplerComparisonState ShadowMapTexture_SamplerState;// : register(s7);
 #else
@@ -70,6 +70,7 @@ float FindShadow(float3 worldPosition)
     
     // to shadow space
     float2 shadowMapTextureCoordinates = 0.5 * lightSpacePosition.xy + float2(0.5, 0.5);
+    shadowMapTextureCoordinates.x += cascadeIndex * cbDirectionalLightParameters.ShadowMapSize.x * cbDirectionalLightParameters.ShadowMapSize.z;
 #ifndef __OPENGL__
     shadowMapTextureCoordinates.y = 1.0 - shadowMapTextureCoordinates.y;
 #endif

@@ -51,7 +51,7 @@ BEGIN_SHADER_COMPONENT_PARAMETERS(DeferredDirectionalLightShader)
     DEFINE_SHADER_COMPONENT_PARAMETER("GBuffer0", SHADER_PARAMETER_TYPE_TEXTURE2D)
     DEFINE_SHADER_COMPONENT_PARAMETER("GBuffer1", SHADER_PARAMETER_TYPE_TEXTURE2D)
     DEFINE_SHADER_COMPONENT_PARAMETER("GBuffer2", SHADER_PARAMETER_TYPE_TEXTURE2D)
-    DEFINE_SHADER_COMPONENT_PARAMETER("ShadowMapTexture", SHADER_PARAMETER_TYPE_TEXTURE2DARRAY)
+    DEFINE_SHADER_COMPONENT_PARAMETER("ShadowMapTexture", SHADER_PARAMETER_TYPE_TEXTURE2D)
 END_SHADER_COMPONENT_PARAMETERS()
 
 BEGIN_SHADER_CONSTANT_BUFFER(cbDeferredDirectionalLightParameters, "DeferredDirectionalLightParameters", "cbDeferredDirectionalLightParameters", RENDERER_PLATFORM_COUNT, RENDERER_FEATURE_LEVEL_SM4, SHADER_CONSTANT_BUFFER_UPDATE_FREQUENCY_PER_PROGRAM)
@@ -109,7 +109,7 @@ void DeferredDirectionalLightShader::SetShadowParameters(GPUCommandList *pComman
 {
     uint32 shadowMapWidth = pShadowMapData->pShadowMapTexture->GetDesc()->Width;
     uint32 shadowMapHeight = pShadowMapData->pShadowMapTexture->GetDesc()->Height;
-    float4 shadowMapSize((float)shadowMapWidth, (float)shadowMapHeight, 1.0f / (float)shadowMapWidth, 1.0f / (float)shadowMapHeight);
+    float4 shadowMapSize((float)shadowMapWidth, 1.0f / (float)pShadowMapData->CascadeCount, 1.0f / (float)shadowMapWidth, 1.0f / (float)shadowMapHeight);
 
     cbDeferredDirectionalLightParameters.SetFieldFloat4(pCommandList, 3, shadowMapSize, false);
     cbDeferredDirectionalLightParameters.SetFieldFloat4x4Array(pCommandList, 4, 0, pShadowMapData->CascadeCount, pShadowMapData->ViewProjectionMatrices, false);

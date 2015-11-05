@@ -68,13 +68,23 @@ DeferredShadingWorldRenderer::~DeferredShadingWorldRenderer()
 
     // delete cached shadow maps
     for (uint32 i = 0; i < m_directionalShadowMaps.GetSize(); i++)
-        m_directionalShadowMaps[i].pShadowMapTexture->Release();
+    {
+        m_pDirectionalShadowMapRenderer->FreeShadowMap(m_directionalShadowMaps[i]);
+        delete m_directionalShadowMaps[i];
+    }
     m_directionalShadowMaps.Clear();
+
     for (uint32 i = 0; i < m_pointShadowMaps.GetSize(); i++)
-        m_pointShadowMaps[i].pShadowMapTexture->Release();
+    {
+        m_pPointShadowMapRenderer->FreeShadowMap(m_pointShadowMaps[i]);
+        delete m_pointShadowMaps[i];
+    }
     m_pointShadowMaps.Clear();
+
     for (uint32 i = 0; i < m_spotShadowMaps.GetSize(); i++)
-        m_spotShadowMaps[i].pShadowMapTexture->Release();
+    {
+        m_spotShadowMaps[i]->pShadowMapTexture->Release();
+    }
     m_spotShadowMaps.Clear();
 
     // delete shadow map renderers
@@ -245,17 +255,17 @@ void DeferredShadingWorldRenderer::GetRenderStats(RenderStats *pRenderStats) con
     pRenderStats->ShadowMapCount = 0;
     for (uint32 i = 0; i < m_directionalShadowMaps.GetSize(); i++)
     {
-        if (m_directionalShadowMaps[i].IsActive)
+        if (m_directionalShadowMaps[i]->IsActive)
             pRenderStats->ShadowMapCount++;
     }
     for (uint32 i = 0; i < m_pointShadowMaps.GetSize(); i++)
     {
-        if (m_pointShadowMaps[i].IsActive)
+        if (m_pointShadowMaps[i]->IsActive)
             pRenderStats->ShadowMapCount++;
     }
     for (uint32 i = 0; i < m_spotShadowMaps.GetSize(); i++)
     {
-        if (m_spotShadowMaps[i].IsActive)
+        if (m_spotShadowMaps[i]->IsActive)
             pRenderStats->ShadowMapCount++;
     }
 }
@@ -277,11 +287,11 @@ void DeferredShadingWorldRenderer::DrawShadowMaps(const RenderWorld *pRenderWorl
 
     // clear all shadow map states
     for (uint32 i = 0; i < m_directionalShadowMaps.GetSize(); i++)
-        m_directionalShadowMaps[i].IsActive = false;
+        m_directionalShadowMaps[i]->IsActive = false;
     for (uint32 i = 0; i < m_pointShadowMaps.GetSize(); i++)
-        m_pointShadowMaps[i].IsActive = false;
+        m_pointShadowMaps[i]->IsActive = false;
     for (uint32 i = 0; i < m_spotShadowMaps.GetSize(); i++)
-        m_spotShadowMaps[i].IsActive = false;
+        m_spotShadowMaps[i]->IsActive = false;
 
     // directional lights
     {
@@ -318,7 +328,7 @@ bool DeferredShadingWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *p
     uint32 shadowMapIndex = 0;
     for (; shadowMapIndex < m_directionalShadowMaps.GetSize(); shadowMapIndex++)
     {
-        if (!m_directionalShadowMaps[shadowMapIndex].IsActive)
+        if (!m_directionalShadowMaps[shadowMapIndex]->IsActive)
             break;
     }
 
@@ -326,15 +336,18 @@ bool DeferredShadingWorldRenderer::DrawDirectionalShadowMap(const RenderWorld *p
     if (shadowMapIndex == m_directionalShadowMaps.GetSize())
     {
         // allocate it
-        DirectionalShadowMapRenderer::ShadowMapData shadowMapData;
-        if (!m_pDirectionalShadowMapRenderer->AllocateShadowMap(&shadowMapData))
+        DirectionalShadowMapRenderer::ShadowMapData *pShadowMapData = new DirectionalShadowMapRenderer::ShadowMapData();
+        if (!m_pDirectionalShadowMapRenderer->AllocateShadowMap(pShadowMapData))
+        {
+            delete pShadowMapData;
             return false;
+        }
 
-        m_directionalShadowMaps.Add(shadowMapData);
+        m_directionalShadowMaps.Add(pShadowMapData);
     }
 
     // get shadow map data pointer
-    DirectionalShadowMapRenderer::ShadowMapData *pShadowMapData = &m_directionalShadowMaps[shadowMapIndex];
+    DirectionalShadowMapRenderer::ShadowMapData *pShadowMapData = m_directionalShadowMaps[shadowMapIndex];
     pShadowMapData->IsActive = true;
 
     // bind the shadow map to the light
@@ -361,7 +374,7 @@ bool DeferredShadingWorldRenderer::DrawPointShadowMap(const RenderWorld *pRender
     uint32 shadowMapIndex = 0;
     for (; shadowMapIndex < m_pointShadowMaps.GetSize(); shadowMapIndex++)
     {
-        if (!m_pointShadowMaps[shadowMapIndex].IsActive)
+        if (!m_pointShadowMaps[shadowMapIndex]->IsActive)
             break;
     }
 
@@ -369,15 +382,15 @@ bool DeferredShadingWorldRenderer::DrawPointShadowMap(const RenderWorld *pRender
     if (shadowMapIndex == m_pointShadowMaps.GetSize())
     {
         // allocate it
-        PointShadowMapRenderer::ShadowMapData shadowMapData;
-        if (!m_pPointShadowMapRenderer->AllocateShadowMap(&shadowMapData))
+        PointShadowMapRenderer::ShadowMapData *pShadowMapData = new PointShadowMapRenderer::ShadowMapData();
+        if (!m_pPointShadowMapRenderer->AllocateShadowMap(pShadowMapData))
             return false;
 
-        m_pointShadowMaps.Add(shadowMapData);
+        m_pointShadowMaps.Add(pShadowMapData);
     }
 
     // get shadow map data pointer
-    PointShadowMapRenderer::ShadowMapData *pShadowMapData = &m_pointShadowMaps[shadowMapIndex];
+    PointShadowMapRenderer::ShadowMapData *pShadowMapData = m_pointShadowMaps[shadowMapIndex];
     pShadowMapData->IsActive = true;
 
     // bind the shadow map to the light
@@ -535,7 +548,7 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(GPUCommandL
         pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
 
         // using shadow map? note: we need the shadow map data to set the constant buffer up, even if this object does not use it
-        const DirectionalShadowMapRenderer::ShadowMapData *pShadowMapData = (pLight->ShadowMapIndex >= 0) ? &m_directionalShadowMaps[pLight->ShadowMapIndex] : nullptr;
+        const DirectionalShadowMapRenderer::ShadowMapData *pShadowMapData = (pLight->ShadowMapIndex >= 0) ? m_directionalShadowMaps[pLight->ShadowMapIndex] : nullptr;
 
         // set constant buffer parameters
         if (m_lastDirectionalLightIndex != lightIndex)
@@ -610,7 +623,7 @@ uint32 DeferredShadingWorldRenderer::DrawForwardLightPassesForObject(GPUCommandL
         pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
 
         // using shadow map? note: we need the shadow map data to set the constant buffer up, even if this object does not use it
-        const PointShadowMapRenderer::ShadowMapData *pShadowMapData = (pLight->ShadowMapIndex >= 0) ? &m_pointShadowMaps[pLight->ShadowMapIndex] : nullptr;
+        const PointShadowMapRenderer::ShadowMapData *pShadowMapData = (pLight->ShadowMapIndex >= 0) ? m_pointShadowMaps[pLight->ShadowMapIndex] : nullptr;
 
         // set constant buffer parameters
         if (m_lastPointLightIndex != lightIndex)
@@ -995,7 +1008,7 @@ void DeferredShadingWorldRenderer::DrawLights_DirectionalLights(GPUCommandList *
         DeferredDirectionalLightShader::SetBufferParameters(pCommandList, pShaderProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer0->pTexture, m_pGBuffer1->pTexture, m_pGBuffer2->pTexture);
         DeferredDirectionalLightShader::SetLightParameters(pCommandList, pShaderProgram, pViewParameters, &currentLight);
         if (currentLight.ShadowMapIndex >= 0)
-            DeferredDirectionalLightShader::SetShadowParameters(pCommandList, pShaderProgram, &m_directionalShadowMaps[currentLight.ShadowMapIndex]);
+            DeferredDirectionalLightShader::SetShadowParameters(pCommandList, pShaderProgram, m_directionalShadowMaps[currentLight.ShadowMapIndex]);
 
         DeferredDirectionalLightShader::CommitParameters(pCommandList, pShaderProgram);
 
@@ -1077,7 +1090,7 @@ void DeferredShadingWorldRenderer::DrawLights_PointLights_ByLightVolumes(GPUComm
         pCommandList->SetShaderProgram(pShaderProgram->GetGPUProgram());
         DeferredPointLightShader::SetBufferParameters(pCommandList, pShaderProgram, m_pSceneDepthBuffer->pTexture, m_pGBuffer0->pTexture, m_pGBuffer1->pTexture, m_pGBuffer2->pTexture);
         DeferredPointLightShader::SetLightParameters(pCommandList, pShaderProgram, pViewParameters, &currentLight);
-        DeferredPointLightShader::SetShadowParameters(pCommandList, pShaderProgram, &m_pointShadowMaps[currentLight.ShadowMapIndex]);
+        DeferredPointLightShader::SetShadowParameters(pCommandList, pShaderProgram, m_pointShadowMaps[currentLight.ShadowMapIndex]);
 
         // draw the light volume
         pCommandList->Draw(0, m_pointLightVolumeVertexCount);

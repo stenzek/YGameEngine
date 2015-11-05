@@ -91,9 +91,9 @@ private:
     SpotShadowMapRenderer *m_pSpotShadowMapRenderer;
 
     // shadow map cache
-    MemArray<DirectionalShadowMapRenderer::ShadowMapData> m_directionalShadowMaps;
-    MemArray<PointShadowMapRenderer::ShadowMapData> m_pointShadowMaps;
-    MemArray<SpotShadowMapRenderer::ShadowMapData> m_spotShadowMaps;
+    MemArray<DirectionalShadowMapRenderer::ShadowMapData *> m_directionalShadowMaps;
+    MemArray<PointShadowMapRenderer::ShadowMapData *> m_pointShadowMaps;
+    MemArray<SpotShadowMapRenderer::ShadowMapData *> m_spotShadowMaps;
 
     // last rendered light indices, used to avoid buffer updates when not needed
     uint32 m_lastDirectionalLightIndex;

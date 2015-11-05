@@ -2409,6 +2409,18 @@ void GPUContextConstants::SetWorldTime(float worldTime, bool commit /*= true*/)
         CommitChanges();
 }
 
+void GPUContextConstants::Reset()
+{
+    m_localToWorldMatrix.SetZero();
+    m_materialTintColor.SetZero();
+    m_cameraViewMatrix.SetZero();
+    m_cameraProjectionMatrix.SetZero();
+    m_cameraEyePosition.SetZero();
+    m_viewportOffset.SetZero();
+    m_viewportSize.SetZero();
+    m_worldTime = 0.0f;
+}
+
 void GPUContextConstants::CommitChanges()
 {
     // commit object buffer

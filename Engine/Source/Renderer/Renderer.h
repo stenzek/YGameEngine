@@ -462,6 +462,9 @@ public:
     const float GetWorldTime() const { return m_worldTime; }
     void SetWorldTime(float worldTime, bool commit = true);
 
+    // Reset
+    void Reset();
+
     // Commit
     void CommitChanges();
 

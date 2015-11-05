@@ -74,9 +74,6 @@ D3D12GPUCommandList::~D3D12GPUCommandList()
     if (m_pGraphicsCommandQueue != nullptr)
         ReleaseAllocators(m_pGraphicsCommandQueue->GetNextFenceValue());
 
-    // release command list - only resource we own
-    SAFE_RELEASE(m_pCommandList);
-
     for (uint32 i = 0; i < m_constantBuffers.GetSize(); i++)
     {
         ConstantBuffer *constantBuffer = &m_constantBuffers[i];
@@ -154,16 +151,8 @@ bool D3D12GPUCommandList::Open(D3D12CommandQueue *pCommandQueue, D3D12GPUOutputB
     Assert(!m_open);
 
     // release anything if we didn't execute
-    if (m_pCurrentCommandAllocator != nullptr)
-        pCommandQueue->ReleaseCommandAllocator(m_pCurrentCommandAllocator);
-    if (m_pCommandList)
-        pCommandQueue->ReleaseCommandList(m_pCommandList);
-    if (m_pCurrentScratchBuffer != nullptr)
-        pCommandQueue->ReleaseLinearBufferHeap(m_pCurrentScratchBuffer);
-    if (m_pCurrentScratchViewHeap != nullptr)
-        pCommandQueue->ReleaseLinearViewHeap(m_pCurrentScratchViewHeap);
-    if (m_pCurrentScratchSamplerHeap != nullptr)
-        pCommandQueue->ReleaseLinearSamplerHeap(m_pCurrentScratchSamplerHeap);
+    if (m_pGraphicsCommandQueue != nullptr)
+        ReleaseAllocators(m_pGraphicsCommandQueue->GetLastCompletedFenceValue());
 
     // set command queue
     m_pGraphicsCommandQueue = pCommandQueue;
@@ -230,19 +219,19 @@ bool D3D12GPUCommandList::Open(D3D12CommandQueue *pCommandQueue, D3D12GPUOutputB
         stageState.UAVsDirty = true;
     }
 
+    // flag all constant buffers as dirty, since their state is unknown at execution time.
+    m_pConstants->Reset();
+    for (ConstantBuffer &constantBuffer : m_constantBuffers)
+    {
+        constantBuffer.DirtyLowerBounds = 0;
+        constantBuffer.DirtyUpperBounds = constantBuffer.Size - 1;
+        if (constantBuffer.pLocalMemory != nullptr)
+            Y_memzero(constantBuffer.pLocalMemory, constantBuffer.Size);
+    }
+
     // restore state
     SetFullViewport();
     RestoreCommandListDependantState();
-
-    // flag all constant buffers as dirty, since their state is unknown at execution time.
-    for (ConstantBuffer &constantBuffer : m_constantBuffers)
-    {
-        if (constantBuffer.pLocalMemory != nullptr)
-        {
-            constantBuffer.DirtyLowerBounds = 0;
-            constantBuffer.DirtyUpperBounds = constantBuffer.Size - 1;
-        }
-    }
 
     // flag as open
     m_open = true;
@@ -285,6 +274,16 @@ bool D3D12GPUCommandList::Close()
     m_perDrawConstantBuffersDirty = false;
     m_pipelineChanged = false;
 
+    // vertex buffers
+    for (uint32 i = 0; i < m_currentVertexBufferBindCount; i++)
+    {
+        SAFE_RELEASE(m_pCurrentVertexBuffers[i]);
+        m_currentVertexBufferOffsets[i] = 0;
+        m_currentVertexBufferStrides[i] = 0;
+    }
+    m_currentVertexBufferBindCount = 0;
+    SAFE_RELEASE(m_pCurrentIndexBuffer);
+
     // render targets -- still needs to be re-synced
     for (uint32 i = 0; i < m_nCurrentRenderTargets; i++)
         SAFE_RELEASE(m_pCurrentRenderTargetViews[i]);
@@ -325,6 +324,9 @@ void D3D12GPUCommandList::ReleaseAllocators(uint64 fenceValue)
     DebugAssert(m_pGraphicsCommandQueue != nullptr);
 
     // release everything back to the queue
+    m_pGraphicsCommandQueue->ReleaseCommandAllocator(m_pCurrentCommandAllocator);
+    m_pGraphicsCommandQueue->ReleaseCommandList(m_pCommandList);
+
     for (D3D12LinearBufferHeap *pBuffer : m_scratchBufferReleaseList)
         m_pGraphicsCommandQueue->ReleaseLinearBufferHeap(pBuffer, fenceValue);
     m_scratchBufferReleaseList.Clear();

@@ -338,6 +338,34 @@ void D3D12GPUContext::ResetCommandList(bool restoreState, bool refreshAllocators
         m_pCommandList->IASetPrimitiveTopology(D3D12Helpers::GetD3D12PrimitiveTopology(m_currentTopology));
         m_pCommandList->OMSetBlendFactor(m_currentBlendStateBlendFactors);
         m_pCommandList->OMSetStencilRef(m_currentDepthStencilRef);
+
+        // vertex buffers
+        if (m_currentVertexBufferBindCount > 0)
+        {
+            D3D12_VERTEX_BUFFER_VIEW vertexBufferViews[D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
+            for (uint32 i = 0; i < m_currentVertexBufferBindCount; i++)
+            {
+                if (m_pCurrentVertexBuffers[i] != nullptr)
+                {
+                    vertexBufferViews[i].BufferLocation = m_pCurrentVertexBuffers[i]->GetD3DResource()->GetGPUVirtualAddress() + m_currentVertexBufferOffsets[i];
+                    vertexBufferViews[i].SizeInBytes = m_pCurrentVertexBuffers[i]->GetDesc()->Size - m_currentVertexBufferOffsets[i];
+                    vertexBufferViews[i].StrideInBytes = m_currentVertexBufferStrides[i];
+                }
+                else
+                {
+                    Y_memzero(&vertexBufferViews[i], sizeof(D3D12_VERTEX_BUFFER_VIEW));
+                }
+            }
+            m_pCommandList->IASetVertexBuffers(0, m_currentVertexBufferBindCount, vertexBufferViews);
+        }
+        if (m_pCurrentIndexBuffer != nullptr)
+        {
+            D3D12_INDEX_BUFFER_VIEW bufferView;
+            bufferView.BufferLocation = m_pCurrentIndexBuffer->GetD3DResource()->GetGPUVirtualAddress() + m_currentIndexBufferOffset;
+            bufferView.SizeInBytes = m_pCurrentIndexBuffer->GetDesc()->Size - m_currentIndexBufferOffset;
+            bufferView.Format = (m_currentIndexFormat == GPU_INDEX_FORMAT_UINT16) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
+            m_pCommandList->IASetIndexBuffer(&bufferView);
+        }
     }
     else
     {
@@ -362,6 +390,16 @@ void D3D12GPUContext::ResetCommandList(bool restoreState, bool refreshAllocators
         m_nCurrentRenderTargets = 0;
         SynchronizeRenderTargetsAndUAVs();
         UpdateScissorRect();
+
+        // input assembler
+        for (uint32 i = 0; i < m_currentVertexBufferBindCount; i++)
+        {
+            SAFE_RELEASE(m_pCurrentVertexBuffers[i]);
+            m_currentVertexBufferStrides[i] = 0;
+            m_currentVertexBufferOffsets[i] = 0;
+        }
+        m_currentVertexBufferBindCount = 0;
+        SAFE_RELEASE(m_pCurrentIndexBuffer);
 
         // predicate
         //SAFE_RELEASE(m_pCurrentPredicate);
